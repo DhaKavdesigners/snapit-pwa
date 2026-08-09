@@ -1,0 +1,16 @@
+# Dependencies (Never upload to GitHub)
+node_modules/
+.pnpm-store/
+
+# Environment Keys (Never upload secrets)
+.env
+.env.local
+.env.production
+
+# Build Outputs
+dist/
+build/
+
+# System junk
+.DS_Store
+Thumbs.db
