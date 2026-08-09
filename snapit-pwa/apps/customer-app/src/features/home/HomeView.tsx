@@ -1,5 +1,4 @@
 import React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { SearchBar } from './SearchBar';
@@ -16,7 +15,6 @@ import { useContextStore } from '../../store/contextStore';
 
 export const HomeView: React.FC = () => {
   const { activeContext } = useContextStore();
-  const queryClient = useQueryClient();
 
   const { data: stores, isLoading: storesLoading, error: storesError, refetch: refetchStores } = useStores(activeContext);
   const { data: products, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useProducts(activeContext);
