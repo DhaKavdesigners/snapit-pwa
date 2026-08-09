@@ -2,7 +2,7 @@
 
 > Hyperlocal commerce platform launching in KGF. Three dashboards, one shared contract.
 
-------
+-------
 
 ## 🏗️ Repository Structure
 
