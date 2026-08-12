@@ -2,17 +2,21 @@ export interface Product {
   id: string; // UUID, never sequential
   name: string;
   price: number; // Stored strictly as Integer Paise (e.g., ₹100 = 10000)
-  imageUrl: string;
+  imageUrl: string; // Local path: /images/products/<name>.jpg
+  fallbackImageUrl?: string; // Unsplash URL if local image not found
   storeId: string;
   category: 'grocery' | 'food' | 'bakery';
   deliveryEtaMinutes: number;
   inStock: boolean;
+  description?: string;
+  storeName?: string;
 }
 
 export interface Store {
   id: string;
   name: string;
-  logoUrl: string;
+  logoUrl: string; // Local path: /images/stores/<store-slug>/logo.jpg
+  fallbackLogoUrl?: string; // Unsplash URL if local logo not found
   rating: number;
   category: Product['category'];
   isOpen: boolean;

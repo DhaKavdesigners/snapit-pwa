@@ -5,6 +5,9 @@ import { HomeView } from './features/home/HomeView';
 import { ExploreView } from './features/explore/ExploreView';
 import { FavoritesView } from './features/favorites/FavoritesView';
 import { ProfileView } from './features/profile/ProfileView';
+import { CartView } from './features/cart/CartView';
+import { CheckoutView } from './features/checkout/CheckoutView';
+import { OrderSuccessView } from './features/checkout/OrderSuccessView';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,24 +18,23 @@ const queryClient = new QueryClient({
   },
 });
 
-const DummyView = ({ title }: { title: string }) => (
-  <div className="flex items-center justify-center h-full pt-20">
-    <h2 className="text-xl font-bold">{title}</h2>
-  </div>
-);
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          {/* Main App Shell with Bottom Navigation */}
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomeView />} />
             <Route path="/explore" element={<ExploreView />} />
-            <Route path="/cart" element={<DummyView title="Cart - Coming Soon" />} />
+            <Route path="/cart" element={<CartView />} />
             <Route path="/favorites" element={<FavoritesView />} />
             <Route path="/profile" element={<ProfileView />} />
           </Route>
+          
+          {/* Full Screen Flows without Bottom Navigation */}
+          <Route path="/checkout" element={<CheckoutView />} />
+          <Route path="/success" element={<OrderSuccessView />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
