@@ -15,7 +15,7 @@ export default {
         'text-secondary': '#6B7280',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'sans-serif'],
       },
       spacing: {
         // Strict 8px grid based extensions if needed, but Tailwind defaults are 4px base (e.g. 2=8px, 4=16px, 8=32px)

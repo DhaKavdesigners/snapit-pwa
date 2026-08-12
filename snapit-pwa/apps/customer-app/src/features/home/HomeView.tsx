@@ -107,20 +107,35 @@ export const HomeView: React.FC = () => {
               </div>
             </div>
 
-            {/* ── All Products Feed (2-col grid, scrolls naturally) ── */}
+            {/* ── Handpicked For You (Side Scroll) ── */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-lg text-gray-900">
+                  {activeContext === 'shopping' ? '✨ Handpicked For You' : '✨ Chef\'s Specials'}
+                </h3>
+              </div>
+              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar -mx-4 px-4">
+                {isLoading
+                  ? Array(5).fill(0).map((_, i) => <Skeleton key={`skeleton-hp-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-2xl" />)
+                  : products?.slice(0, 6).map(product => <ProductCard key={product.id} product={product} />)
+                }
+              </div>
+            </div>
+
+            {/* ── All Products Feed (Grid) ── */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-lg text-gray-900">
-                  {activeContext === 'shopping' ? '🛒 All Essentials' : '🍽️ All Menu Items'}
+                  {activeContext === 'shopping' ? '🛒 More Essentials' : '🍽️ More Menu Items'}
                 </h3>
               </div>
               {isLoading ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-56 rounded-2xl" />)}
+                <div className="grid grid-cols-3 gap-2">
+                  {Array(6).fill(0).map((_, i) => <Skeleton key={`skeleton-grid-${i}`} className="h-56 rounded-2xl" />)}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  {products?.map(product => (
+                <div className="grid grid-cols-3 gap-2">
+                  {products?.slice(6).map(product => (
                     <ProductCard key={product.id} product={product} fullWidth />
                   ))}
                 </div>

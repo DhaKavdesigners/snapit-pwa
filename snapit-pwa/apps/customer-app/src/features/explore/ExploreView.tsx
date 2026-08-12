@@ -4,7 +4,6 @@ import { StoreCard } from '../../components/StoreCard';
 import { ProductCard } from '../../components/ProductCard';
 import { useContextStore } from '../../store/contextStore';
 import { mockShoppingStores, mockFoodStores, mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
-import { ShoppingBag, Utensils } from 'lucide-react';
 
 const shoppingCategories = [
   { id: 'c1', name: 'Groceries',     emoji: '🛒', imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80' },
@@ -41,45 +40,20 @@ export const ExploreView: React.FC = () => {
       <div className="bg-white border-b border-gray-100 shadow-sm px-4 pt-2 pb-0 sticky top-0 z-10">
         <SearchBar />
 
-        {/* ── Shopping / Food toggle — Explore-specific vivid style ── */}
-        <div className="flex gap-2 mb-3 bg-emerald-50 p-1 rounded-2xl border border-emerald-100">
-          <button
-            onClick={() => setContext('shopping')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-              isShopping
-                ? 'bg-brand text-white shadow-md shadow-brand/30'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            Shopping
-          </button>
-          <button
-            onClick={() => setContext('food')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-              !isShopping
-                ? 'bg-brand text-white shadow-md shadow-brand/30'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Utensils className="w-4 h-4" />
-            Food
-          </button>
-        </div>
-
-        {/* ── Categories / Stores sub-tabs (underline style) ── */}
-        <div className="flex gap-0 -mb-px">
+        {/* ── Categories / Stores Pill Toggle ── */}
+        <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-full border border-gray-200/50 w-[260px] mx-auto">
           {(['categories', 'stores'] as ExploreTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 text-sm capitalize border-b-2 font-bold transition-colors duration-150 ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
                 activeTab === tab
-                  ? 'border-brand text-brand'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                  ? 'bg-brand text-white shadow-md'
+                  : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab === 'categories' ? '📦 Categories' : '🏪 Stores'}
+              <span className="text-base">{tab === 'categories' ? '📦' : '🏪'}</span>
+              <span className="capitalize">{tab}</span>
             </button>
           ))}
         </div>
