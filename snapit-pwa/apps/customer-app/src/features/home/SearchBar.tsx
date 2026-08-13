@@ -10,23 +10,27 @@ const placeholders = [
   "Search Maggi..."
 ];
 
-export const SearchBar: React.FC = () => {
+interface SearchBarProps {
+  value: string;
+  onChange: (val: string) => void;
+}
+
+export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange }) => {
   const [idx, setIdx] = useState(0);
-  const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   // Rotate placeholder only when not focused and no text typed
   useEffect(() => {
-    if (isFocused || inputValue.length > 0) return;
+    if (isFocused || value.length > 0) return;
     const timer = setInterval(() => {
       setIdx((prev) => (prev + 1) % placeholders.length);
     }, 3000);
     return () => clearInterval(timer);
-  }, [isFocused, inputValue]);
+  }, [isFocused, value]);
 
   // Whether to show the animated placeholder overlay
-  const showAnimatedPlaceholder = !isFocused && inputValue.length === 0;
+  const showAnimatedPlaceholder = !isFocused && value.length === 0;
 
   return (
     <div className="relative mb-4">
@@ -38,8 +42,8 @@ export const SearchBar: React.FC = () => {
       {/* Real input */}
       <input
         type="text"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         // Keep native placeholder invisible — we overlay animated one
@@ -66,9 +70,9 @@ export const SearchBar: React.FC = () => {
       </div>
 
       {/* Clear button */}
-      {inputValue.length > 0 && (
+      {value.length > 0 && (
         <button
-          onMouseDown={(e) => { e.preventDefault(); setInputValue(''); }}
+          onMouseDown={(e) => { e.preventDefault(); onChange(''); }}
           className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
           aria-label="Clear search"
         >

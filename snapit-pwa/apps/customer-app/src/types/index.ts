@@ -6,6 +6,7 @@ export interface Product {
   fallbackImageUrl?: string; // Unsplash URL if local image not found
   storeId: string;
   category: 'grocery' | 'food' | 'bakery';
+  subCategory?: string;
   deliveryEtaMinutes: number;
   inStock: boolean;
   description?: string;

@@ -5,6 +5,7 @@ import { useCartStore } from '../store/cartStore';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { Plus, Minus, Heart } from 'lucide-react';
 import { Button } from './ui/Button';
+import { motion } from 'framer-motion';
 
 interface ProductCardProps {
   product: Product;
@@ -26,8 +27,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
   };
 
   return (
-    <div
-      className={`flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden transition-all duration-200 ${
+    <motion.div
+      whileHover={{ scale: 1.02, y: -4, boxShadow: '0px 12px 24px rgba(5, 150, 105, 0.2)' }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      className={`flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${
         fullWidth ? 'w-full' : 'min-w-[110px] max-w-[130px] snap-start shrink-0'
       }`}
     >
@@ -113,6 +116,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

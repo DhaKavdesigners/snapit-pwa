@@ -9,8 +9,8 @@ export default {
       colors: {
         background: '#FFFFFF',
         surface: '#F8F9FA',
-        brand: '#046B35',
-        accent: '#FFC107',
+        brand: '#059669', // Emerald Green
+        accent: '#2563EB', // Royal Blue
         'text-primary': '#121212',
         'text-secondary': '#6B7280',
       },
