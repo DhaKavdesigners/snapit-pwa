@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, RotateCcw, Zap, Tag } from 'lucide-react';
+import { Plus, Tag } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ContextToggle } from './ContextToggle';
 import { BannerCarousel } from './BannerCarousel';
@@ -41,14 +41,12 @@ export const HomeView: React.FC = () => {
     p.category?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  // Generate unique search suggestions based on current query
   const rawSuggestions = [
     ...(products?.map(p => ({ type: 'Product', text: p.name })) || []),
     ...(stores?.map(s => ({ type: 'Store', text: s.name })) || []),
     ...(products?.map(p => ({ type: 'Category', text: p.subCategory || p.category })) || []),
   ];
   
-  // Filter and deduplicate suggestions
   const suggestions = Array.from(new Map(
     rawSuggestions
       .filter(s => s.text?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -56,20 +54,47 @@ export const HomeView: React.FC = () => {
   ).values()).slice(0, 5);
   const isSearching = searchQuery.trim().length > 0;
 
-  // Quick category chips — context-aware
-  const categories = activeContext === 'shopping'
-    ? [
-        { id: 'c1', name: 'Grocery',  emoji: '🛒', imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80' },
-        { id: 'c2', name: 'Dairy',    emoji: '🥛', imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=200&q=80' },
-        { id: 'c3', name: 'Snacks',   emoji: '🍿', imageUrl: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?auto=format&fit=crop&w=200&q=80' },
-        { id: 'c4', name: 'Home Care',emoji: '🧴', imageUrl: 'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?auto=format&fit=crop&w=200&q=80' },
-      ]
-    : [
-        { id: 'f1', name: 'Biryani',  emoji: '🍚', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=200&q=80' },
-        { id: 'f2', name: 'Burgers',  emoji: '🍔', imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=200&q=80' },
-        { id: 'f3', name: 'Shawarma', emoji: '🌯', imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=200&q=80' },
-        { id: 'f4', name: 'Bakery',   emoji: '🥐', imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=200&q=80' },
-      ];
+  // Shopping Categories
+  const snacks = products?.filter(p => p.subCategory === 'Snacks & Beverages') || [];
+  const dairy = products?.filter(p => ['Milk & Curd', 'Butter, Ghee & Cream', 'Ice Cream'].includes(p.subCategory || '')) || [];
+  const masalas = products?.filter(p => p.subCategory === 'Cooking Essentials') || [];
+  const homecare = products?.filter(p => ['Home Essentials', 'Personal Care'].includes(p.subCategory || '')) || [];
+
+  // Food Categories
+  const biryani = products?.filter(p => p.subCategory === 'Biryani Specialties') || [];
+  const fastfood = products?.filter(p => p.subCategory === 'Fast Food & Rolls') || [];
+  const bakery = products?.filter(p => ['Breads & Cakes', 'Puffs & Savories'].includes(p.subCategory || '')) || [];
+
+  // Deduplication Logic
+  const featuredIds = activeContext === 'shopping' 
+    ? new Set([...snacks, ...dairy, ...masalas, ...homecare].map(p => p.id))
+    : new Set([...biryani, ...fastfood, ...bakery].map(p => p.id));
+    
+  const nonFeaturedProducts = products?.filter(p => !featuredIds.has(p.id)) || [];
+  const featuredProductsList = products?.filter(p => featuredIds.has(p.id)) || [];
+  const deduplicatedAllEssentials = [...nonFeaturedProducts, ...featuredProductsList];
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const shoppingAnchors = [
+    { id: 'section-grocery', name: 'Grocery', emoji: '🛒' },
+    { id: 'section-dairy', name: 'Dairy', emoji: '🥛' },
+    { id: 'section-snacks', name: 'Snacks', emoji: '🍿' },
+    { id: 'section-homecare', name: 'Home Care', emoji: '🧼' },
+  ];
+
+  const foodAnchors = [
+    { id: 'section-biryani', name: 'Biryani', emoji: '🍚' },
+    { id: 'section-fastfood', name: 'Fast Food', emoji: '🍔' },
+    { id: 'section-bakery', name: 'Bakery', emoji: '🥐' },
+  ];
+
+  const anchors = activeContext === 'shopping' ? shoppingAnchors : foodAnchors;
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -83,7 +108,6 @@ export const HomeView: React.FC = () => {
         {(!isError && !isEmpty) && (
           <>
             {isSearching ? (
-              // Search Results View
               <div className="mb-4">
                 <h3 className="font-bold text-lg text-gray-900 mb-3">Search Results</h3>
                 {searchedProducts.length > 0 ? (
@@ -117,34 +141,31 @@ export const HomeView: React.FC = () => {
                 )}
               </div>
             ) : (
-              // Regular Home View
               <>
                 <BannerCarousel />
 
-                {/* ── Quick Category Chips ── */}
-                <div className="mb-6">
-                  <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar">
-                    {categories.map(c => (
-                      <div key={c.id} className="flex flex-col items-center snap-start shrink-0 cursor-pointer group">
-                        <div className="w-16 h-16 rounded-full overflow-hidden shadow-sm bg-white border border-gray-100 group-active:scale-95 transition-transform">
-                          <img src={c.imageUrl} alt={c.name} className="object-cover w-full h-full" />
-                        </div>
-                        <span className="text-xs font-semibold text-gray-700 mt-2">{c.name}</span>
-                      </div>
-                    ))}
-                    <div className="flex flex-col items-center snap-start shrink-0">
-                      <Link
-                        to="/explore"
-                        className="w-16 h-16 rounded-full bg-white border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 active:scale-95 transition-transform shadow-sm"
-                        aria-label="View all categories"
+                {/* ── Category Anchor Jump Chips ── */}
+                <div className="mb-6 sticky top-[132px] z-30 bg-slate-50/90 backdrop-blur-md py-2 -mx-4 px-4 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.05)] border-b border-gray-100">
+                  <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar">
+                    {anchors.map(a => (
+                      <button
+                        key={a.id}
+                        onClick={() => scrollToSection(a.id)}
+                        className="flex items-center gap-1.5 snap-start shrink-0 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all text-sm font-semibold text-gray-700 whitespace-nowrap"
                       >
-                        <Plus className="h-6 w-6" />
-                      </Link>
-                      <span className="text-xs font-semibold text-gray-700 mt-2">Explore</span>
-                    </div>
+                        <span>{a.emoji}</span>
+                        {a.name}
+                      </button>
+                    ))}
+                    <Link
+                      to="/explore"
+                      className="flex items-center gap-1.5 snap-start shrink-0 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all text-sm font-semibold text-gray-500 whitespace-nowrap"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Explore
+                    </Link>
                   </div>
                 </div>
-
 
                 {/* ── 🔥 Popular in Robertsonpet ── */}
                 <div className="mb-6">
@@ -153,14 +174,13 @@ export const HomeView: React.FC = () => {
                       🔥 Popular in Robertsonpet
                     </h3>
                   </div>
-                  <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar -mx-4 px-4">
+                  <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar scrollbar-none py-2 -mx-4 px-4">
                     {trendingLoading
                       ? Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-trend-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
                       : trending?.map(product => <ProductCard key={product.id} product={product} />)
                     }
                   </div>
                 </div>
-
 
                 {/* ── 🏷️ Today's Picks ── */}
                 {activeContext === 'shopping' && (
@@ -171,7 +191,7 @@ export const HomeView: React.FC = () => {
                         <h3 className="font-bold text-lg text-gray-900">Today's Picks</h3>
                       </div>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar -mx-4 px-4">
+                    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar scrollbar-none py-2 -mx-4 px-4">
                       {todaysLoading
                         ? Array(3).fill(0).map((_, i) => <Skeleton key={`skeleton-tp-${i}`} className="min-w-[150px] h-52 shrink-0 snap-start rounded-xl" />)
                         : todaysPicks?.map(product => <ProductCard key={product.id} product={product} />)
@@ -180,8 +200,72 @@ export const HomeView: React.FC = () => {
                   </div>
                 )}
 
+                {/* ── CATEGORIZED HORIZONTAL ROWS ── */}
+                {activeContext === 'shopping' ? (
+                  <>
+                    <section id="section-grocery" className="mb-6 scroll-mt-32">
+                      <h3 className="font-bold text-lg text-gray-900 mb-3">🛒 Everyday Groceries</h3>
+                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                        {productsLoading ? (
+                          Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-groc-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
+                        ) : (
+                          masalas.map(product => <ProductCard key={product.id} product={product} />)
+                        )}
+                      </div>
+                    </section>
+
+                    <section id="section-dairy" className="mb-6 scroll-mt-32">
+                      <h3 className="font-bold text-lg text-gray-900 mb-3">🥛 Dairy Items</h3>
+                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                        {dairy.map(product => <ProductCard key={product.id} product={product} />)}
+                      </div>
+                    </section>
+
+                    <section id="section-snacks" className="mb-6 scroll-mt-32">
+                      <h3 className="font-bold text-lg text-gray-900 mb-3">🍿 Snacks & Juices</h3>
+                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                        {snacks.map(product => <ProductCard key={product.id} product={product} />)}
+                      </div>
+                    </section>
+
+                    <section id="section-homecare" className="mb-6 scroll-mt-32">
+                      <h3 className="font-bold text-lg text-gray-900 mb-3">🧼 Home Care & Cleaning</h3>
+                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                        {homecare.map(product => <ProductCard key={product.id} product={product} />)}
+                      </div>
+                    </section>
+                  </>
+                ) : (
+                  <>
+                    <section id="section-biryani" className="mb-6 scroll-mt-32">
+                      <h3 className="font-bold text-lg text-gray-900 mb-3">🍚 Biryani Specialties</h3>
+                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                        {productsLoading ? (
+                          Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-biry-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
+                        ) : (
+                          biryani.map(product => <ProductCard key={product.id} product={product} />)
+                        )}
+                      </div>
+                    </section>
+
+                    <section id="section-fastfood" className="mb-6 scroll-mt-32">
+                      <h3 className="font-bold text-lg text-gray-900 mb-3">🍔 Fast Food & Rolls</h3>
+                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                        {fastfood.map(product => <ProductCard key={product.id} product={product} />)}
+                      </div>
+                    </section>
+
+                    <section id="section-bakery" className="mb-6 scroll-mt-32">
+                      <h3 className="font-bold text-lg text-gray-900 mb-3">🥐 Bakery & Sweets</h3>
+                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                        {bakery.map(product => <ProductCard key={product.id} product={product} />)}
+                      </div>
+                    </section>
+                  </>
+                )}
+
                 {/* ── All Products Feed (Grid) ── */}
-                <div className="mb-4">
+                <section id="section-all-essentials" className="mb-4 scroll-mt-32">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-lg text-gray-900">
                       {activeContext === 'shopping' ? '🛒 All Essentials' : '🍽️ All Menu Items'}
@@ -193,12 +277,12 @@ export const HomeView: React.FC = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
-                      {products?.map(product => (
+                      {deduplicatedAllEssentials.map(product => (
                         <ProductCard key={product.id} product={product} fullWidth />
                       ))}
                     </div>
                   )}
-                </div>
+                </section>
               </>
             )}
           </>

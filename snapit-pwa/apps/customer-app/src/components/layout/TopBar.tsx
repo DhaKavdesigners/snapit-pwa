@@ -16,15 +16,14 @@ export const TopBar: React.FC = () => {
           alt="SnapIt Logo"
           className="h-10 w-auto object-contain"
           onError={(e) => {
-            // Inline text fallback if logo file not found yet
             (e.target as HTMLImageElement).style.display = 'none';
           }}
         />
         <span className="font-black text-xl tracking-tight text-brand">SnapIt</span>
       </Link>
 
-      {/* Delivery Location Selector - Only show if logged in */}
-      {isLoggedIn && (
+      {/* Delivery Location Selector */}
+      {isLoggedIn ? (
         <button
           className="flex flex-col items-end gap-0 active:opacity-70 transition-opacity"
           aria-label="Change delivery location"
@@ -36,6 +35,13 @@ export const TopBar: React.FC = () => {
             <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
           </div>
         </button>
+      ) : (
+        <Link
+          to="/profile"
+          className="bg-emerald-50 text-emerald-800 border border-emerald-200/60 px-3 py-1.5 rounded-full font-semibold text-xs flex items-center gap-1.5 shadow-sm hover:scale-105 transition-transform cursor-pointer"
+        >
+          📍 Where should we deliver? ▾
+        </Link>
       )}
     </header>
   );

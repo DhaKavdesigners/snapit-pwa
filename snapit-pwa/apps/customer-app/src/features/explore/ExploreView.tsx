@@ -1,98 +1,159 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SearchBar } from '../home/SearchBar';
 import { StoreCard } from '../../components/StoreCard';
 import { ProductCard } from '../../components/ProductCard';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useContextStore } from '../../store/contextStore';
-import { exploreCategories, mockShoppingStores, mockFoodStores } from '../../api/mockData';
+import { exploreShoppingCategories, exploreFoodCategories, mockShoppingStores, mockFoodStores } from '../../api/mockData';
 import { useAllProducts } from '../../api/queries';
 
 type ExploreTab = 'categories' | 'stores';
+type ExploreState = 'main' | 'category' | 'store';
 
 export const ExploreView: React.FC = () => {
   const { activeContext } = useContextStore();
-  const [activeTab, setActiveTab] = useState<ExploreTab>('categories');
-
-  // We can track the expanded main category (e.g. cat_groceries)
-  const [expandedCategory, setExpandedCategory] = useState<string | null>('cat_groceries');
+  const isShopping = activeContext === 'shopping';
   
-  // If a subcategory is clicked, we show its products in a full view over the categories
-  const [selectedSubCategory, setSelectedSubCategory] = useState<{catId: string, subId: string} | null>(null);
+  // Navigation State
+  const [exploreState, setExploreState] = useState<ExploreState>('main');
+  const [activeTab, setActiveTab] = useState<ExploreTab>('categories');
+  const [exploreSearchQuery, setExploreSearchQuery] = useState('');
+
+  // Drill-down selections
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
 
   const { data: allProducts, isLoading } = useAllProducts();
 
-  const isShopping = activeContext === 'shopping';
-  const stores = isShopping ? mockShoppingStores : mockFoodStores;
+  const categories = isShopping ? exploreShoppingCategories : exploreFoodCategories;
 
-  // Filter products by selected subCategory name
-  const getSubCategoryName = (catId: string, subId: string) => {
-    const cat = exploreCategories.find(c => c.id === catId);
-    if (!cat) return null;
-    const sub = cat.subCategories.find(s => s.id === subId);
-    return sub ? sub.name : null;
+  // --- HANDLERS ---
+  const handleCategoryClick = (category: any) => {
+    setSelectedCategory(category);
+    setActiveSubCategory(category.subCategories[0]?.name || null);
+    setExploreState('category');
   };
 
-  const handleAccordionClick = (catId: string) => {
-    setExpandedCategory(expandedCategory === catId ? null : catId);
+  const handleStoreClick = (storeId: string) => {
+    setSelectedStore(storeId);
+    setExploreState('store');
   };
 
-  // If a subcategory is selected, we render ONLY the products for that subcategory 
-  // (like a drill-down view)
-  if (selectedSubCategory) {
-    const subName = getSubCategoryName(selectedSubCategory.catId, selectedSubCategory.subId);
-    const filteredProducts = subName && allProducts
-      ? allProducts.filter(p => p.subCategory === subName)
-      : [];
+  const goBack = () => {
+    setExploreState('main');
+    setSelectedCategory(null);
+    setSelectedStore(null);
+  };
 
+  // --- RENDER VIEWS ---
+
+  if (exploreState === 'category' && selectedCategory) {
+    const filteredProducts = allProducts?.filter(p => p.subCategory === activeSubCategory) || [];
+    
     return (
       <div className="flex flex-col h-full bg-slate-50 min-h-screen">
-        <div className="bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm p-4 sticky top-0 z-10 flex items-center gap-3">
-          <button 
-            onClick={() => setSelectedSubCategory(null)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <h2 className="font-bold text-lg text-gray-900">{subName}</h2>
+        <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-20">
+          <div className="p-4 flex items-center gap-3">
+            <button onClick={goBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95">
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
+            <h2 className="font-bold text-lg text-gray-900">{selectedCategory.title}</h2>
+          </div>
+          {/* Subcategory Pills */}
+          <div className="flex overflow-x-auto hide-scrollbar gap-2 px-4 pb-3">
+            {selectedCategory.subCategories.map((sub: any) => (
+              <button
+                key={sub.id}
+                onClick={() => setActiveSubCategory(sub.name)}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors border ${
+                  activeSubCategory === sub.name
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {sub.name}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="p-4">
+        
+        <div className="p-4 pb-28">
           {isLoading ? (
             <div className="grid grid-cols-3 gap-2">
               {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />)}
             </div>
           ) : (
-            <>
+            <div className="grid grid-cols-3 gap-2 animate-in fade-in slide-in-from-bottom-2">
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2 animate-in fade-in slide-in-from-bottom-2">
-                  {filteredProducts.map(product => (
-                    <ProductCard key={product.id} product={product} fullWidth />
-                  ))}
-                </div>
+                filteredProducts.map(product => <ProductCard key={product.id} product={product} fullWidth />)
               ) : (
-                <div className="text-center py-10 text-gray-500 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div className="col-span-3 text-center py-10 text-gray-500">
                   <div className="text-4xl mb-2">🤷‍♂️</div>
                   <h3 className="font-bold text-gray-900 mb-1">No products found</h3>
-                  <p className="text-sm">We are adding items to {subName} soon!</p>
+                  <p className="text-sm">We are adding items to {activeSubCategory} soon!</p>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
     );
   }
 
-  const [exploreSearchQuery, setExploreSearchQuery] = useState('');
+  if (exploreState === 'store' && selectedStore) {
+    const store = [...mockShoppingStores, ...mockFoodStores].find(s => s.id === selectedStore);
+    const storeProducts = allProducts?.filter(p => p.storeId === selectedStore) || [];
 
+    return (
+      <div className="flex flex-col h-full bg-slate-50 min-h-screen">
+        <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-20 p-4 flex items-center gap-3">
+          <button onClick={goBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95">
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <div className="flex items-center gap-3">
+            <img src={store?.logoUrl} alt={store?.name} className="w-8 h-8 rounded-full border border-gray-100 object-cover" />
+            <div>
+              <h2 className="font-bold text-lg text-gray-900 leading-tight">{store?.name}</h2>
+              <div className="text-xs text-gray-500 font-semibold flex items-center gap-1">
+                <span className="text-yellow-500">★</span> {store?.rating} • {store?.category === 'food' ? 'Food' : 'Grocery'}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-4 pb-28">
+          {isLoading ? (
+            <div className="grid grid-cols-3 gap-2">
+              {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 animate-in fade-in slide-in-from-bottom-2">
+              {storeProducts.length > 0 ? (
+                storeProducts.map(product => <ProductCard key={product.id} product={product} fullWidth />)
+              ) : (
+                <div className="col-span-3 text-center py-10 text-gray-500">
+                  <div className="text-4xl mb-2">🤷‍♂️</div>
+                  <h3 className="font-bold text-gray-900 mb-1">No products found</h3>
+                  <p className="text-sm">This store has not listed any items yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- MAIN VIEW ---
   return (
     <div className="flex flex-col h-full bg-slate-50 min-h-screen">
-      {/* ── Sticky header ── */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm px-4 pt-2 pb-0 sticky top-0 z-10">
+      {/* Sticky header */}
+      <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm px-4 pt-2 pb-0 sticky top-0 z-10">
         <SearchBar value={exploreSearchQuery} onChange={setExploreSearchQuery} />
 
-        {/* ── Categories / Stores Pill Toggle ── */}
         <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-full border border-gray-200/50 w-[260px] mx-auto">
           {(['categories', 'stores'] as ExploreTab[]).map((tab) => (
             <button
@@ -100,7 +161,7 @@ export const ExploreView: React.FC = () => {
               onClick={() => setActiveTab(tab)}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
                 activeTab === tab
-                  ? 'bg-brand text-white shadow-md'
+                  ? 'bg-emerald-600 text-white shadow-md'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -111,85 +172,85 @@ export const ExploreView: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Scrollable content ── */}
+      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-4 pb-28">
-
-        {/* CATEGORIES tab */}
+        
+        {/* CATEGORIES TAB */}
         {activeTab === 'categories' && (
-          <div className="flex flex-col gap-4">
-            {exploreCategories.map((category) => {
-              const isExpanded = expandedCategory === category.id;
-
-              return (
-                <motion.div 
-                  key={category.id} 
-                  whileHover={{ scale: 1.02, y: -2, boxShadow: '0px 10px 20px rgba(5, 150, 105, 0.15)' }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-                >
-                  <button
-                    onClick={() => handleAccordionClick(category.id)}
-                    className="w-full flex items-center justify-between p-4 bg-white active:bg-gray-50 transition-colors"
-                  >
-                    <h3 className="font-bold text-gray-900 text-lg">{category.title}</h3>
-                    {isExpanded ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    )}
-                  </button>
-
-                  {isExpanded && (
-                    <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="grid grid-cols-2 gap-2 mt-1">
-                        {category.subCategories.map((sub) => (
-                          <button
-                            key={sub.id}
-                            onClick={() => setSelectedSubCategory({ catId: category.id, subId: sub.id })}
-                            className="text-left px-4 py-3 bg-slate-50 hover:bg-brand-50 border border-gray-100 hover:border-brand-200 rounded-xl transition-all active:scale-95 flex items-center justify-between group"
-                          >
-                            <span className="text-sm font-semibold text-gray-700 group-hover:text-brand-700 leading-tight">
-                              {sub.name}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+          <div className="grid grid-cols-1 gap-4">
+            {categories.map((category) => (
+              <motion.div 
+                key={category.id} 
+                whileHover={{ scale: 1.02, y: -2, boxShadow: '0px 12px 24px rgba(5, 150, 105, 0.15)' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                onClick={() => handleCategoryClick(category)}
+                className="relative h-40 rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer group"
+              >
+                <img 
+                  src={category.imageUrl} 
+                  alt={category.title}
+                  onError={(e) => { 
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== category.fallbackImageUrl) {
+                      target.src = category.fallbackImageUrl;
+                    }
+                  }}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-white text-2xl tracking-tight">{category.title}</h3>
+                    <div className="bg-white/20 backdrop-blur-md rounded-full p-1 text-white">
+                      <ChevronRight className="w-5 h-5" />
                     </div>
-                  )}
-                </motion.div>
-              );
-            })}
+                  </div>
+                  <p className="text-white/80 text-sm font-medium mt-1">
+                    {category.subCategories.length} Categories
+                  </p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         )}
 
-        {/* STORES tab */}
+        {/* STORES TAB */}
         {activeTab === 'stores' && (
-          <div className="grid grid-cols-2 gap-4">
-            {stores.map((store) => (
-              <motion.div
-                key={store.id}
-                whileHover={{ scale: 1.02, y: -4, boxShadow: '0px 12px 24px rgba(5, 150, 105, 0.2)' }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                className="flex flex-col items-center bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] cursor-pointer"
-              >
-                <div className="w-20 h-20 rounded-full overflow-hidden mb-3 bg-gray-100 shadow-inner">
-                  <img
-                    src={store.logoUrl}
-                    alt={store.name}
-                    onError={(e) => { if (store.fallbackLogoUrl) (e.target as HTMLImageElement).src = store.fallbackLogoUrl; }}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <h4 className="font-bold text-sm text-gray-900 text-center line-clamp-2 leading-tight mb-1">{store.name}</h4>
-                <div className="flex items-center gap-1 text-xs text-gray-500 font-semibold mb-2">
-                  <span className="text-yellow-400">★</span>
-                  {store.rating.toFixed(1)}
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${store.isOpen ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
-                  {store.isOpen ? 'OPEN NOW' : 'CLOSED'}
-                </span>
-              </motion.div>
-            ))}
+          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-2">
+            
+            {/* GROCERY SECTION */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
+                  <span>🛒</span> Grocery & Essentials
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {mockShoppingStores.map((store) => (
+                  <div key={store.id} onClick={() => handleStoreClick(store.id)}>
+                    <StoreCard store={store} />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="h-px bg-gray-200/50 w-full" />
+
+            {/* FOOD SECTION */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
+                  <span>🍽️</span> Food & Restaurants
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {mockFoodStores.map((store) => (
+                  <div key={store.id} onClick={() => handleStoreClick(store.id)}>
+                    <StoreCard store={store} />
+                  </div>
+                ))}
+              </div>
+            </section>
+            
           </div>
         )}
 
