@@ -38,9 +38,11 @@ export const TopBar: React.FC = () => {
       ) : (
         <Link
           to="/profile"
-          className="bg-emerald-50 text-emerald-800 border border-emerald-200/60 px-3 py-1.5 rounded-full font-semibold text-xs flex items-center gap-1.5 shadow-sm hover:scale-105 transition-transform cursor-pointer"
+          className="flex items-center gap-1 text-gray-500 hover:text-brand transition-colors"
+          aria-label="Set delivery location"
         >
-          📍 Where should we deliver? ▾
+          <span className="text-base">📍</span>
+          <span className="text-sm font-semibold text-gray-600">Where should we deliver?</span>
         </Link>
       )}
     </header>
