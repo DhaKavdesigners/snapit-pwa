@@ -46,20 +46,26 @@ export interface CartItem {
 // ─── Order ───────────────────────────────────────────────────────────────────
 
 export type OrderStatus =
-  | 'PENDING'     // Customer placed order, waiting for merchant
-  | 'PAID'        // Payment confirmed (backend-verified)
-  | 'ACCEPTED'    // Merchant accepted
-  | 'PREPARING'   // Merchant is preparing the order
-  | 'READY'       // Ready for pickup by rider
-  | 'PICKED_UP'   // Rider has collected the order
-  | 'DELIVERED'   // Order delivered to customer
-  | 'CANCELLED';  // Order cancelled
+  | 'PENDING'           // Customer placed order, waiting for merchant
+  | 'PLACED'            // Alias for PENDING — used in rider dispatch flow
+  | 'PAID'              // Payment confirmed (backend-verified)
+  | 'ACCEPTED'          // Merchant accepted
+  | 'PREPARING'         // Merchant is preparing the order
+  | 'READY'             // Ready for pickup (legacy alias)
+  | 'READY_FOR_PICKUP'  // Triggers rider dispatch chime
+  | 'RIDER_ASSIGNED'    // A specific rider has been assigned
+  | 'PICKED_UP'         // Rider has collected from store
+  | 'OUT_FOR_DELIVERY'  // Rider en-route to customer doorstep
+  | 'DELIVERED'         // Order delivered — requires 4-digit PIN handshake
+  | 'CANCELLED';        // Order cancelled
+
+export type PaymentMethod = 'UPI_NOW' | 'UPI_DELIVERY' | 'CASH';
 
 export interface Order {
   id: string;               // UUID
   customerId: string;       // Links to Firebase/Supabase user UID
   storeId: string;
-  riderId?: string;         // Assigned after ACCEPTED
+  riderId?: string;         // Assigned after RIDER_ASSIGNED
   status: OrderStatus;
   items: CartItem[];
   estimatedTotal: number;   // Paise — for DISPLAY only, never trust for payment
@@ -68,6 +74,14 @@ export interface Order {
   idempotencyKey: string;   // Client-generated UUID, sent with Pay action
   createdAt: string;        // ISO 8601 timestamp
   updatedAt: string;        // ISO 8601 timestamp
+
+  // ── Rider Handshake & Payment Fields ───────────────────────────────────────
+  paymentMethod?: PaymentMethod;            // UPI_NOW (paid), UPI_DELIVERY (doorstep QR), CASH (disabled Phase 1)
+  deliveryVerified?: boolean;               // Set true on valid 4-digit PIN handshake
+  recipientName?: string;                   // If ordering for someone else
+  recipientPhone?: string;                  // Rider calls this number instead of customerId's phone
+  deliveryAddressSnapshot?: DeliveryAddress; // Immutable snapshot at order-placement time
+  handshakePinHash?: string;               // Hashed 4-digit OTP — NEVER store plaintext
 }
 
 // ─── Address ─────────────────────────────────────────────────────────────────
@@ -101,8 +115,16 @@ export interface Merchant extends SnapItUser {
 
 // ─── Rider ───────────────────────────────────────────────────────────────────
 
+export type KycStatus = 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
+
 export interface Rider extends SnapItUser {
   role: 'rider';
   isOnline: boolean;
   currentOrderId?: string;
+
+  // ── Rider Profile & Gamification ────────────────────────────────────────────
+  vehicleNumber?: string;          // e.g. 'KA 07 AB 1234'
+  dailyDeliveryCount: number;      // Resets at midnight — drives gamification header
+  kycStatus: KycStatus;            // Document verification state (snapit-kyc Supabase bucket)
+  upiId?: string;                  // Rider's personal UPI ID for doorstep QR generation
 }
