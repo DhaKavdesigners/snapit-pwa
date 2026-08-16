@@ -20,6 +20,7 @@ build/
 .env.production.local
 *.env
 db_auth.env.txt
+.env.example
 
 # ── Logs ─────────────────────────────────────────────────
 npm-debug.log*
