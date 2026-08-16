@@ -4,6 +4,7 @@ node_modules/
 
 # Environment Keys (Never upload secrets)
 .env
+db_auth.env
 .env.local
 .env.production
 
