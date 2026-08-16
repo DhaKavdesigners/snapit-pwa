@@ -4,10 +4,15 @@ node_modules/
 
 # Environment Keys (Never upload secrets)
 .env
+.env.txt
 .env.local
 .env.production
+<<<<<<< HEAD
 .env.txt
 
+=======
+db_auth.env.txt
+>>>>>>> 678f3080393ba6af281ee5fcb8d8f8467e352a60
 # Build Outputs
 dist/
 build/
