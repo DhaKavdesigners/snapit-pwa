@@ -20,6 +20,8 @@ export const CheckoutView: React.FC = () => {
   const navigate = useNavigate();
   
   const [paymentMethod, setPaymentMethod] = useState<PayMethod>('online');
+  const [useCurrentLocation, setUseCurrentLocation] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState<'registered' | 'college' | 'new'>('registered');
   
   // Modal & Address States
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -52,17 +54,17 @@ export const CheckoutView: React.FC = () => {
   // ── Address Logic ────────────────────────────────────────
   const hasProfile = !!userProfile;
   
-  // The currently selected address. In a real app, this would be an object.
-  // For Phase 1, if they added a new address we use that, otherwise profile address.
-  const isUsingNewAddress = isAddingNew && newLine1.trim().length > 0;
+  const isUsingNewAddress = selectedAddressId === 'new' && newLine1.trim().length > 0;
+  const isCollegeAddress = selectedAddressId === 'college';
   
   const displayAddressLine = isUsingNewAddress 
     ? newLine1 
+    : isCollegeAddress ? 'Dttit kgf'
     : hasProfile ? `${userProfile!.addressLine1}${userProfile!.addressLine2 ? `, ${userProfile!.addressLine2}` : ''}` : '';
     
-  const displayLandmark = isUsingNewAddress ? newLandmark : userProfile?.landmark;
-  const displayPin = isUsingNewAddress ? newPin : userProfile?.pincode;
-  const displayTitle = isUsingNewAddress ? (newTitle || 'New Address') : 'PRIMARY';
+  const displayLandmark = isUsingNewAddress ? newLandmark : isCollegeAddress ? 'oorgaum post' : userProfile?.landmark;
+  const displayPin = isUsingNewAddress ? newPin : isCollegeAddress ? '563120' : userProfile?.pincode;
+  const displayTitle = isUsingNewAddress ? (newTitle || 'NEW ADDRESS') : isCollegeAddress ? 'COLLEGE' : 'REGISTERED ADDRESS';
   
   const finalRecipientName = isSomeoneElse && recipientName.trim() ? recipientName : (userProfile?.name || 'Guest');
   const finalRecipientPhone = isSomeoneElse && recipientPhone.trim() ? recipientPhone : (userProfile?.phone || '');
@@ -87,6 +89,8 @@ export const CheckoutView: React.FC = () => {
       alert("Please fill all mandatory fields.");
       return;
     }
+    setSelectedAddressId('new');
+    setIsAddingNew(false);
     setIsAddressModalOpen(false);
   };
 
@@ -115,16 +119,8 @@ export const CheckoutView: React.FC = () => {
 
         {/* ── Delivery Address ── */}
         <section>
-          <div className="flex justify-between items-end mb-2">
+          <div className="mb-2">
             <h2 className="font-bold text-text-primary text-xs uppercase tracking-wider text-gray-400">Delivery Address</h2>
-            {hasProfile && (
-              <button 
-                onClick={() => setIsAddressModalOpen(true)}
-                className="text-brand text-xs font-bold uppercase tracking-wide hover:underline"
-              >
-                Change
-              </button>
-            )}
           </div>
           
           {hasProfile || isUsingNewAddress ? (
@@ -165,6 +161,30 @@ export const CheckoutView: React.FC = () => {
               </button>
             </div>
           )}
+
+          {/* New address buttons below the card */}
+          <div className="flex gap-3 mt-4">
+            <button 
+              onClick={() => setUseCurrentLocation(!useCurrentLocation)}
+              className={`flex-1 font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors border ${
+                useCurrentLocation 
+                  ? 'bg-brand/10 text-brand border-brand/30' 
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <MapPin className="w-4 h-4" /> {useCurrentLocation ? 'Using Live Location' : 'Use Live Location'}
+            </button>
+            
+            <button 
+              onClick={() => {
+                setIsAddressModalOpen(true);
+                setUseCurrentLocation(false);
+              }}
+              className="flex-1 bg-white border border-gray-200 text-gray-700 font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-xs hover:bg-gray-50 transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
+            >
+              <Plus className="w-4 h-4 text-brand" /> Add New Address
+            </button>
+          </div>
         </section>
 
         {/* ── Bill Details ── */}
@@ -189,83 +209,91 @@ export const CheckoutView: React.FC = () => {
         {/* ── Payment Method ── */}
         <section>
           <h2 className="font-bold text-text-primary mb-2 text-xs uppercase tracking-wider text-gray-400">Payment Method</h2>
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-
-            {/* Option 1: Pay Now via UPI / Card */}
-            <label
-              className={`flex items-center gap-3 p-4 cursor-pointer transition-colors border-b border-gray-50 ${
-                paymentMethod === 'online' ? 'bg-brand/5' : 'hover:bg-gray-50'
-              }`}
-              onClick={() => setPaymentMethod('online')}
-            >
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                paymentMethod === 'online' ? 'border-brand' : 'border-gray-300'
-              }`}>
-                {paymentMethod === 'online' && <div className="w-2.5 h-2.5 rounded-full bg-brand" />}
+          
+          <div className="flex flex-col gap-4">
+            {/* 1. Online Payment Group */}
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">1</span>
+                <span className="font-black text-base text-brand">Online Payment</span>
               </div>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                paymentMethod === 'online' ? 'bg-brand' : 'bg-gray-100'
-              }`}>
-                <CreditCard className={`w-5 h-5 ${paymentMethod === 'online' ? 'text-white' : 'text-gray-400'}`} />
-              </div>
-              <div className="flex-1">
-                <p className={`font-bold text-sm ${paymentMethod === 'online' ? 'text-brand' : 'text-text-primary'}`}>
-                  Pay Now via UPI / Card
-                </p>
-                <p className="text-[11px] text-text-secondary">Fast and secure online payment</p>
-              </div>
-              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Recommended</span>
-            </label>
-
-            {/* Option 2: Pay on Delivery via UPI */}
-            <label
-              className={`flex items-center gap-3 p-4 cursor-pointer transition-colors border-b border-gray-50 ${
-                paymentMethod === 'upiDelivery' ? 'bg-brand/5' : 'hover:bg-gray-50'
-              }`}
-              onClick={() => setPaymentMethod('upiDelivery')}
-            >
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                paymentMethod === 'upiDelivery' ? 'border-brand' : 'border-gray-300'
-              }`}>
-                {paymentMethod === 'upiDelivery' && <div className="w-2.5 h-2.5 rounded-full bg-brand" />}
-              </div>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                paymentMethod === 'upiDelivery' ? 'bg-brand' : 'bg-gray-100'
-              }`}>
-                <Smartphone className={`w-5 h-5 ${paymentMethod === 'upiDelivery' ? 'text-white' : 'text-gray-400'}`} />
-              </div>
-              <div className="flex-1">
-                <p className={`font-bold text-sm ${paymentMethod === 'upiDelivery' ? 'text-brand' : 'text-text-primary'}`}>
-                  Pay on Delivery via UPI
-                </p>
-                <p className="text-[11px] text-text-secondary">Strictly NO CASH accepted. Scan QR at doorstep.</p>
-              </div>
-            </label>
-
-            {/* Option 3: Cash on Delivery — disabled */}
-            <div className="flex items-center gap-3 p-4 opacity-50 cursor-not-allowed select-none grayscale">
-              <div className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
-              <div className="w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center shrink-0">
-                <Banknote className="w-5 h-5 text-gray-500" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-sm text-gray-600">Cash on Delivery</p>
-                  <span className="text-[9px] font-black text-white bg-red-400/90 px-2 py-0.5 rounded-full uppercase">Unavailable</span>
+              
+              {/* Option 1a: Pay Now via UPI / Card */}
+              <label
+                className={`flex items-center gap-3 p-4 cursor-pointer transition-colors border-b border-gray-50 ${
+                  paymentMethod === 'online' ? 'bg-brand/5' : 'hover:bg-gray-50'
+                }`}
+                onClick={() => setPaymentMethod('online')}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  paymentMethod === 'online' ? 'border-brand' : 'border-gray-300'
+                }`}>
+                  {paymentMethod === 'online' && <div className="w-2.5 h-2.5 rounded-full bg-brand" />}
                 </div>
-                <p className="text-[11px] text-gray-500">Coming soon in future updates</p>
-              </div>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  paymentMethod === 'online' ? 'bg-brand' : 'bg-gray-100'
+                }`}>
+                  <CreditCard className={`w-5 h-5 ${paymentMethod === 'online' ? 'text-white' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1">
+                  <p className={`font-bold text-sm ${paymentMethod === 'online' ? 'text-brand' : 'text-text-primary'}`}>
+                    Pay Now via UPI / Card
+                  </p>
+                  <p className="text-[11px] text-text-secondary">Fast and secure online payment</p>
+                </div>
+                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Recommended</span>
+              </label>
+
+              {/* Option 1b: Pay on Delivery via UPI */}
+              <label
+                className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
+                  paymentMethod === 'upiDelivery' ? 'bg-brand/5' : 'hover:bg-gray-50'
+                }`}
+                onClick={() => setPaymentMethod('upiDelivery')}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  paymentMethod === 'upiDelivery' ? 'border-brand' : 'border-gray-300'
+                }`}>
+                  {paymentMethod === 'upiDelivery' && <div className="w-2.5 h-2.5 rounded-full bg-brand" />}
+                </div>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  paymentMethod === 'upiDelivery' ? 'bg-brand' : 'bg-gray-100'
+                }`}>
+                  <Smartphone className={`w-5 h-5 ${paymentMethod === 'upiDelivery' ? 'text-white' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1">
+                  <p className={`font-bold text-sm ${paymentMethod === 'upiDelivery' ? 'text-brand' : 'text-text-primary'}`}>
+                    Pay on Delivery via UPI
+                  </p>
+                  <p className="text-[11px] text-text-secondary">Strictly NO CASH accepted. Scan QR at doorstep.</p>
+                </div>
+              </label>
             </div>
 
-            {/* COD guardrail (silent, for unverified users over limit) */}
-            {!deliveryVerified && total > maxCodLimit && (
-              <div className="mx-3 mb-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  COD unlocks after your first successful delivery.
-                </p>
+            {/* 2. Cash Payment Group */}
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center">2</span>
+                <span className="font-black text-base text-gray-800">Cash Payment</span>
               </div>
-            )}
+
+              {/* Option 3: Cash on Delivery — disabled */}
+              <div className="flex items-center gap-3 p-4 opacity-50 cursor-not-allowed select-none grayscale">
+                <div className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
+                <div className="w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center shrink-0">
+                  <Banknote className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-sm text-gray-600">Cash on Delivery</p>
+                    <span className="text-[9px] font-black text-white bg-red-400/90 px-2 py-0.5 rounded-full uppercase">Unavailable</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500">Coming soon in future updates</p>
+                </div>
+              </div>
+
+              {/* COD guardrail (silent, for unverified users over limit) */}
+            </div>
           </div>
         </section>
 
@@ -304,21 +332,19 @@ export const CheckoutView: React.FC = () => {
             </div>
             
             <div className="p-5 overflow-y-auto">
-              
-              {/* Exact Location Button */}
-              <button className="w-full bg-brand/5 border border-brand text-brand font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 mb-6 hover:bg-brand/10 transition-colors">
-                <MapPin className="w-5 h-5" />
-                Use My Exact Location
-              </button>
+              {/* Modal Content begins */}
 
               {!isAddingNew ? (
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Saved Addresses</h3>
                   
                   {/* Mock Saved Addresses */}
-                  <label className="flex items-start gap-3 bg-white p-4 rounded-xl border border-brand/40 shadow-sm cursor-pointer relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-brand" />
-                    <input type="radio" name="address" className="mt-1" defaultChecked />
+                  <label 
+                    className={`flex items-start gap-3 bg-white p-4 rounded-xl border shadow-sm cursor-pointer relative overflow-hidden ${selectedAddressId === 'registered' ? 'border-brand/40' : 'border-gray-200'}`}
+                    onClick={() => setSelectedAddressId('registered')}
+                  >
+                    {selectedAddressId === 'registered' && <div className="absolute top-0 left-0 w-1 h-full bg-brand" />}
+                    <input type="radio" name="address" className="mt-1" checked={selectedAddressId === 'registered'} readOnly />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-bold text-sm text-text-primary">REGISTERED ADDRESS</span>
@@ -330,8 +356,12 @@ export const CheckoutView: React.FC = () => {
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 bg-white p-4 rounded-xl border border-gray-200 cursor-pointer">
-                    <input type="radio" name="address" className="mt-1" />
+                  <label 
+                    className={`flex items-start gap-3 bg-white p-4 rounded-xl border cursor-pointer relative overflow-hidden ${selectedAddressId === 'college' ? 'border-brand/40' : 'border-gray-200'}`}
+                    onClick={() => setSelectedAddressId('college')}
+                  >
+                    {selectedAddressId === 'college' && <div className="absolute top-0 left-0 w-1 h-full bg-brand" />}
+                    <input type="radio" name="address" className="mt-1" checked={selectedAddressId === 'college'} readOnly />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-bold text-sm text-text-primary">COLLEGE</span>
@@ -341,6 +371,24 @@ export const CheckoutView: React.FC = () => {
                       </p>
                     </div>
                   </label>
+                  
+                  {newLine1.trim().length > 0 && (
+                    <label 
+                      className={`flex items-start gap-3 bg-white p-4 rounded-xl border cursor-pointer relative overflow-hidden ${selectedAddressId === 'new' ? 'border-brand/40' : 'border-gray-200'}`}
+                      onClick={() => setSelectedAddressId('new')}
+                    >
+                      {selectedAddressId === 'new' && <div className="absolute top-0 left-0 w-1 h-full bg-brand" />}
+                      <input type="radio" name="address" className="mt-1" checked={selectedAddressId === 'new'} readOnly />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-sm text-text-primary">{newTitle || 'NEW ADDRESS'}</span>
+                        </div>
+                        <p className="text-sm text-text-secondary leading-snug">
+                          {newLine1}<br/>PIN: {newPin}
+                        </p>
+                      </div>
+                    </label>
+                  )}
 
                   <button 
                     onClick={() => setIsAddingNew(true)}
