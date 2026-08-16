@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../components/ui/Button';
-import { Package, MapPin, CreditCard, HelpCircle, LogOut, CheckCircle2, ArrowRight, X, User, ShoppingBag, Bell, ChevronRight, Star } from 'lucide-react';
+import { Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, MessageCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 
@@ -60,6 +60,10 @@ export const ProfileView: React.FC = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [phoneError, setPhoneError] = useState('');
+
+  // Dashboard modal states
+  const [aboutModal, setAboutModal] = useState(false);
+  const [policyModal, setPolicyModal] = useState<null | 'privacy' | 'terms' | 'refund'>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -246,62 +250,115 @@ export const ProfileView: React.FC = () => {
     </motion.div>
   );
 
+  // ─── Policy content ───────────────────────────────────────────────────────
+  const policyContent = {
+    privacy: {
+      title: 'Privacy Policy',
+      body: 'SnapIt KGF collects your name, phone number, and delivery address solely to facilitate order delivery. We do not share your data with third parties. Your location is used only for real-time delivery tracking. Data is stored securely and you may request deletion at any time by contacting support.',
+    },
+    terms: {
+      title: 'Terms of Service',
+      body: 'By using SnapIt, you agree to place orders only for lawful goods available on the platform. Orders once confirmed cannot be cancelled after preparation begins. SnapIt reserves the right to refuse service to accounts with fraudulent activity. Prices are inclusive of applicable taxes.',
+    },
+    refund: {
+      title: 'Refund Policy',
+      body: 'Refunds are processed within 5–7 business days for eligible orders. A refund is applicable if: (1) the wrong item was delivered, (2) the item was damaged upon delivery, or (3) the order was not delivered. Refund requests must be raised within 24 hours of delivery via Help & Support.',
+    },
+  };
+
   const renderDashboard = () => {
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name || 'User')}&background=059669&color=fff&size=200&font-size=0.4&bold=true`;
 
-    const menuItems = [
-      { icon: Package, label: 'My Orders', sublabel: 'Track & reorder easily', color: 'bg-emerald-50', iconColor: 'text-brand' },
-      { icon: MapPin, label: 'Saved Addresses', sublabel: 'Manage your locations', color: 'bg-blue-50', iconColor: 'text-blue-600' },
-      { icon: CreditCard, label: 'Payment Methods', sublabel: 'UPI, Cards & more', color: 'bg-violet-50', iconColor: 'text-violet-600' },
-      { icon: Bell, label: 'Notifications', sublabel: 'Order updates & offers', color: 'bg-orange-50', iconColor: 'text-orange-500' },
-      { icon: Star, label: 'Rate SnapIt', sublabel: 'Share your experience', color: 'bg-yellow-50', iconColor: 'text-yellow-500' },
-      { icon: HelpCircle, label: 'Help & Support', sublabel: 'We are here for you', color: 'bg-gray-50', iconColor: 'text-gray-500' },
+    // ── Trust tier — read from persisted profile ─────────────────────────
+    const deliveryVerified = userProfile?.deliveryVerified ?? false;
+    const orderCount       = userProfile?.completedOrdersCount ?? 0;
+    const isTrusted        = deliveryVerified || orderCount >= 1;
+
+    const tiles = [
+      {
+        icon: Package,
+        label: 'My Orders',
+        sublabel: 'Track active orders',
+        bg: 'bg-emerald-50',
+        iconColor: 'text-brand',
+        action: () => playSound('tap'),
+      },
+      {
+        icon: MapPin,
+        label: 'Saved Addresses',
+        sublabel: 'Manage delivery spots',
+        bg: 'bg-blue-50',
+        iconColor: 'text-blue-600',
+        action: () => playSound('tap'),
+      },
+      {
+        icon: MessageCircle,
+        label: 'Help & Support',
+        sublabel: 'Chat on WhatsApp',
+        bg: 'bg-green-50',
+        iconColor: 'text-green-600',
+        action: () => window.open('https://wa.me/918217649688', '_blank'),
+      },
+      {
+        icon: Info,
+        label: 'About SnapIt',
+        sublabel: 'App info & version',
+        bg: 'bg-gray-50',
+        iconColor: 'text-gray-500',
+        action: () => setAboutModal(true),
+      },
     ];
 
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col">
-        {/* Hero header card */}
-        <div className="relative overflow-hidden rounded-3xl mb-6 bg-gradient-to-br from-emerald-600 via-brand to-emerald-800 p-6 shadow-[0_12px_40px_rgba(5,150,105,0.35)]">
-          {/* decorative circles */}
+
+        {/* ── Hero header card ── */}
+        <div className="relative overflow-hidden rounded-3xl mb-5 bg-gradient-to-br from-emerald-600 via-brand to-emerald-800 p-5 shadow-[0_12px_40px_rgba(5,150,105,0.35)]">
           <div className="absolute -top-8 -right-8 w-36 h-36 bg-white/10 rounded-full" />
           <div className="absolute -bottom-10 -left-6 w-28 h-28 bg-white/5 rounded-full" />
 
           <div className="flex items-center gap-4 relative z-10">
-            <div className="w-18 h-18 rounded-2xl overflow-hidden border-2 border-white/30 shadow-lg shrink-0" style={{ width: 68, height: 68 }}>
+            <div className="rounded-2xl overflow-hidden border-2 border-white/30 shadow-lg shrink-0" style={{ width: 64, height: 64 }}>
               <img src={avatarUrl} alt={formData.name} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-0.5">Welcome back</p>
-              <h2 className="font-black text-xl text-white truncate">{formData.name || 'User'}</h2>
+              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-0.5">Welcome back</p>
+              <h2 className="font-black text-xl text-white truncate leading-tight">{formData.name || 'User'}</h2>
               <p className="text-white/60 text-xs font-mono tracking-wider">+91 {formData.phone}</p>
             </div>
-            <div className="shrink-0 bg-white/15 backdrop-blur-sm rounded-xl px-3 py-2 text-center border border-white/20">
-              <CheckCircle2 className="w-4 h-4 text-white mx-auto mb-0.5" />
-              <span className="text-white text-[9px] font-black uppercase tracking-wider">Verified</span>
-            </div>
+            {/* Dynamic trust badge ─ upgrades silently after 1st delivery */}
+            {isTrusted ? (
+              <div className="shrink-0 bg-amber-400/20 backdrop-blur-md text-amber-200 text-xs px-2.5 py-1 rounded-full font-bold border border-amber-300/40 flex items-center gap-1">
+                <span>⭐</span>
+                Verified Customer
+              </div>
+            ) : (
+              <div className="shrink-0 bg-white/20 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-full font-medium border border-white/30 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                Phone Verified
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Quick stats strip */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {[{ label: 'Orders', value: '0' }, { label: 'Saved', value: '1' }, { label: 'Points', value: '0' }].map(stat => (
-            <div key={stat.label} className="bg-white rounded-2xl py-3 px-2 text-center shadow-sm border border-gray-100">
-              <p className="font-black text-xl text-text-primary">{stat.value}</p>
-              <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">{stat.label}</p>
-            </div>
-          ))}
-        </div>
+        {/* ── Stats bar: only visible when orderCount > 0 ── */}
+        {orderCount > 0 && (
+          <div className="bg-white rounded-2xl px-5 py-3 mb-5 shadow-sm border border-gray-100 flex items-center justify-center gap-2">
+            <Package className="w-4 h-4 text-brand" />
+            <span className="font-bold text-sm text-text-primary">📦 {orderCount} Total Orders Placed</span>
+          </div>
+        )}
 
-        {/* Menu grid — 2 columns */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {menuItems.map(({ icon: Icon, label, sublabel, color, iconColor }) => (
+        {/* ── 2×2 Action tiles ── */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {tiles.map(({ icon: Icon, label, sublabel, bg, iconColor, action }) => (
             <motion.button
               key={label}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => playSound('tap')}
+              whileTap={{ scale: 0.95 }}
+              onClick={action}
               className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-start gap-3 text-left active:bg-gray-50 transition-colors"
             >
-              <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center`}>
+              <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center`}>
                 <Icon className={`h-5 w-5 ${iconColor}`} />
               </div>
               <div>
@@ -312,14 +369,82 @@ export const ProfileView: React.FC = () => {
           ))}
         </div>
 
-        {/* Log Out */}
-        <button 
+        {/* ── Legal footer ── */}
+        <div className="flex justify-center gap-5 mb-5">
+          {(['privacy', 'terms', 'refund'] as const).map((key) => (
+            <button
+              key={key}
+              onClick={() => setPolicyModal(key)}
+              className="text-xs text-gray-400 hover:text-brand transition-colors font-medium"
+            >
+              {key === 'privacy' ? 'Privacy Policy' : key === 'terms' ? 'Terms of Service' : 'Refund Policy'}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Sign Out ── */}
+        <button
           onClick={() => { logout(); setStep('form'); }}
-          className="flex items-center justify-center gap-2 w-full py-4 text-red-500 font-black active:bg-red-50 rounded-2xl transition-colors text-sm tracking-wider border border-red-100 bg-red-50/50"
+          className="flex items-center justify-center gap-2 w-full py-3.5 text-red-500 font-black rounded-2xl text-sm tracking-wider border border-red-100 bg-red-50/50 active:bg-red-100 transition-colors"
         >
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
+
+        {/* ── About SnapIt Modal ── */}
+        <AnimatePresence>
+          {aboutModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setAboutModal(false)} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-white rounded-3xl shadow-2xl p-7 w-full max-w-sm flex flex-col items-center text-center"
+              >
+                <button onClick={() => setAboutModal(false)}
+                  className="absolute top-4 right-4 w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-brand rounded-2xl flex items-center justify-center mb-4 shadow-[0_8px_20px_rgba(5,150,105,0.3)]">
+                  <ShoppingBag className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-black text-xl text-text-primary mb-1">SnapIt KGF</h3>
+                <p className="text-text-secondary text-sm mb-1">Version 1.0.0 · Phase 1</p>
+                <p className="text-brand text-xs font-bold mb-5">Built by Dhakav Designers</p>
+                <div className="bg-gray-50 rounded-2xl p-4 w-full text-left text-xs text-gray-500 space-y-2">
+                  <p>🏠 <strong className="text-gray-700">Region:</strong> KGF, Karnataka</p>
+                  <p>📦 <strong className="text-gray-700">Focus:</strong> Grocery &amp; Local Food Delivery</p>
+                  <p>📞 <strong className="text-gray-700">Support:</strong> +91 82176 49688</p>
+                  <p>✉️ <strong className="text-gray-700">Email:</strong> support@snapitkgf.in</p>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Policy Modals (bottom-sheet) ── */}
+        <AnimatePresence>
+          {policyModal && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPolicyModal(null)} />
+              <motion.div
+                initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }}
+                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                className="relative bg-white rounded-t-[2.5rem] shadow-2xl px-6 pt-5 pb-10 w-full max-w-sm flex flex-col"
+              >
+                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+                <button onClick={() => setPolicyModal(null)}
+                  className="absolute top-5 right-5 w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+                <h3 className="font-black text-lg text-text-primary mb-3">{policyContent[policyModal].title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{policyContent[policyModal].body}</p>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
       </motion.div>
     );
   };

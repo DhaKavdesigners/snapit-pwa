@@ -4,7 +4,7 @@ import { useCartStore } from '../../store/cartStore';
 import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
 import { formatCurrency } from '../../utils/currency';
 import { Button } from '../../components/ui/Button';
-import { Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
 import { EmptyState } from '../../components/ui/EmptyState';
 
 const allProducts = [...mockShoppingProducts, ...mockFoodProducts];
@@ -18,9 +18,9 @@ export const CartView: React.FC = () => {
     product: allProducts.find(p => p.id === item.productId)
   })).filter(item => item.product !== undefined);
 
-  const itemTotal = cartItemsWithDetails.reduce((sum, item) => sum + (item.product!.price * item.quantity), 0);
-  const deliveryFee = 3000; // 30 Rs
-  const total = itemTotal + deliveryFee;
+  const itemTotal   = cartItemsWithDetails.reduce((sum, item) => sum + (item.product!.price * item.quantity), 0);
+  const deliveryFee = 3000; // ₹30
+  const total       = itemTotal + deliveryFee;
 
   if (items.length === 0) {
     return (
@@ -74,42 +74,33 @@ export const CartView: React.FC = () => {
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 mb-6">
-        <h3 className="font-bold text-lg mb-4 text-text-primary">Bill Details</h3>
-        
-        <div className="flex justify-between text-sm mb-3 text-text-secondary">
-          <span>Item Total</span>
-          <span className="font-medium text-text-primary">{formatCurrency(itemTotal)}</span>
+      {/* ── Bill Summary (transparent, no zero rows) ── */}
+      <div className="mt-auto">
+        <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 mb-4">
+          <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wider mb-3">Bill Summary</h3>
+          <div className="flex justify-between text-sm mb-2.5">
+            <span className="text-text-secondary">Subtotal</span>
+            <span className="font-semibold text-text-primary">{formatCurrency(itemTotal)}</span>
+          </div>
+          <div className="flex justify-between text-sm mb-3">
+            <span className="text-text-secondary">Delivery</span>
+            <span className="font-semibold text-text-primary">{formatCurrency(deliveryFee)}</span>
+          </div>
+          <div className="flex justify-between text-sm mb-4">
+            <span className="text-text-secondary">Taxes & fees</span>
+            <span className="font-semibold text-text-primary">{formatCurrency(0)}</span>
+          </div>
+          <div className="border-t border-dashed border-gray-200 pt-3 flex justify-between">
+            <span className="font-black text-base text-text-primary">To Pay</span>
+            <span className="font-black text-base text-text-primary">{formatCurrency(total)}</span>
+          </div>
         </div>
-        <div className="flex justify-between text-sm mb-3 text-text-secondary">
-          <span>Delivery Partner Fee</span>
-          <span className="font-medium text-text-primary">{formatCurrency(deliveryFee)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-3 text-text-secondary">
-          <span>Online Convenience Fee</span>
-          <span className="font-medium text-text-primary">{formatCurrency(0)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-3 text-text-secondary">
-          <span>Handling Fee</span>
-          <span className="font-medium text-text-primary">{formatCurrency(0)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-4 text-text-secondary">
-          <span>GST & Taxes</span>
-          <span className="font-medium text-text-primary">{formatCurrency(0)}</span>
-        </div>
-        
-        <div className="border-t border-dashed border-gray-200 pt-4 flex justify-between font-bold text-lg text-text-primary">
-          <span>To Pay</span>
-          <span>{formatCurrency(total)}</span>
-        </div>
-      </div>
 
-      <div className="mt-auto px-1">
-        <Button 
-          className="w-full h-14 text-lg font-bold shadow-[0_8px_16px_rgba(4,107,53,0.3)] hover:scale-[1.01] transition-transform flex items-center justify-between px-6 bg-brand"
+        <Button
+          className="w-full h-14 text-base font-bold shadow-[0_8px_16px_rgba(4,107,53,0.3)] hover:scale-[1.01] transition-transform flex items-center justify-between px-6 bg-brand"
           onClick={() => navigate('/checkout')}
         >
-          <span>Proceed to Pay</span>
+          <span>Proceed to Checkout</span>
           <div className="flex items-center gap-2">
             <span>{formatCurrency(total)}</span>
             <ArrowRight className="h-5 w-5" />
@@ -119,3 +110,5 @@ export const CartView: React.FC = () => {
     </div>
   );
 };
+
+

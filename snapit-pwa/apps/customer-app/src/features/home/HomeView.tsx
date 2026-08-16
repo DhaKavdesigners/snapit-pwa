@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Tag } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { SearchBar } from './SearchBar';
 import { ContextToggle } from './ContextToggle';
 import { BannerCarousel } from './BannerCarousel';
@@ -65,9 +66,9 @@ export const HomeView: React.FC = () => {
   const fastfood = products?.filter(p => p.subCategory === 'Fast Food & Rolls') || [];
   const bakery = products?.filter(p => ['Breads & Cakes', 'Puffs & Savories'].includes(p.subCategory || '')) || [];
 
-  // Deduplication Logic
+  // Deduplication Logic for "All Essentials" / "All Menu Items"
   const featuredIds = activeContext === 'shopping' 
-    ? new Set([...snacks, ...dairy, ...masalas, ...homecare].map(p => p.id))
+    ? new Set([...snacks.map(p => p.id), ...dairy.map(p => p.id), ...masalas.map(p => p.id), ...homecare.map(p => p.id)])
     : new Set([...biryani, ...fastfood, ...bakery].map(p => p.id));
     
   const nonFeaturedProducts = products?.filter(p => !featuredIds.has(p.id)) || [];
@@ -82,7 +83,7 @@ export const HomeView: React.FC = () => {
   };
 
   const shoppingAnchors = [
-    { id: 'section-grocery', name: 'Grocery', emoji: '🛒' },
+    { id: 'section-masala', name: 'Grocery', emoji: '🛒' },
     { id: 'section-dairy', name: 'Dairy', emoji: '🥛' },
     { id: 'section-snacks', name: 'Snacks', emoji: '🍿' },
     { id: 'section-homecare', name: 'Home Care', emoji: '🧼' },
@@ -99,7 +100,10 @@ export const HomeView: React.FC = () => {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="p-4 pt-2 bg-slate-50 min-h-screen">
+        {/* 1. Search Bar */}
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
+
+        {/* 2. Context Toggle */}
         <ContextToggle />
 
         {isError && <ErrorState onRetry={handleRefresh} />}
@@ -108,7 +112,7 @@ export const HomeView: React.FC = () => {
         {(!isError && !isEmpty) && (
           <>
             {isSearching ? (
-              <div className="mb-4">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
                 <h3 className="font-bold text-lg text-gray-900 mb-3">Search Results</h3>
                 {searchedProducts.length > 0 ? (
                   <>
@@ -127,9 +131,9 @@ export const HomeView: React.FC = () => {
                       </div>
                     )}
                     <div className="grid grid-cols-3 gap-2">
-                    {searchedProducts.map(product => (
-                      <ProductCard key={product.id} product={product} fullWidth />
-                    ))}
+                      {searchedProducts.map(product => (
+                        <ProductCard key={product.id} product={product} fullWidth />
+                      ))}
                     </div>
                   </>
                 ) : (
@@ -139,151 +143,167 @@ export const HomeView: React.FC = () => {
                     <p className="text-sm text-gray-500">No items found matching "{searchQuery}"</p>
                   </div>
                 )}
-              </div>
+              </motion.div>
             ) : (
-              <>
-                <BannerCarousel />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeContext}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {/* 3. Hero Banner Carousel */}
+                  <BannerCarousel />
 
-                {/* ── Category Anchor Jump Chips ── */}
-                <div className="mb-6 sticky top-[132px] z-30 bg-slate-50/90 backdrop-blur-md py-2 -mx-4 px-4 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.05)] border-b border-gray-100">
-                  <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar">
-                    {anchors.map(a => (
-                      <button
-                        key={a.id}
-                        onClick={() => scrollToSection(a.id)}
-                        className="flex items-center gap-1.5 snap-start shrink-0 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all text-sm font-semibold text-gray-700 whitespace-nowrap"
+                  {/* 4. Category Anchor Jump Chips */}
+                  <div className="mb-6 sticky top-[132px] z-30 bg-slate-50/90 backdrop-blur-md py-2 -mx-4 px-4 shadow-[0_4px_10px_-4px_rgba(0,0,0,0.05)] border-b border-gray-100">
+                    <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar">
+                      {anchors.map(a => (
+                        <button
+                          key={a.id}
+                          onClick={() => scrollToSection(a.id)}
+                          className="flex items-center gap-1.5 snap-start shrink-0 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all text-sm font-semibold text-gray-700 whitespace-nowrap"
+                        >
+                          <span>{a.emoji}</span>
+                          {a.name}
+                        </button>
+                      ))}
+                      <Link
+                        to="/explore"
+                        className="flex items-center gap-1.5 snap-start shrink-0 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all text-sm font-semibold text-gray-500 whitespace-nowrap"
                       >
-                        <span>{a.emoji}</span>
-                        {a.name}
-                      </button>
-                    ))}
-                    <Link
-                      to="/explore"
-                      className="flex items-center gap-1.5 snap-start shrink-0 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all text-sm font-semibold text-gray-500 whitespace-nowrap"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Explore
-                    </Link>
+                        <Plus className="h-4 w-4" />
+                        Explore
+                      </Link>
+                    </div>
                   </div>
-                </div>
 
-                {/* ── 🔥 Popular in Robertsonpet ── */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-lg text-gray-900">
-                      🔥 Popular in Robertsonpet
-                    </h3>
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar scrollbar-none py-2 -mx-4 px-4">
-                    {trendingLoading
-                      ? Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-trend-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
-                      : trending?.map(product => <ProductCard key={product.id} product={product} />)
-                    }
-                  </div>
-                </div>
-
-                {/* ── 🏷️ Today's Picks ── */}
-                {activeContext === 'shopping' && (
+                  {/* 5. 🔥 Popular in Robertsonpet */}
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Tag className="w-5 h-5 text-emerald-500" fill="currentColor" />
-                        <h3 className="font-bold text-lg text-gray-900">Today's Picks</h3>
-                      </div>
+                      <h3 className="font-bold text-lg text-gray-900">
+                        🔥 Popular in Robertsonpet
+                      </h3>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar scrollbar-none py-2 -mx-4 px-4">
-                      {todaysLoading
-                        ? Array(3).fill(0).map((_, i) => <Skeleton key={`skeleton-tp-${i}`} className="min-w-[150px] h-52 shrink-0 snap-start rounded-xl" />)
-                        : todaysPicks?.map(product => <ProductCard key={product.id} product={product} />)
+                    <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                      {trendingLoading
+                        ? Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-trend-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
+                        : trending?.map(product => <ProductCard key={product.id} product={product} />)
                       }
                     </div>
                   </div>
-                )}
 
-                {/* ── CATEGORIZED HORIZONTAL ROWS ── */}
-                {activeContext === 'shopping' ? (
-                  <>
-                    <section id="section-grocery" className="mb-6 scroll-mt-32">
-                      <h3 className="font-bold text-lg text-gray-900 mb-3">🛒 Everyday Groceries</h3>
-                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                        {productsLoading ? (
-                          Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-groc-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
-                        ) : (
-                          masalas.map(product => <ProductCard key={product.id} product={product} />)
-                        )}
+                  {/* 6. 🏷️ Today's Picks */}
+                  {activeContext === 'shopping' && (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Tag className="w-5 h-5 text-emerald-500" fill="currentColor" />
+                          <h3 className="font-bold text-lg text-gray-900">Today's Picks</h3>
+                        </div>
                       </div>
-                    </section>
-
-                    <section id="section-dairy" className="mb-6 scroll-mt-32">
-                      <h3 className="font-bold text-lg text-gray-900 mb-3">🥛 Dairy Items</h3>
                       <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                        {dairy.map(product => <ProductCard key={product.id} product={product} />)}
+                        {todaysLoading
+                          ? Array(3).fill(0).map((_, i) => <Skeleton key={`skeleton-tp-${i}`} className="min-w-[150px] h-52 shrink-0 snap-start rounded-xl" />)
+                          : todaysPicks?.map(product => <ProductCard key={product.id} product={product} />)
+                        }
                       </div>
-                    </section>
-
-                    <section id="section-snacks" className="mb-6 scroll-mt-32">
-                      <h3 className="font-bold text-lg text-gray-900 mb-3">🍿 Snacks & Juices</h3>
-                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                        {snacks.map(product => <ProductCard key={product.id} product={product} />)}
-                      </div>
-                    </section>
-
-                    <section id="section-homecare" className="mb-6 scroll-mt-32">
-                      <h3 className="font-bold text-lg text-gray-900 mb-3">🧼 Home Care & Cleaning</h3>
-                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                        {homecare.map(product => <ProductCard key={product.id} product={product} />)}
-                      </div>
-                    </section>
-                  </>
-                ) : (
-                  <>
-                    <section id="section-biryani" className="mb-6 scroll-mt-32">
-                      <h3 className="font-bold text-lg text-gray-900 mb-3">🍚 Biryani Specialties</h3>
-                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                        {productsLoading ? (
-                          Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-biry-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
-                        ) : (
-                          biryani.map(product => <ProductCard key={product.id} product={product} />)
-                        )}
-                      </div>
-                    </section>
-
-                    <section id="section-fastfood" className="mb-6 scroll-mt-32">
-                      <h3 className="font-bold text-lg text-gray-900 mb-3">🍔 Fast Food & Rolls</h3>
-                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                        {fastfood.map(product => <ProductCard key={product.id} product={product} />)}
-                      </div>
-                    </section>
-
-                    <section id="section-bakery" className="mb-6 scroll-mt-32">
-                      <h3 className="font-bold text-lg text-gray-900 mb-3">🥐 Bakery & Sweets</h3>
-                      <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                        {bakery.map(product => <ProductCard key={product.id} product={product} />)}
-                      </div>
-                    </section>
-                  </>
-                )}
-
-                {/* ── All Products Feed (Grid) ── */}
-                <section id="section-all-essentials" className="mb-4 scroll-mt-32">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-lg text-gray-900">
-                      {activeContext === 'shopping' ? '🛒 All Essentials' : '🍽️ All Menu Items'}
-                    </h3>
-                  </div>
-                  {productsLoading ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      {Array(6).fill(0).map((_, i) => <Skeleton key={`skeleton-grid-${i}`} className="h-56 rounded-2xl" />)}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {deduplicatedAllEssentials.map(product => (
-                        <ProductCard key={product.id} product={product} fullWidth />
-                      ))}
                     </div>
                   )}
-                </section>
-              </>
+
+                  {/* 7. CATEGORIZED HORIZONTAL SCROLL ROWS */}
+                  {activeContext === 'shopping' ? (
+                    <>
+                      {/* id="section-snacks" */}
+                      <section id="section-snacks" className="mb-6 scroll-mt-32">
+                        <h3 className="font-bold text-lg text-gray-900 mb-3">🍿 Snacks & Juices</h3>
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                          {productsLoading ? (
+                            Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-snk-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
+                          ) : (
+                            snacks.map(product => <ProductCard key={product.id} product={product} />)
+                          )}
+                        </div>
+                      </section>
+
+                      {/* id="section-dairy" */}
+                      <section id="section-dairy" className="mb-6 scroll-mt-32">
+                        <h3 className="font-bold text-lg text-gray-900 mb-3">🥛 Dairy Items</h3>
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                          {dairy.map(product => <ProductCard key={product.id} product={product} />)}
+                        </div>
+                      </section>
+
+                      {/* id="section-masala" */}
+                      <section id="section-masala" className="mb-6 scroll-mt-32">
+                        <h3 className="font-bold text-lg text-gray-900 mb-3">🧂 Cooking Masalas & Spices</h3>
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                          {masalas.map(product => <ProductCard key={product.id} product={product} />)}
+                        </div>
+                      </section>
+
+                      {/* id="section-homecare" */}
+                      <section id="section-homecare" className="mb-6 scroll-mt-32">
+                        <h3 className="font-bold text-lg text-gray-900 mb-3">🧼 Home Care & Cleaning</h3>
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                          {homecare.map(product => <ProductCard key={product.id} product={product} />)}
+                        </div>
+                      </section>
+                    </>
+                  ) : (
+                    <>
+                      {/* id="section-biryani" */}
+                      <section id="section-biryani" className="mb-6 scroll-mt-32">
+                        <h3 className="font-bold text-lg text-gray-900 mb-3">🍚 Biryani Specialties</h3>
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                          {productsLoading ? (
+                            Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-biry-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
+                          ) : (
+                            biryani.map(product => <ProductCard key={product.id} product={product} />)
+                          )}
+                        </div>
+                      </section>
+
+                      {/* id="section-fastfood" */}
+                      <section id="section-fastfood" className="mb-6 scroll-mt-32">
+                        <h3 className="font-bold text-lg text-gray-900 mb-3">🍔 Fast Food & Rolls</h3>
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                          {fastfood.map(product => <ProductCard key={product.id} product={product} />)}
+                        </div>
+                      </section>
+
+                      {/* id="section-bakery" */}
+                      <section id="section-bakery" className="mb-6 scroll-mt-32">
+                        <h3 className="font-bold text-lg text-gray-900 mb-3">🥐 Bakery & Sweets</h3>
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                          {bakery.map(product => <ProductCard key={product.id} product={product} />)}
+                        </div>
+                      </section>
+                    </>
+                  )}
+
+                  {/* 8. id="section-all-essentials" (3-Column Grid) */}
+                  <section id="section-all-essentials" className="mb-4 scroll-mt-32">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-lg text-gray-900">
+                        {activeContext === 'shopping' ? '🛒 All Essentials' : '🍽️ All Menu Items'}
+                      </h3>
+                    </div>
+                    {productsLoading ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {Array(6).fill(0).map((_, i) => <Skeleton key={`skeleton-grid-${i}`} className="h-56 rounded-2xl" />)}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {deduplicatedAllEssentials.map(product => (
+                          <ProductCard key={product.id} product={product} fullWidth />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </motion.div>
+              </AnimatePresence>
             )}
           </>
         )}

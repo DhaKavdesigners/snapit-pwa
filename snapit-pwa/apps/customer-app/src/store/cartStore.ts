@@ -1,16 +1,26 @@
 import { create } from 'zustand';
 import { CartItem } from '../types';
 
+export interface LastOrder {
+  orderId: string;
+  total: number;       // in paise
+  itemNames: string[]; // product names at time of order
+  paymentMethod: 'upi' | 'upiDelivery';
+}
+
 interface CartState {
   items: CartItem[];
+  lastOrder: LastOrder | null;
   addItem: (productId: string) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  saveLastOrder: (order: LastOrder) => void;
   clearCart: () => void;
 }
 
 export const useCartStore = create<CartState>((set) => ({
   items: [],
+  lastOrder: null,
   addItem: (productId) =>
     set((state) => {
       const existing = state.items.find((i) => i.productId === productId);
@@ -40,5 +50,7 @@ export const useCartStore = create<CartState>((set) => ({
         ),
       };
     }),
+  saveLastOrder: (order) => set({ lastOrder: order }),
   clearCart: () => set({ items: [] }),
 }));
+
