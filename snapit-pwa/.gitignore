@@ -19,11 +19,7 @@ build/
 .env.test.local
 .env.production.local
 *.env
-<<<<<<< HEAD
-.env.txt
-=======
 db_auth.env.txt
->>>>>>> 678f3080393ba6af281ee5fcb8d8f8467e352a60
 
 # ── Logs ─────────────────────────────────────────────────
 npm-debug.log*
