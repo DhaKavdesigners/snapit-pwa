@@ -37,13 +37,14 @@ export const CartView: React.FC = () => {
   }
 
   return (
-    <div className="p-4 pt-4 pb-32 h-full overflow-y-auto bg-gray-50 flex flex-col">
-      <h2 className="font-bold text-2xl text-text-primary mb-6 flex items-center gap-2">
-        <ShoppingBag className="h-6 w-6 text-brand" />
-        Your Cart
-      </h2>
+    <div className="h-full bg-gray-50 flex flex-col relative">
+      <div className="flex-1 p-4 pt-4 pb-[280px]">
+        <h2 className="font-bold text-2xl text-text-primary mb-6 flex items-center gap-2">
+          <ShoppingBag className="h-6 w-6 text-brand" />
+          Your Cart
+        </h2>
 
-      <div className="bg-white rounded-3xl p-4 shadow-sm mb-6 flex flex-col gap-4">
+        <div className="bg-white rounded-3xl p-4 shadow-sm mb-6 flex flex-col gap-4">
         {cartItemsWithDetails.map((item) => (
           <div key={item.productId} className="flex gap-4 border-b border-gray-50 pb-4 last:border-0 last:pb-0">
             <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
@@ -74,25 +75,26 @@ export const CartView: React.FC = () => {
         ))}
       </div>
 
-      {/* ── Bill Summary (transparent, no zero rows) ── */}
-      <div className="mt-auto">
-        <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 mb-4">
-          <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wider mb-3">Bill Summary</h3>
-          <div className="flex justify-between text-sm mb-2.5">
-            <span className="text-text-secondary">Subtotal</span>
+      </div>
+
+      {/* ── Bill Summary (Fixed Footer) ── */}
+      <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-md bg-white px-4 py-3 border-t border-gray-100 shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.05)] z-40 rounded-t-3xl pb-4">
+        <div className="bg-gray-50/50 rounded-2xl px-5 py-3 border border-gray-100 mb-3">
+          <div className="flex justify-between text-xs mb-2">
+            <span className="text-text-secondary font-medium">Subtotal</span>
             <span className="font-semibold text-text-primary">{formatCurrency(itemTotal)}</span>
           </div>
-          <div className="flex justify-between text-sm mb-3">
-            <span className="text-text-secondary">Delivery</span>
+          <div className="flex justify-between text-xs mb-2">
+            <span className="text-text-secondary font-medium">Delivery</span>
             <span className="font-semibold text-text-primary">{formatCurrency(deliveryFee)}</span>
           </div>
-          <div className="flex justify-between text-sm mb-4">
-            <span className="text-text-secondary">Taxes & fees</span>
+          <div className="flex justify-between text-xs mb-3">
+            <span className="text-text-secondary font-medium">Taxes & fees</span>
             <span className="font-semibold text-text-primary">{formatCurrency(0)}</span>
           </div>
-          <div className="border-t border-dashed border-gray-200 pt-3 flex justify-between">
-            <span className="font-black text-base text-text-primary">To Pay</span>
-            <span className="font-black text-base text-text-primary">{formatCurrency(total)}</span>
+          <div className="border-t border-dashed border-gray-200 pt-2 flex justify-between">
+            <span className="font-black text-sm text-text-primary">To Pay</span>
+            <span className="font-black text-sm text-text-primary">{formatCurrency(total)}</span>
           </div>
         </div>
 
