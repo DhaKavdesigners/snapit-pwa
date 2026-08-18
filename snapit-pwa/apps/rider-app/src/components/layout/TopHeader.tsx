@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRider } from '@/context/RiderContext';
 import { Smartphone, Monitor } from 'lucide-react';
 
@@ -33,7 +32,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
           <Link href="/profile" className="flex items-center gap-2 group">
             <div className="w-9 h-9 rounded-full relative overflow-hidden ring-2 ring-primary/20 p-[1px] bg-white shadow-sm transition-transform group-hover:scale-105">
               <img
-                src={rider.avatarUrl}
+                src={rider.selfieCapturedUrl || rider.avatarUrl}
                 alt={rider.name}
                 className="w-full h-full object-cover rounded-full"
               />
@@ -69,8 +68,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
           )}
         </div>
 
-        {/* Right: Online Toggle & Frame Switcher */}
-        <div className="flex items-center gap-2">
+        {/* Right: Online / Offline Toggle Switch & Frame Switcher */}
+        <div className="flex items-center gap-2.5">
           {/* Mobile/Desktop Presentation toggle */}
           <button
             onClick={toggleDesktopFrame}
@@ -80,24 +79,42 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
             {desktopFrame ? <Smartphone className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
           </button>
 
-          {/* Online/Offline pill button matching Stitch */}
-          <button
+          {/* Real Animated Sliding Toggle Switch */}
+          <div
             onClick={toggleOnline}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 shadow-sm active:scale-95 ${
-              isOnline
-                ? 'bg-primary-container/20 border-primary-container text-primary font-bold hover:bg-primary-container/30'
-                : 'bg-surface-container border-outline-variant text-secondary font-medium hover:bg-surface-container-high'
-            }`}
+            className="flex items-center gap-2 cursor-pointer select-none group"
+            title={`Click to switch ${isOnline ? 'Offline' : 'Online'}`}
           >
-            <div
-              className={`w-2 h-2 rounded-full ${
-                isOnline ? 'bg-primary animate-pulse' : 'bg-secondary'
+            <span
+              className={`text-xs font-bold transition-colors ${
+                isOnline ? 'text-primary' : 'text-secondary'
               }`}
-            />
-            <span className="text-xs tracking-tight">
+            >
               {isOnline ? 'Online' : 'Offline'}
             </span>
-          </button>
+
+            {/* Toggle Track */}
+            <div
+              className={`w-12 h-6.5 rounded-full p-0.5 transition-colors duration-300 relative shadow-inner ${
+                isOnline
+                  ? 'bg-primary border border-primary-container shadow-glow'
+                  : 'bg-slate-300 border border-slate-400/60'
+              }`}
+            >
+              {/* Sliding Circular Thumb Knob */}
+              <div
+                className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${
+                  isOnline ? 'translate-x-[22px]' : 'translate-x-0'
+                }`}
+              >
+                <div
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                    isOnline ? 'bg-primary animate-pulse' : 'bg-slate-400'
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

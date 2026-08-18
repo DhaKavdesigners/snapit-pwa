@@ -2,23 +2,23 @@
 
 import React, { useState } from 'react';
 import { useRider } from '@/context/RiderContext';
-import { X, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { X, CheckCircle2, ArrowRight, ShieldCheck, Building2, Wallet } from 'lucide-react';
 
 interface CashoutModalProps {
   onClose: () => void;
 }
 
 export const CashoutModal: React.FC<CashoutModalProps> = ({ onClose }) => {
-  const { earnings, rider, cashoutEarnings } = useRider();
-  const [amount, setAmount] = useState(earnings.today);
+  const { rider, transferWalletToBank } = useRider();
+  const [amount, setAmount] = useState(rider.walletBalance);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleCashout = () => {
-    if (amount <= 0 || amount > earnings.today) return;
+    if (amount <= 0 || amount > rider.walletBalance) return;
     setIsProcessing(true);
     setTimeout(() => {
-      cashoutEarnings(amount);
+      transferWalletToBank(amount);
       setIsProcessing(false);
       setIsSuccess(true);
     }, 1200);
@@ -29,13 +29,15 @@ export const CashoutModal: React.FC<CashoutModalProps> = ({ onClose }) => {
       <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-slide-up">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base text-on-surface">Instant Payout</h2>
-              <p className="text-[11px] text-secondary">Direct UPI Transfer (Zero fee)</p>
+              <h2 className="font-bold text-base text-on-surface leading-tight">
+                Transfer Wallet to Main Account
+              </h2>
+              <p className="text-[11px] text-secondary">Instant settlement (0% fee)</p>
             </div>
           </div>
           <button
@@ -47,25 +49,29 @@ export const CashoutModal: React.FC<CashoutModalProps> = ({ onClose }) => {
         </div>
 
         {isSuccess ? (
-          /* Transfer Success Receipt State */
+          /* Transfer Success Receipt */
           <div className="flex flex-col items-center text-center py-4 gap-3 animate-scale-up">
             <div className="w-16 h-16 rounded-full bg-primary-container/20 text-primary flex items-center justify-center mb-1">
               <CheckCircle2 className="w-10 h-10 animate-pulse-soft" />
             </div>
-            <h3 className="font-bold text-lg text-on-surface">Transfer Initiated!</h3>
-            <p className="text-xs text-secondary max-w-[260px]">
-              ₹{amount.toLocaleString()} has been sent to UPI ID <br />
-              <span className="font-mono font-bold text-on-surface">{rider.upiId}</span>
+            <h3 className="font-bold text-lg text-on-surface">Transfer Successful!</h3>
+            <p className="text-xs text-secondary max-w-[280px]">
+              ₹{amount.toLocaleString()} was transferred from your Snapit Wallet to <br />
+              <strong className="font-mono text-on-surface">{rider.upiId}</strong> ({rider.bankName || 'HDFC Bank'})
             </p>
 
             <div className="bg-surface-container-low rounded-2xl p-4 w-full text-left space-y-2 border border-slate-200 text-xs mt-2">
               <div className="flex justify-between">
                 <span className="text-secondary">Transaction Ref</span>
-                <span className="font-mono font-bold">UPI-{Date.now().toString().slice(-8)}</span>
+                <span className="font-mono font-bold">TXN-{Date.now().toString().slice(-8)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-secondary">Bank Status</span>
-                <span className="text-primary font-bold">Processing (Instant)</span>
+                <span className="text-secondary">Destination Bank</span>
+                <span className="font-semibold text-on-surface">{rider.bankName || 'HDFC Bank Ltd'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-secondary">Settlement Status</span>
+                <span className="text-primary font-bold">Credited Instantly</span>
               </div>
             </div>
 
@@ -73,44 +79,49 @@ export const CashoutModal: React.FC<CashoutModalProps> = ({ onClose }) => {
               onClick={onClose}
               className="w-full py-3.5 mt-3 bg-primary text-white font-bold text-xs rounded-xl shadow-lift hover:bg-primary/90 transition-colors"
             >
-              Done
+              Done & Return to Wallet
             </button>
           </div>
         ) : (
-          /* Amount & Transfer Form */
+          /* Transfer Form */
           <>
-            <div className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant/30">
-              <span className="text-[11px] font-semibold text-secondary uppercase tracking-wider">
-                Available to Withdraw
+            {/* Available Wallet Balance */}
+            <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                Available Wallet Balance
               </span>
-              <p className="text-3xl font-black text-on-surface font-mono mt-1">
-                ₹{earnings.today.toLocaleString()}
+              <p className="text-3xl font-black font-mono mt-1 text-white">
+                ₹{rider.walletBalance.toLocaleString()}
               </p>
             </div>
 
-            {/* Target UPI Account details */}
-            <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl">
+            {/* Destination Main Bank / UPI Account Details */}
+            <div className="flex items-center justify-between p-3.5 bg-surface-container-low border border-slate-200 rounded-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                  UPI
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                  <Building2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-on-surface">{rider.upiId}</p>
-                  <p className="text-[10px] text-secondary">Verified Bank Account</p>
+                  <p className="text-xs font-bold text-on-surface">
+                    {rider.bankName || 'HDFC Bank'} ({rider.upiId})
+                  </p>
+                  <p className="text-[10px] text-secondary font-mono">
+                    A/C: ••••{rider.accountNumber?.slice(-4) || '9281'} • Verified
+                  </p>
                 </div>
               </div>
-              <ShieldCheck className="w-5 h-5 text-primary" />
+              <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
             </div>
 
-            {/* Amount Slider or Quick Select */}
+            {/* Amount input & Quick All button */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-semibold text-secondary">
-                <span>Enter Amount</span>
+                <span>Enter Amount to Transfer</span>
                 <button
-                  onClick={() => setAmount(earnings.today)}
-                  className="text-primary hover:underline font-bold"
+                  onClick={() => setAmount(rider.walletBalance)}
+                  className="text-primary hover:underline font-bold text-[11px]"
                 >
-                  Withdraw All
+                  Transfer Max (₹{rider.walletBalance})
                 </button>
               </div>
 
@@ -118,8 +129,8 @@ export const CashoutModal: React.FC<CashoutModalProps> = ({ onClose }) => {
                 <span className="absolute left-4 text-xl font-bold text-secondary">₹</span>
                 <input
                   type="number"
-                  min={100}
-                  max={earnings.today}
+                  min={1}
+                  max={rider.walletBalance}
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
                   className="w-full pl-9 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-lg font-bold font-mono outline-none focus:border-primary"
@@ -127,20 +138,20 @@ export const CashoutModal: React.FC<CashoutModalProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* Cashout Button */}
+            {/* Submit Button */}
             <button
               onClick={handleCashout}
-              disabled={isProcessing || amount <= 0 || amount > earnings.today}
-              className="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm rounded-xl shadow-lift hover:opacity-95 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isProcessing || amount <= 0 || amount > rider.walletBalance}
+              className="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm rounded-2xl shadow-lift hover:opacity-95 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isProcessing ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Processing Transfer...</span>
+                  <span>Transferring to Main Account...</span>
                 </>
               ) : (
                 <>
-                  <span>Transfer ₹{amount.toLocaleString()} Now</span>
+                  <span>Confirm Transfer ₹{amount.toLocaleString()}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

@@ -35,10 +35,30 @@ export interface Order {
 
 export interface RiderProfile {
   name: string;
+  dob: string;
   phone: string;
+  altPhone?: string;
   email: string;
+  address?: string;
   avatarUrl: string;
+  selfieCapturedUrl?: string;
+  
+  // KYC Documents & Numbers
+  aadhaarNumber?: string;
+  aadhaarDoc?: string;
+  panNumber?: string;
+  panDoc?: string;
+  dlNumber?: string;
+  dlDoc?: string;
+
+  // Financials & Wallet
+  walletBalance: number;
   upiId: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+
+  // Performance & Status
   rating: number;
   totalDeliveries: number;
   acceptanceRate: number;

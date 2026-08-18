@@ -1,0 +1,128 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useRider } from '@/context/RiderContext';
+import { SlideToConfirm } from '@/components/orders/SlideToConfirm';
+import { RouteTimeline } from '@/components/orders/RouteTimeline';
+import { LiveRouteSimulation } from '@/components/orders/LiveRouteSimulation';
+import { Phone, Navigation, PackageCheck, ShoppingBag, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+export const LiveOrderTracker: React.FC = () => {
+  const { activeOrder, advanceActiveOrderStatus } = useRider();
+  const [showNavigation, setShowNavigation] = useState(false);
+  const router = useRouter();
+
+  if (!activeOrder) return null;
+
+  const handleSlideAction = () => {
+    if (activeOrder.status === 'picking_up') {
+      advanceActiveOrderStatus(); // -> arrived_at_pickup
+    } else if (activeOrder.status === 'arrived_at_pickup') {
+      advanceActiveOrderStatus(); // -> in_transit
+    } else {
+      // -> in_transit to delivery OTP
+      router.push('/confirm-delivery');
+    }
+  };
+
+  const getSliderLabels = () => {
+    if (activeOrder.status === 'picking_up') {
+      return {
+        label: 'Slide: Arrived at Shop',
+        success: 'Arrived at Store!',
+      };
+    }
+    if (activeOrder.status === 'arrived_at_pickup') {
+      return {
+        label: 'Slide: Order Picked Up',
+        success: 'Order Collected!',
+      };
+    }
+    return {
+      label: 'Slide: Confirm Delivery (OTP)',
+      success: 'Opening Verification...',
+    };
+  };
+
+  const { label, success } = getSliderLabels();
+
+  return (
+    <div className="w-full animate-slide-up">
+      {/* Floating Active Cockpit Card */}
+      <div className="bg-white rounded-3xl p-5 shadow-[0px_10px_30px_rgba(15,23,42,0.14)] border border-primary/30 relative overflow-hidden ring-1 ring-primary/20">
+        {/* Top Accent Gradient */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary to-primary-container" />
+
+        {/* Header Row */}
+        <div className="flex justify-between items-start pt-1 mb-2">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="inline-flex items-center gap-1 bg-primary text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                {activeOrder.status === 'picking_up'
+                  ? 'Heading to Shop'
+                  : activeOrder.status === 'arrived_at_pickup'
+                  ? 'At Store (Pickup)'
+                  : 'On the Way (Delivery)'}
+              </span>
+              <span className="text-[11px] font-mono font-bold text-secondary">
+                #{activeOrder.orderNumber}
+              </span>
+            </div>
+            <h2 className="font-bold text-base text-on-surface">
+              {activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup'
+                ? activeOrder.restaurantName
+                : activeOrder.customerName}
+            </h2>
+          </div>
+
+          <div className="bg-primary/5 rounded-xl px-2.5 py-1.5 text-right border border-primary/20">
+            <span className="font-mono font-black text-lg text-primary leading-tight">
+              ₹{activeOrder.earnings}
+            </span>
+            <p className="text-[9px] uppercase font-bold text-secondary">Payout</p>
+          </div>
+        </div>
+
+        {/* Route Snapshot */}
+        <div className="my-2">
+          <RouteTimeline order={activeOrder} />
+        </div>
+
+        {/* Actions Row: Navigation, Call, View Basket */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setShowNavigation(true)}
+            className="flex-1 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+          >
+            <Navigation className="w-3.5 h-3.5 fill-current" />
+            <span>Turn Navigation</span>
+          </button>
+
+          <a
+            href={`tel:${activeOrder.customerPhone}`}
+            className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-primary hover:bg-slate-100 transition-colors shadow-sm"
+          >
+            <Phone className="w-4 h-4" />
+          </a>
+        </div>
+
+        {/* Interactive "Slide to Update Order Status" on Home Screen! */}
+        <div className="mt-1">
+          <SlideToConfirm
+            key={activeOrder.status}
+            label={label}
+            successLabel={success}
+            onConfirm={handleSlideAction}
+          />
+        </div>
+      </div>
+
+      {/* Turn-by-turn Navigation Simulation Overlay */}
+      {showNavigation && (
+        <LiveRouteSimulation order={activeOrder} onClose={() => setShowNavigation(false)} />
+      )}
+    </div>
+  );
+};

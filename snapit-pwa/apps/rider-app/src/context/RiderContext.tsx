@@ -24,21 +24,42 @@ interface RiderContextType {
   triggerMockOrder: () => void;
   updateRiderProfile: (updates: Partial<RiderProfile>) => void;
   simulateApproval: () => void;
-  cashoutEarnings: (amount: number) => boolean;
+  resetOnboarding: () => void;
+  transferWalletToBank: (amount: number) => boolean;
   markAlertAsRead: (id: string) => void;
 }
 
 const defaultRider: RiderProfile = {
   name: "Rahul Sharma",
+  dob: "1998-05-14",
   phone: "+91 98765 43210",
+  altPhone: "+91 98111 22334",
   email: "rahul.sharma@snapit.in",
+  address: "Flat 302, Green Meadows, 4th Cross, Indiranagar, Bengaluru, 560038",
   avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuC-PEiTgWViD1ovXWhH1B1TQbMaWamoTZBv9VbCDabgGy61BlhUVTtyCaQqeI5WbDHOFao2v1A6tBhc7gUUm_4Kw7IjE4g7U93BvPxpBCwFcpkL3WKodfrio1p1RyKPuUw3qMZ3ehzSz5_NUemOI3BVvFqRDj3EdyCQfpGH2eWP1FbJCAvX16Yy7ZGqOdSYHx44o2sVTKEs0VZ56ZU7EjUIFOEJHw_qX6azzfjVcPoCJ7EDvRR1lx43EA",
+  selfieCapturedUrl: "",
+  
+  // KYC Info
+  aadhaarNumber: "4829-1029-8921",
+  aadhaarDoc: "aadhaar_front_back.pdf",
+  panNumber: "ABCDE1234F",
+  panDoc: "pan_card.jpg",
+  dlNumber: "KA03-2020-0089124",
+  dlDoc: "driving_license.jpg",
+
+  // Wallet & Banking
+  walletBalance: 2450,
   upiId: "rahul.k@okicici",
+  bankName: "HDFC Bank Ltd",
+  accountNumber: "50100492819281",
+  ifscCode: "HDFC0001234",
+
+  // Performance
   rating: 4.9,
   totalDeliveries: 1420,
   acceptanceRate: 98,
   vehicleType: "Electric Scooter (Ather 450X)",
-  vehicleNumber: "MH 02 EQ 8821",
+  vehicleNumber: "KA 03 EQ 8821",
   selectedZone: "Downtown Central",
   isVerified: true,
   verificationStep: 4,
@@ -203,32 +224,32 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [alerts, setAlerts] = useState<AlertNotification[]>(initialAlerts);
   const [desktopFrame, setDesktopFrame] = useState<boolean>(false);
 
-  // Initialize from LocalStorage
+  // Load from localStorage
   useEffect(() => {
     try {
-      const savedRider = localStorage.getItem('snapit_rider_profile');
+      const savedRider = localStorage.getItem('snapit_rider_profile_v2');
       if (savedRider) setRider(JSON.parse(savedRider));
 
-      const savedOnline = localStorage.getItem('snapit_online_status');
+      const savedOnline = localStorage.getItem('snapit_online_status_v2');
       if (savedOnline !== null) setIsOnline(JSON.parse(savedOnline));
 
-      const savedActive = localStorage.getItem('snapit_active_order');
+      const savedActive = localStorage.getItem('snapit_active_order_v2');
       if (savedActive) setActiveOrder(JSON.parse(savedActive));
 
-      const savedEarnings = localStorage.getItem('snapit_earnings');
+      const savedEarnings = localStorage.getItem('snapit_earnings_v2');
       if (savedEarnings) setEarnings(JSON.parse(savedEarnings));
     } catch (e) {
       console.warn("Could not read local storage", e);
     }
   }, []);
 
-  // Save to LocalStorage
+  // Save to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('snapit_rider_profile', JSON.stringify(rider));
-      localStorage.setItem('snapit_online_status', JSON.stringify(isOnline));
-      localStorage.setItem('snapit_active_order', JSON.stringify(activeOrder));
-      localStorage.setItem('snapit_earnings', JSON.stringify(earnings));
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(rider));
+      localStorage.setItem('snapit_online_status_v2', JSON.stringify(isOnline));
+      localStorage.setItem('snapit_active_order_v2', JSON.stringify(activeOrder));
+      localStorage.setItem('snapit_earnings_v2', JSON.stringify(earnings));
     } catch (e) {
       console.warn("Could not write local storage", e);
     }
@@ -240,10 +261,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       if (!next) {
         setIncomingOrder(null);
       } else if (!activeOrder) {
-        // Automatically trigger an order after 3 seconds when turning online
         setTimeout(() => {
           setIncomingOrder(initialIncomingOrder);
-        }, 3000);
+        }, 2500);
       }
       return next;
     });
@@ -302,7 +322,6 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const completeDeliveryWithOtp = (enteredOtp: string): boolean => {
     if (!activeOrder) return false;
-    // Accept valid OTP or default '1234'
     if (enteredOtp === activeOrder.otp || enteredOtp === '1234') {
       const completedOrder: Order = {
         ...activeOrder,
@@ -310,11 +329,18 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         timestamp: 'Just now',
       };
 
-      // Add to completed orders
       setOrdersHistory((prev) => [completedOrder, ...prev]);
 
-      // Update earnings
       const orderEarnings = activeOrder.earnings || 45;
+
+      // 1. Credit directly to Rider's Wallet Balance!
+      setRider((prev) => ({
+        ...prev,
+        walletBalance: prev.walletBalance + orderEarnings,
+        totalDeliveries: prev.totalDeliveries + 1,
+      }));
+
+      // 2. Update today's earnings overview
       setEarnings((prev) => ({
         ...prev,
         today: prev.today + orderEarnings,
@@ -328,11 +354,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         ),
       }));
 
-      // Add notification alert
+      // 3. Add alert notification
       const newAlert: AlertNotification = {
         id: `alert-${Date.now()}`,
-        title: "✅ Delivery Complete",
-        message: `Order #${activeOrder.orderNumber} delivered. ₹${orderEarnings} added to wallet!`,
+        title: "💰 Wallet Credited: ₹" + orderEarnings,
+        message: `Order #${activeOrder.orderNumber} delivered. ₹${orderEarnings} added to your Snapit Wallet.`,
         time: "Just now",
         type: "payout",
         read: false,
@@ -347,7 +373,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const triggerMockOrder = () => {
-    const randomEarn = Math.floor(Math.random() * 35) + 40;
+    const randomEarn = Math.floor(Math.random() * 35) + 45;
     const randomDistance = (Math.random() * 2 + 1.2).toFixed(1);
     const mock: Order = {
       id: `req-${Date.now()}`,
@@ -385,16 +411,26 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
-  const cashoutEarnings = (amount: number): boolean => {
-    if (amount <= 0 || amount > earnings.today) return false;
-    setEarnings((prev) => ({
+  const resetOnboarding = () => {
+    setRider((prev) => ({
       ...prev,
-      today: prev.today - amount,
+      isVerified: false,
+      verificationStep: 1,
+    }));
+    setActiveOrder(null);
+    setIncomingOrder(null);
+  };
+
+  const transferWalletToBank = (amount: number): boolean => {
+    if (amount <= 0 || amount > rider.walletBalance) return false;
+    setRider((prev) => ({
+      ...prev,
+      walletBalance: prev.walletBalance - amount,
     }));
     const newAlert: AlertNotification = {
       id: `alert-cashout-${Date.now()}`,
-      title: "💸 Instant Cashout Successful",
-      message: `₹${amount} transferred to UPI ${rider.upiId}`,
+      title: "🏦 Bank Transfer Initiated",
+      message: `₹${amount} transferred from Wallet to primary bank/UPI account (${rider.upiId})`,
       time: "Just now",
       type: "payout",
       read: false,
@@ -431,7 +467,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         triggerMockOrder,
         updateRiderProfile,
         simulateApproval,
-        cashoutEarnings,
+        resetOnboarding,
+        transferWalletToBank,
         markAlertAsRead,
       }}
     >
