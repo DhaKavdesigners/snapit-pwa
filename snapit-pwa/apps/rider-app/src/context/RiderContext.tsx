@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { RiderProfile, Order, EarningsSummary, DeliveryZone, AlertNotification, DeliveryStatus } from '@/types';
+import { RiderProfile, Order, EarningsSummary, DeliveryZone, AlertNotification, DeliveryStatus, NavigationStage } from '@/types';
 
 interface RiderContextType {
   rider: RiderProfile;
@@ -20,6 +20,9 @@ interface RiderContextType {
   declineIncomingOrder: () => void;
   advanceActiveOrderStatus: () => void;
   setActiveOrderStatus: (status: DeliveryStatus) => void;
+  startNavigation: () => void;
+  markOrderPickedUp: () => void;
+  setNavStage: (stage: NavigationStage) => void;
   completeDeliveryWithOtp: (otp: string) => boolean;
   triggerMockOrder: () => void;
   updateRiderProfile: (updates: Partial<RiderProfile>) => void;
@@ -72,8 +75,8 @@ const initialIncomingOrder: Order = {
   customerPhone: "+91 91234 56789",
   customerAvatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBQm3F-EF8KMdfUn1CQ9_0AUu0c5Anids2usYM_zIsXx7e0kAQfYRu8ya1d-UFWak5O28XmbayOqGMxNHtc59lxyiIwhncjrY8XDG12i2tRQ5ZZnKkH5mEp0s_f52f09hRiNQGIcV2D4704CLIlRGfnLt7iMMRjWFYILDYbh8oZVpMKr6lbRp4SFioMcFer9PvsJgqi85zB3_zM1EKPWzOuaozxNddoYAjVKl88_tl8Ka9Dcu8_200q0w",
   restaurantName: "Spice Route Restaurant",
-  restaurantAddress: "124 Culinary Blvd, Food District",
-  deliveryAddress: "Apt 4B, Serenity Towers, Park View",
+  restaurantAddress: "124 Culinary Blvd, Indiranagar, Bengaluru",
+  deliveryAddress: "Apt 4B, Serenity Towers, Domlur, Bengaluru",
   distanceKm: 2.5,
   estimatedMinutes: 8,
   earnings: 45,
@@ -86,6 +89,23 @@ const initialIncomingOrder: Order = {
   otp: "1234",
   timestamp: "Just now",
   paymentMethod: "Prepaid UPI",
+  shopLocation: {
+    lat: 12.9785,
+    lng: 77.6450,
+    name: "Spice Route Restaurant",
+    address: "124 Culinary Blvd, Indiranagar, Bengaluru",
+  },
+  customerLocation: {
+    lat: 12.9630,
+    lng: 77.6380,
+    name: "Rahul Sharma",
+    address: "Apt 4B, Serenity Towers, Domlur, Bengaluru",
+  },
+  riderStartLocation: {
+    lat: 12.9716,
+    lng: 77.6412,
+  },
+  navStage: 'idle',
 };
 
 const initialEarnings: EarningsSummary = {
@@ -282,7 +302,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     if (!incomingOrder) return;
     const orderWithActiveStatus: Order = {
       ...incomingOrder,
-      status: "picking_up",
+      status: "accepted",
+      navStage: "to_shop",
+      shopLocation: incomingOrder.shopLocation || { lat: 12.9785, lng: 77.6450, name: incomingOrder.restaurantName, address: incomingOrder.restaurantAddress },
+      customerLocation: incomingOrder.customerLocation || { lat: 12.9630, lng: 77.6380, name: incomingOrder.customerName, address: incomingOrder.deliveryAddress },
+      riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9716, lng: 77.6412 }
     };
     setActiveOrder(orderWithActiveStatus);
     setIncomingOrder(null);
@@ -300,23 +324,59 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const advanceActiveOrderStatus = () => {
+  const startNavigation = () => {
     if (!activeOrder) return;
-    const flow: Record<DeliveryStatus, DeliveryStatus> = {
-      pending: 'accepted',
-      accepted: 'picking_up',
-      picking_up: 'arrived_at_pickup',
-      arrived_at_pickup: 'in_transit',
-      in_transit: 'arrived_at_dropoff',
-      arrived_at_dropoff: 'delivered',
-      delivered: 'delivered',
-      cancelled: 'cancelled',
-    };
-
-    const nextStatus = flow[activeOrder.status] || activeOrder.status;
+    const isAlreadyAtShop = activeOrder.status === 'arrived_at_pickup' || activeOrder.status === 'in_transit' || activeOrder.navStage === 'to_customer';
+    const nextStage = isAlreadyAtShop ? 'to_customer' : 'to_shop';
+    const nextStatus = isAlreadyAtShop ? 'in_transit' : 'accepted';
     setActiveOrder({
       ...activeOrder,
       status: nextStatus,
+      navStage: nextStage,
+    });
+  };
+
+  const markOrderPickedUp = () => {
+    if (!activeOrder) return;
+    setActiveOrder({
+      ...activeOrder,
+      status: 'in_transit',
+      navStage: 'to_customer',
+    });
+  };
+
+  const setNavStage = (stage: NavigationStage) => {
+    if (!activeOrder) return;
+    setActiveOrder({
+      ...activeOrder,
+      navStage: stage,
+    });
+  };
+
+  const advanceActiveOrderStatus = () => {
+    if (!activeOrder) return;
+    
+    let nextStatus: DeliveryStatus = activeOrder.status;
+    let nextNavStage: NavigationStage = activeOrder.navStage || 'to_shop';
+
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
+      nextStatus = 'arrived_at_pickup';
+      nextNavStage = 'to_shop';
+    } else if (activeOrder.status === 'arrived_at_pickup') {
+      nextStatus = 'in_transit';
+      nextNavStage = 'to_customer'; // Automatically switch map destination to customer!
+    } else if (activeOrder.status === 'in_transit') {
+      nextStatus = 'arrived_at_dropoff';
+      nextNavStage = 'at_customer';
+    } else if (activeOrder.status === 'arrived_at_dropoff') {
+      nextStatus = 'delivered';
+      nextNavStage = 'delivered';
+    }
+
+    setActiveOrder({
+      ...activeOrder,
+      status: nextStatus,
+      navStage: nextNavStage,
     });
   };
 
@@ -463,6 +523,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         declineIncomingOrder,
         advanceActiveOrderStatus,
         setActiveOrderStatus,
+        startNavigation,
+        markOrderPickedUp,
+        setNavStage,
         completeDeliveryWithOtp,
         triggerMockOrder,
         updateRiderProfile,

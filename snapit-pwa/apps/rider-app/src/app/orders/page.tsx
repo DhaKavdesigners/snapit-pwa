@@ -5,42 +5,95 @@ import { AppShell } from '@/components/layout/AppShell';
 import { useRider } from '@/context/RiderContext';
 import { RouteTimeline } from '@/components/orders/RouteTimeline';
 import { SlideToConfirm } from '@/components/orders/SlideToConfirm';
-import { LiveRouteSimulation } from '@/components/orders/LiveRouteSimulation';
-import { Phone, Navigation, Check, Package, Clock, AlertCircle } from 'lucide-react';
+import { LiveRiderNavigation } from '@/components/navigation/LiveRiderNavigation';
+import { Phone, Navigation, Check, Package, Clock, AlertCircle, Maximize2, ShieldCheck, Store, Home } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function OrdersPage() {
-  const { activeOrder, ordersHistory, advanceActiveOrderStatus, triggerMockOrder } = useRider();
+  const { activeOrder, ordersHistory, advanceActiveOrderStatus, triggerMockOrder, markOrderPickedUp } = useRider();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'cancelled'>('active');
-  const [showNavSimulation, setShowNavSimulation] = useState(false);
+  const [isNavActive, setIsNavActive] = useState<boolean>(true);
+  const [isFullScreenNav, setIsFullScreenNav] = useState<boolean>(false);
   const router = useRouter();
 
-  const handleSlideArrive = () => {
+  // Strict Sequential Action Handlers
+  const handleNextStepAction = () => {
     if (!activeOrder) return;
-    if (activeOrder.status === 'picking_up' || activeOrder.status === 'accepted') {
-      advanceActiveOrderStatus();
-    } else {
-      // Arrived at dropoff -> navigate to OTP confirmation
+
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
+      // Step 1 -> Step 2: Slide to Arrive at Store
+      advanceActiveOrderStatus(); // Status becomes 'arrived_at_pickup'
+    } else if (activeOrder.status === 'arrived_at_pickup') {
+      // Step 2 -> Step 3: Slide to Confirm Pickup (Order Collected)
+      markOrderPickedUp(); // Status becomes 'in_transit', navStage becomes 'to_customer'
+    } else if (activeOrder.status === 'in_transit') {
+      // Step 3 -> Step 4: Slide to Arrive at Customer
+      advanceActiveOrderStatus(); // Status becomes 'arrived_at_dropoff'
+    } else if (activeOrder.status === 'arrived_at_dropoff') {
+      // Step 4 -> OTP Page
       router.push('/confirm-delivery');
     }
   };
 
-  const getStatusStage = () => {
-    if (!activeOrder) return 0;
-    if (activeOrder.status === 'accepted') return 1;
-    if (activeOrder.status === 'picking_up') return 2;
-    if (activeOrder.status === 'arrived_at_pickup' || activeOrder.status === 'in_transit') return 2;
-    if (activeOrder.status === 'arrived_at_dropoff') return 3;
-    if (activeOrder.status === 'delivered') return 4;
-    return 1;
+  // Label configuration for the single active slider/button below the map
+  const getSingleNextActionConfig = () => {
+    if (!activeOrder) return { type: 'slider', label: '', success: '' };
+
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
+      return {
+        type: 'slider',
+        label: 'Slide to Arrive at Store',
+        success: 'Arrived at Store!',
+      };
+    }
+    if (activeOrder.status === 'arrived_at_pickup') {
+      return {
+        type: 'slider',
+        label: 'Slide to Confirm Pickup (Order Collected)',
+        success: 'Order Collected! Switched to Customer Route',
+      };
+    }
+    if (activeOrder.status === 'in_transit') {
+      return {
+        type: 'slider',
+        label: 'Slide to Arrive at Customer',
+        success: 'Arrived at Customer Location!',
+      };
+    }
+    if (activeOrder.status === 'arrived_at_dropoff') {
+      return {
+        type: 'button',
+        label: 'Proceed to Delivery OTP Verification →',
+        success: '',
+      };
+    }
+
+    return { type: 'slider', label: 'Slide to Update Status', success: 'Done' };
   };
+
+  const actionConfig = getSingleNextActionConfig();
+
+  // Status Badge Label
+  const getStatusBadgeLabel = () => {
+    if (!activeOrder) return '';
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') return 'Order Accepted';
+    if (activeOrder.status === 'arrived_at_pickup') return 'Arrived at Store';
+    if (activeOrder.status === 'in_transit') return 'Order Picked Up (On the Way)';
+    if (activeOrder.status === 'arrived_at_dropoff') return 'Arrived at Customer';
+    if (activeOrder.status === 'delivered') return 'Delivered';
+    return 'Active Order';
+  };
+
+  // Timeline Stepper Stage Highlighting
+  const isPickupDone = activeOrder?.status === 'in_transit' || activeOrder?.status === 'arrived_at_dropoff' || activeOrder?.status === 'delivered';
+  const isDeliveredDone = activeOrder?.status === 'delivered';
 
   return (
     <AppShell title="My Orders" subtitle="Manage active & past trips">
       <div className="flex flex-col gap-5 pt-2 pb-6">
         
-        {/* Segmented Control Filter Tabs matching Stitch */}
+        {/* Segmented Control Filter Tabs */}
         <div className="flex bg-slate-200/80 p-1 rounded-2xl w-full border border-slate-300/60 shadow-inner">
           <button
             onClick={() => setSelectedTab('active')}
@@ -81,7 +134,16 @@ export default function OrdersPage() {
           <>
             {activeOrder ? (
               <div className="flex flex-col gap-4 animate-fade-in">
-                {/* Active Order Card */}
+                
+                {/* 1. COMPACT LIVE NAVIGATION MAP AT TOP OF ORDER PAGE (ONLY NAVIGATION CONTROLS INSIDE MAP) */}
+                <LiveRiderNavigation
+                  order={activeOrder}
+                  isFullScreen={isFullScreenNav}
+                  onToggleFullScreen={() => setIsFullScreenNav((fs) => !fs)}
+                  onCloseNav={() => setIsNavActive(false)}
+                />
+
+                {/* 2. ORDER DETAILS CARD BELOW THE MAP (ONLY ORDER WORKFLOW & ACTIONS BELOW MAP) */}
                 <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 flex flex-col gap-4 relative overflow-hidden">
                   {/* Decorative top green gradient */}
                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary to-primary-container" />
@@ -89,12 +151,8 @@ export default function OrdersPage() {
                   {/* Header Row */}
                   <div className="flex justify-between items-start pt-1">
                     <div>
-                      <span className="inline-block bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider">
-                        {activeOrder.status === 'picking_up'
-                          ? 'Picking Up'
-                          : activeOrder.status === 'in_transit'
-                          ? 'On The Way'
-                          : 'Arrived'}
+                      <span className="inline-block bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider">
+                        {getStatusBadgeLabel()}
                       </span>
                       <h3 className="font-bold text-base text-on-surface mt-1.5 font-mono">
                         Order #{activeOrder.orderNumber}
@@ -111,62 +169,52 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
-                  {/* Map Graphic Preview with Route */}
-                  <div className="w-full h-32 rounded-2xl bg-slate-100 overflow-hidden relative border border-slate-200 shadow-inner group">
-                    <img
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3QUDEFUOGFAOYzQErgBkhcsP-PWi5Vt7MLrlm0cTm8Mlqp4Y31xt5zbXWvoIUmvq8t7WSNNAY8BHv25v33Mancbcolv7PwKgAO4rvLcoAegUDUp2Ldzg46Szct9bPbhrc63bt-a-JOruogmV7VH63ORzNLuzmQSOAeqyldaZjCghhyhiD5ALgMm9xo_0GQgTRJ6Rg0py8NAXqTnrsjRnezD6N_Awn35mnB_ex4NRsKPwmmRJfk6yG8g"
-                      alt="Delivery Route"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute bottom-2.5 right-2.5 glass-panel px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-xs font-bold text-on-surface">
-                      <span className="material-symbols-outlined text-[16px] text-primary">
-                        directions_car
-                      </span>
-                      <span>{activeOrder.distanceKm} km ({activeOrder.estimatedMinutes} mins)</span>
-                    </div>
-                  </div>
-
-                  {/* Route Timeline */}
+                  {/* Address Snapshot Route Timeline */}
                   <RouteTimeline order={activeOrder} />
 
                   <hr className="border-slate-100" />
 
-                  {/* Action Buttons: Navigate & Call */}
-                  <div className="flex gap-3">
+                  {/* Customer Quick Call & Fullscreen Map Action */}
+                  <div className="flex items-center justify-between gap-3">
                     <button
-                      onClick={() => setShowNavSimulation(true)}
-                      className="flex-1 bg-gradient-to-r from-primary to-primary-container text-white py-3 rounded-2xl font-bold text-xs shadow-lift hover:opacity-95 transition-all flex items-center justify-center gap-2 active:scale-95"
+                      onClick={() => setIsFullScreenNav(true)}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-1.5 border border-slate-200"
                     >
-                      <Navigation className="w-4 h-4 fill-current" />
-                      <span>Start Navigation</span>
+                      <Maximize2 className="w-4 h-4 text-primary" />
+                      <span>Expand Map View</span>
                     </button>
 
                     <a
                       href={`tel:${activeOrder.customerPhone}`}
-                      className="w-12 h-12 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center text-primary hover:bg-slate-100 transition-colors shadow-sm active:scale-95"
+                      className="w-11 h-11 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center text-primary hover:bg-slate-100 transition-colors shadow-sm active:scale-95 shrink-0"
                       title="Call Customer"
                     >
                       <Phone className="w-5 h-5" />
                     </a>
                   </div>
 
-                  {/* Interactive Slide to Arrive / Deliver */}
+                  {/* 3. STRICT SEQUENTIAL SINGLE NEXT ACTION WORKFLOW BELOW THE MAP */}
                   <div className="mt-1">
-                    <SlideToConfirm
-                      label={
-                        activeOrder.status === 'picking_up'
-                          ? 'Slide to Arrive at Store'
-                          : 'Slide to Confirm Delivery OTP'
-                      }
-                      successLabel={
-                        activeOrder.status === 'picking_up' ? 'Arrived at Store!' : 'Proceed to OTP'
-                      }
-                      onConfirm={handleSlideArrive}
-                    />
+                    {actionConfig.type === 'slider' ? (
+                      <SlideToConfirm
+                        key={activeOrder.status}
+                        label={actionConfig.label}
+                        successLabel={actionConfig.success}
+                        onConfirm={handleNextStepAction}
+                      />
+                    ) : (
+                      <button
+                        onClick={handleNextStepAction}
+                        className="w-full py-4 bg-gradient-to-r from-primary to-primary-container hover:opacity-95 text-white font-extrabold text-xs rounded-2xl shadow-lift transition-all flex items-center justify-center gap-2 active:scale-98 ring-2 ring-primary/30"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>{actionConfig.label}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Order Details Basket Card */}
+                {/* 4. ORDER ITEMS & LIVE TIMELINE CARD */}
                 <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 flex flex-col gap-4">
                   <div className="flex justify-between items-center">
                     <h3 className="font-bold text-sm text-on-surface">Order Items</h3>
@@ -199,10 +247,10 @@ export default function OrdersPage() {
 
                   <hr className="border-slate-100" />
 
-                  {/* Multi-step Status Tracker Bar */}
+                  {/* DYNAMIC LIVE DELIVERY TIMELINE STEPPER */}
                   <div className="flex flex-col gap-2">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-secondary">
-                      Live Delivery Timeline
+                      Live Delivery Progress
                     </h4>
                     
                     <div className="flex items-center relative py-2">
@@ -217,24 +265,24 @@ export default function OrdersPage() {
                       {/* Connecting Line 1 */}
                       <div
                         className={`flex-1 h-1 transition-colors ${
-                          getStatusStage() >= 2 ? 'bg-primary' : 'bg-slate-200'
+                          isPickupDone ? 'bg-primary' : 'bg-slate-200'
                         }`}
                       />
 
-                      {/* Step 2: Picking Up */}
+                      {/* Step 2: Pickup */}
                       <div className="flex flex-col items-center gap-1 z-10">
                         <div
                           className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                            getStatusStage() >= 2
-                              ? 'bg-primary text-white shadow-glow'
-                              : 'bg-slate-200 text-slate-500'
+                            isPickupDone
+                              ? 'bg-primary text-white'
+                              : 'bg-amber-500 text-white shadow-glow animate-pulse'
                           }`}
                         >
-                          <Package className="w-3.5 h-3.5" />
+                          {isPickupDone ? <Check className="w-3.5 h-3.5" /> : <Package className="w-3.5 h-3.5" />}
                         </div>
                         <span
                           className={`text-[10px] font-bold ${
-                            getStatusStage() >= 2 ? 'text-primary' : 'text-slate-400'
+                            isPickupDone ? 'text-primary' : 'text-amber-600'
                           }`}
                         >
                           Pickup
@@ -244,7 +292,7 @@ export default function OrdersPage() {
                       {/* Connecting Line 2 */}
                       <div
                         className={`flex-1 h-1 transition-colors ${
-                          getStatusStage() >= 3 ? 'bg-primary' : 'bg-slate-200'
+                          isDeliveredDone ? 'bg-primary' : 'bg-slate-200'
                         }`}
                       />
 
@@ -252,7 +300,7 @@ export default function OrdersPage() {
                       <div className="flex flex-col items-center gap-1 z-10">
                         <div
                           className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                            getStatusStage() >= 4
+                            isDeliveredDone
                               ? 'bg-primary text-white'
                               : 'bg-slate-200 text-slate-500'
                           }`}
@@ -261,7 +309,7 @@ export default function OrdersPage() {
                         </div>
                         <span
                           className={`text-[10px] font-bold ${
-                            getStatusStage() >= 4 ? 'text-primary' : 'text-slate-400'
+                            isDeliveredDone ? 'text-primary' : 'text-slate-400'
                           }`}
                         >
                           Delivered
@@ -269,14 +317,6 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Fast track to OTP button */}
-                  <Link
-                    href="/confirm-delivery"
-                    className="w-full py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold text-center transition-colors border border-primary/20 flex items-center justify-center gap-2"
-                  >
-                    <span>Proceed to Delivery OTP Verification →</span>
-                  </Link>
                 </div>
               </div>
             ) : (
@@ -353,14 +393,6 @@ export default function OrdersPage() {
         )}
 
       </div>
-
-      {/* Turn-by-Turn Navigation Simulator Modal */}
-      {showNavSimulation && activeOrder && (
-        <LiveRouteSimulation
-          order={activeOrder}
-          onClose={() => setShowNavSimulation(false)}
-        />
-      )}
     </AppShell>
   );
 }

@@ -8,6 +8,15 @@ export type DeliveryStatus =
   | 'delivered'
   | 'cancelled';
 
+export type NavigationStage = 'idle' | 'to_shop' | 'at_shop' | 'to_customer' | 'at_customer' | 'delivered';
+
+export interface LocationPoint {
+  lat: number;
+  lng: number;
+  name?: string;
+  address?: string;
+}
+
 export interface OrderItem {
   name: string;
   quantity: number;
@@ -31,6 +40,10 @@ export interface Order {
   otp: string;
   timestamp: string;
   paymentMethod: string;
+  shopLocation?: LocationPoint;
+  customerLocation?: LocationPoint;
+  riderStartLocation?: LocationPoint;
+  navStage?: NavigationStage;
 }
 
 export interface RiderProfile {

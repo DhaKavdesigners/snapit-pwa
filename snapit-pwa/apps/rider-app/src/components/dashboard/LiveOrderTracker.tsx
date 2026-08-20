@@ -93,11 +93,11 @@ export const LiveOrderTracker: React.FC = () => {
         {/* Actions Row: Navigation, Call, View Basket */}
         <div className="flex items-center gap-2 mb-3">
           <button
-            onClick={() => setShowNavigation(true)}
-            className="flex-1 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+            onClick={() => router.push('/orders')}
+            className="flex-1 py-2.5 bg-gradient-to-r from-primary to-primary-container text-white border border-primary/20 rounded-xl text-xs font-bold transition-all shadow-lift flex items-center justify-center gap-1.5 active:scale-95"
           >
             <Navigation className="w-3.5 h-3.5 fill-current" />
-            <span>Turn Navigation</span>
+            <span>Open Live Navigation</span>
           </button>
 
           <a
