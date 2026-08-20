@@ -85,7 +85,7 @@ export default function EarningsPage() {
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-secondary uppercase">Today's Total Generated</p>
+              <p className="text-[11px] font-bold text-secondary uppercase">Today&apos;s Total Generated</p>
               <p className="text-xl font-bold font-mono text-on-surface">
                 ₹{earnings.today.toLocaleString()}
               </p>
@@ -136,7 +136,7 @@ export default function EarningsPage() {
 
         {/* 5. Today's Breakdown List */}
         <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 flex flex-col gap-3">
-          <h3 className="font-bold text-sm text-on-surface">Today's Earnings Breakdown</h3>
+          <h3 className="font-bold text-sm text-on-surface">Today&apos;s Earnings Breakdown</h3>
 
           <div className="flex flex-col divide-y divide-slate-100 text-xs">
             {/* Delivery Fare */}

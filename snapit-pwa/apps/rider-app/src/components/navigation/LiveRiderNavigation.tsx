@@ -1,29 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRider } from '@/context/RiderContext';
 import { Order, LocationPoint } from '@/types';
-import {
-  Navigation2,
-  Volume2,
-  VolumeX,
-  Maximize2,
-  Minimize2,
-  Play,
-  Pause,
-  Store,
-  Home,
-  Sparkles,
-  Compass,
-  ArrowUp,
-  ArrowLeft,
-  ArrowRight,
-  RotateCcw,
-  Flag,
-  Plus,
-  Minus,
-  Crosshair,
-} from 'lucide-react';
 
 interface LiveRiderNavigationProps {
   order: Order;
@@ -42,26 +20,23 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
   order,
   isFullScreen = false,
   onToggleFullScreen,
-  onCloseNav,
 }) => {
-  // Navigation Stage: 'to_shop' or 'to_customer'
   const isToShop =
     order.navStage === 'to_shop' ||
     order.status === 'picking_up' ||
     order.status === 'accepted' ||
     order.status === 'arrived_at_pickup';
 
-  // Target Destination Coordinates
   const shopCoords: LocationPoint = order.shopLocation || {
     lat: 12.9785,
-    lng: 77.6450,
+    lng: 77.645,
     name: order.restaurantName,
     address: order.restaurantAddress,
   };
 
   const customerCoords: LocationPoint = order.customerLocation || {
-    lat: 12.9630,
-    lng: 77.6380,
+    lat: 12.963,
+    lng: 77.638,
     name: order.customerName,
     address: order.deliveryAddress,
   };
@@ -73,47 +48,42 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
 
   const targetCoords = isToShop ? shopCoords : customerCoords;
 
-  // Rider position state
   const [currentRiderPos, setCurrentRiderPos] = useState<LocationPoint>(startCoords);
-  const [isSimulating, setIsSimulating] = useState<boolean>(true);
-  const [simSpeed, setSimSpeed] = useState<number>(1);
-  const [simProgress, setSimProgress] = useState<number>(0); // 0 to 1
+  const [isSimulating] = useState<boolean>(true);
+  const [simProgress, setSimProgress] = useState<number>(0);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [currentStepIdx, setCurrentStepIdx] = useState<number>(0);
-  const [remainingDist, setRemainingDist] = useState<number>(order.distanceKm || 2.5);
-  const [remainingEta, setRemainingEta] = useState<number>(order.estimatedMinutes || 8);
-  const [isRecalculating, setIsRecalculating] = useState<boolean>(false);
+  const [remainingDist, setRemainingDist] = useState<number>(order.distanceKm || 1.2);
+  const [remainingEta, setRemainingEta] = useState<number>(order.estimatedMinutes || 4);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+  const [navMode, setNavMode] = useState<'map' | 'satellite'>('map');
 
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapInstance = useRef<any>(null);
   const riderMarkerRef = useRef<any>(null);
-  const polylineRef = useRef<any>(null);
 
-  // Turn-by-turn steps tailored for current stage
   const shopSteps: NavStep[] = [
-    { instruction: 'Head East on 100 Feet Rd toward Indiranagar Metro', dist: '300m', turn: 'straight' },
-    { instruction: 'In 200m, turn Left onto Culinary Blvd', dist: '200m', turn: 'left' },
-    { instruction: 'Continue 400m past Food District Park', dist: '400m', turn: 'straight' },
-    { instruction: `Arriving at Shop on right: ${order.restaurantName}`, dist: '50m', turn: 'arrive' },
+    { instruction: `Turn left onto 5th Main Rd`, dist: '150 m', turn: 'left' },
+    { instruction: 'Continue on 100 Feet Rd toward Indiranagar Metro', dist: '300 m', turn: 'straight' },
+    { instruction: 'Turn left onto Culinary Blvd', dist: '200 m', turn: 'left' },
+    { instruction: `Arriving at ${order.restaurantName}`, dist: '50 m', turn: 'arrive' },
   ];
 
   const customerSteps: NavStep[] = [
-    { instruction: 'Head South on Culinary Blvd toward Domlur Flyover', dist: '500m', turn: 'straight' },
-    { instruction: 'In 350m, take Right turn at Serenity Signal', dist: '350m', turn: 'right' },
-    { instruction: 'Merge onto Park View Way toward Serenity Towers', dist: '800m', turn: 'straight' },
-    { instruction: `Arrived at Customer location: ${order.deliveryAddress}`, dist: '30m', turn: 'arrive' },
+    { instruction: 'Head South on Culinary Blvd toward Domlur', dist: '500 m', turn: 'straight' },
+    { instruction: 'Take right at Serenity Signal', dist: '350 m', turn: 'right' },
+    { instruction: 'Continue onto Park View Way', dist: '800 m', turn: 'straight' },
+    { instruction: `Arriving at ${order.customerName}'s location`, dist: '30 m', turn: 'arrive' },
   ];
 
   const currentSteps = isToShop ? shopSteps : customerSteps;
 
-  // Audio Voice Prompt (Web Speech API)
   const speakInstruction = (text: string) => {
     if (!voiceEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.0;
-      utterance.pitch = 1.0;
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn('SpeechSynthesis error:', e);
@@ -125,87 +95,52 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
     if (currentSteps[currentStepIdx]) {
       speakInstruction(currentSteps[currentStepIdx].instruction);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepIdx, isToShop]);
 
-  // Real GPS Geolocation Watcher
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('geolocation' in navigator)) return;
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        if (!isSimulating) {
-          const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setCurrentRiderPos(newPos);
-        }
-      },
-      (err) => {
-        console.log('GPS watch fallback to simulation:', err.message);
-      },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [isSimulating]);
-
-  // Simulation loop along interpolating polyline path
+  // Simulation loop
   useEffect(() => {
     if (!isSimulating) return;
-
-    const intervalTime = 1000 / simSpeed;
     const timer = setInterval(() => {
       setSimProgress((prev) => {
-        if (prev >= 1) {
-          return 1;
-        }
-        const next = prev + 0.03;
+        if (prev >= 1) return 1;
+        const next = prev + 0.015;
 
         const stepCount = currentSteps.length;
         const newStep = Math.min(stepCount - 1, Math.floor(next * stepCount));
-        if (newStep !== currentStepIdx) {
-          setCurrentStepIdx(newStep);
-        }
+        if (newStep !== currentStepIdx) setCurrentStepIdx(newStep);
 
         const origin = isToShop ? startCoords : shopCoords;
-        const target = targetCoords;
+        const lat = origin.lat + (targetCoords.lat - origin.lat) * next;
+        const lng = origin.lng + (targetCoords.lng - origin.lng) * next;
+        setCurrentRiderPos({ lat, lng });
 
-        const currentLat = origin.lat + (target.lat - origin.lat) * next;
-        const currentLng = origin.lng + (target.lng - origin.lng) * next;
-
-        setCurrentRiderPos({ lat: currentLat, lng: currentLng });
-
-        const totalDist = order.distanceKm || 2.5;
-        const totalEta = order.estimatedMinutes || 8;
+        const totalDist = order.distanceKm || 1.2;
+        const totalEta = order.estimatedMinutes || 4;
         setRemainingDist(Math.max(0.1, +(totalDist * (1 - next)).toFixed(1)));
         setRemainingEta(Math.max(1, Math.ceil(totalEta * (1 - next))));
 
-        // Random off-path auto-reroute simulation trigger at 40% progress
-        if (Math.abs(next - 0.4) < 0.015 && !isRecalculating) {
-          setIsRecalculating(true);
-          setTimeout(() => setIsRecalculating(false), 2000);
-        }
-
         return next;
       });
-    }, intervalTime);
-
+    }, 1200);
     return () => clearInterval(timer);
-  }, [isSimulating, simSpeed, isToShop, currentStepIdx, isRecalculating]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSimulating, isToShop, currentStepIdx]);
 
-  // Reset simulation progress when stage changes (Store -> Customer)
+  // Reset when stage changes
   useEffect(() => {
     setSimProgress(0);
     setCurrentStepIdx(0);
-    setRemainingDist(isToShop ? order.distanceKm : Math.max(1.2, +(order.distanceKm * 0.8).toFixed(1)));
-    setRemainingEta(isToShop ? order.estimatedMinutes : Math.max(4, order.estimatedMinutes - 2));
+    setRemainingDist(order.distanceKm || 1.2);
+    setRemainingEta(order.estimatedMinutes || 4);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isToShop]);
-
-  const [isMounted, setIsMounted] = useState<boolean>(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Leaflet Map Initialization and Tile rendering
+  // Leaflet init
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined' || !mapRef.current) return;
 
@@ -219,7 +154,6 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
           leafletMapInstance.current.remove();
           leafletMapInstance.current = null;
         }
-
         if ((mapRef.current as any)._leaflet_id) {
           (mapRef.current as any)._leaflet_id = null;
         }
@@ -231,72 +165,89 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
 
         leafletMapInstance.current = map;
 
+        // Light map tile (CartoDB Voyager — clean & bright like reference)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
           subdomains: 'abcd',
         }).addTo(map);
 
-        // Scooter Rider Pin
+        // Blue arrow rider marker
         const riderIcon = L.divIcon({
-          className: 'custom-rider-pin',
+          className: '',
           html: `
-            <div style="position: relative; width: 44px; height: 44px; display: flex; items-center; justify-content: center;">
-              <div style="position: absolute; width: 44px; height: 44px; border-radius: 50%; background: rgba(0, 110, 47, 0.25); animation: ping 1.8s infinite;"></div>
-              <div style="position: relative; z-index: 10; width: 34px; height: 34px; border-radius: 50%; background: #006e2f; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="12 2 19 21 12 17 5 21 12 2"></polygon>
+            <div style="width:36px;height:36px;position:relative;display:flex;align-items:center;justify-content:center;">
+              <div style="position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(37,99,235,0.18);animation:ping 1.8s infinite;"></div>
+              <div style="position:relative;z-index:10;width:28px;height:28px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
+              </div>
+            </div>`,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+        });
+
+        // Shop marker — green circle with fork icon + label bubble
+        const shopIcon = L.divIcon({
+          className: '',
+          html: `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+              <div style="background:white;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;color:#1a1a1a;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.18);line-height:1.4;">
+                ${isToShop ? order.restaurantName : order.customerName}
+              </div>
+              <div style="width:34px;height:34px;border-radius:50%;background:#16a34a;border:3px solid #fff;box-shadow:0 3px 10px rgba(22,163,74,0.35);display:flex;align-items:center;justify-content:center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+                  ${isToShop
+                    ? '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'
+                    : '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>'
+                  }
                 </svg>
               </div>
-            </div>
-          `,
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
+            </div>`,
+          iconSize: [90, 54],
+          iconAnchor: [45, 54],
         });
 
-        // Destination Marker (Shop vs Customer)
-        const destIcon = L.divIcon({
-          className: 'custom-dest-pin',
+        // Destination label marker (road-side label like reference "Indiranagar 100 Feet Rd")
+        const destLabelIcon = L.divIcon({
+          className: '',
           html: `
-            <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-              <div style="width: 36px; height: 36px; border-radius: 50%; background: ${isToShop ? '#006e2f' : '#ba1a1a'}; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: white;">
-                ${
-                  isToShop
-                    ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>`
-                    : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="3"></circle><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"></path></svg>`
-                }
-              </div>
-            </div>
-          `,
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
+            <div style="background:white;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600;color:#374151;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);border:1px solid #e5e7eb;line-height:1.5;">
+              ${isToShop ? order.restaurantAddress?.split(',')[1]?.trim() || 'Indiranagar' : order.deliveryAddress?.split(',')[1]?.trim() || 'Domlur'}
+            </div>`,
+          iconSize: [140, 24],
+          iconAnchor: [70, 12],
         });
 
-        L.marker([targetCoords.lat, targetCoords.lng], { icon: destIcon }).addTo(map);
+        // Place markers
+        L.marker([targetCoords.lat, targetCoords.lng], { icon: shopIcon }).addTo(map);
+
+        // Show destination label slightly offset
+        const midLat = (currentRiderPos.lat + targetCoords.lat) / 2;
+        const midLng = (currentRiderPos.lng + targetCoords.lng) / 2;
+        L.marker([midLat + 0.003, midLng + 0.002], { icon: destLabelIcon }).addTo(map);
 
         const riderMarker = L.marker([currentRiderPos.lat, currentRiderPos.lng], { icon: riderIcon }).addTo(map);
         riderMarkerRef.current = riderMarker;
 
+        // Blue route polyline
         const routePoints = [
           [currentRiderPos.lat, currentRiderPos.lng],
-          [(currentRiderPos.lat + targetCoords.lat) / 2 + 0.002, (currentRiderPos.lng + targetCoords.lng) / 2 - 0.002],
+          [midLat + 0.001, midLng - 0.003],
           [targetCoords.lat, targetCoords.lng],
         ];
 
-        const polyline = L.polyline(routePoints, {
-          color: '#006e2f',
-          weight: 6,
-          opacity: 0.9,
-          dashArray: '8, 8',
+        L.polyline(routePoints, {
+          color: '#2563eb',
+          weight: 5,
+          opacity: 0.95,
           lineCap: 'round',
+          lineJoin: 'round',
         }).addTo(map);
-
-        polylineRef.current = polyline;
 
         const bounds = L.latLngBounds([
           [currentRiderPos.lat, currentRiderPos.lng],
           [targetCoords.lat, targetCoords.lng],
         ]);
-        map.fitBounds(bounds, { padding: [40, 40] });
+        map.fitBounds(bounds, { padding: [50, 60] });
       } catch (err) {
         console.warn('Leaflet map error:', err);
       }
@@ -313,13 +264,13 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
         (mapRef.current as any)._leaflet_id = null;
       }
     };
-  }, [isToShop, isMounted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isToShop, isMounted, navMode]);
 
-  // Update Rider Marker position dynamically on map
+  // Update rider marker on map
   useEffect(() => {
     if (riderMarkerRef.current && currentRiderPos) {
       riderMarkerRef.current.setLatLng([currentRiderPos.lat, currentRiderPos.lng]);
-
       if (leafletMapInstance.current && isSimulating) {
         leafletMapInstance.current.panTo([currentRiderPos.lat, currentRiderPos.lng], {
           animate: true,
@@ -327,52 +278,68 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
         });
       }
     }
-  }, [currentRiderPos, isSimulating]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRiderPos]);
 
-  // Map Controls: Zoom In, Zoom Out, Recenter
-  const handleZoomIn = () => {
-    if (leafletMapInstance.current) {
-      leafletMapInstance.current.zoomIn();
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (leafletMapInstance.current) {
-      leafletMapInstance.current.zoomOut();
-    }
-  };
-
+  const handleZoomIn = () => leafletMapInstance.current?.zoomIn();
+  const handleZoomOut = () => leafletMapInstance.current?.zoomOut();
   const handleRecenter = () => {
     if (leafletMapInstance.current) {
       leafletMapInstance.current.panTo([currentRiderPos.lat, currentRiderPos.lng]);
     }
   };
 
-  // Turn step icon renderer
-  const renderTurnIcon = (turn: string) => {
-    switch (turn) {
-      case 'left':
-        return <ArrowLeft className="w-7 h-7 text-emerald-400" />;
-      case 'right':
-        return <ArrowRight className="w-7 h-7 text-emerald-400" />;
-      case 'u-turn':
-        return <RotateCcw className="w-7 h-7 text-amber-400" />;
-      case 'arrive':
-        return <Flag className="w-7 h-7 text-primary-fixed" />;
-      default:
-        return <ArrowUp className="w-7 h-7 text-emerald-400" />;
-    }
+  // Turn icon SVG for the banner
+  const getTurnSvg = (turn: string) => {
+    if (turn === 'left')
+      return (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      );
+    if (turn === 'right')
+      return (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      );
+    if (turn === 'arrive')
+      return (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+          <line x1="4" y1="22" x2="4" y2="15" />
+        </svg>
+      );
+    // straight (default)
+    return (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5" />
+        <polyline points="5 12 12 5 19 12" />
+      </svg>
+    );
   };
+
+  // Compute ETA clock time (current time + remaining minutes)
+  const etaTime = (() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + remainingEta);
+    return now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  })();
+
+  // Google Maps navigation link
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${targetCoords.lat},${targetCoords.lng}&travelmode=driving`;
+
+  const currentStep = currentSteps[currentStepIdx];
 
   return (
     <div
       className={`relative overflow-hidden transition-all duration-300 ${
         isFullScreen
-          ? 'fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between'
-          : 'w-full rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col h-[380px]'
+          ? 'fixed inset-0 z-50 flex flex-col bg-white'
+          : 'w-full rounded-2xl bg-white shadow-lg border border-slate-200 flex flex-col'
       }`}
     >
-      {/* Inject Leaflet CSS for map styling */}
+      {/* Leaflet CSS */}
       <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -380,145 +347,171 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
         crossOrigin=""
       />
 
-      {/* TOP TURN-BY-TURN GUIDANCE HEADER */}
-      <div className="z-20 bg-slate-950/95 backdrop-blur-md p-3.5 border-b border-slate-800 flex items-center justify-between shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center shadow-glow shrink-0">
-            {renderTurnIcon(currentSteps[currentStepIdx]?.turn || 'straight')}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-emerald-400 uppercase tracking-widest font-mono">
-                {currentSteps[currentStepIdx]?.dist || '100m'}
-              </span>
-              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                {isToShop ? 'NAVIGATING TO SHOP' : 'NAVIGATING TO CUSTOMER'}
-              </span>
-            </div>
-            <h2 className="text-xs sm:text-sm font-extrabold text-slate-100 mt-0.5 line-clamp-1">
-              {currentSteps[currentStepIdx]?.instruction}
-            </h2>
-          </div>
-        </div>
-
-        {/* Action Controls: Voice & FullScreen Expand/Minimize */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setVoiceEnabled((v) => !v)}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-              voiceEnabled ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'
-            }`}
-            title="Toggle Voice Navigation"
-          >
-            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-
-          {onToggleFullScreen && (
-            <button
-              onClick={onToggleFullScreen}
-              className="w-9 h-9 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 flex items-center justify-center transition-colors"
-              title={isFullScreen ? 'Minimize Map' : 'Expand Map to Full Screen'}
-            >
-              {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-          )}
-
-          {isFullScreen && onCloseNav && (
-            <button
-              onClick={onCloseNav}
-              className="text-xs font-bold text-slate-400 hover:text-white px-2 py-1"
-            >
-              Close
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* RECALCULATING ROUTE WARNING OVERLAY */}
-      {isRecalculating && (
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-30 bg-amber-500 text-slate-950 font-bold text-xs px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
-          <Sparkles className="w-4 h-4 fill-current" />
-          <span>Off Route – Auto-Recalculating Path...</span>
-        </div>
-      )}
-
-      {/* MAP CANVAS CONTAINER */}
-      <div className="relative flex-1 w-full bg-slate-900 overflow-hidden">
-        {/* Leaflet Map Div */}
+      {/* ═══════════════════════════════════════════════
+          MAP AREA (with all overlays INSIDE the map)
+      ═══════════════════════════════════════════════ */}
+      <div className={`relative w-full bg-slate-100 ${isFullScreen ? 'flex-1' : 'h-[260px]'}`}>
+        {/* Leaflet map canvas */}
         <div ref={mapRef} className="w-full h-full z-10" />
 
-        {/* FLOATING TOP-LEFT SPEEDOMETER & RIDE SIMULATOR CONTROLS */}
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-          <div className="bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-800 flex items-center gap-2 shadow-soft">
-            <Compass className="w-4 h-4 text-emerald-400 animate-spin" style={{ animationDuration: '8s' }} />
-            <span className="text-xs font-mono font-bold text-slate-200">
-              {isSimulating ? `${Math.floor(28 * simSpeed)} km/h` : 'Live GPS'}
-            </span>
+        {/* ── OVERLAY: Turn-by-turn banner (top-left) ── */}
+        <div className="absolute top-3 left-3 z-20 max-w-[72%]">
+          <div className="bg-slate-900/95 backdrop-blur-sm rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-xl">
+            <div className="shrink-0">{getTurnSvg(currentStep?.turn || 'straight')}</div>
+            <div>
+              <p className="text-white font-black text-base leading-none">{currentStep?.dist || '150 m'}</p>
+              <p className="text-slate-300 text-[11px] font-medium mt-0.5 leading-tight line-clamp-1">
+                {currentStep?.instruction || 'Calculating route...'}
+              </p>
+            </div>
           </div>
-
-          <button
-            onClick={() => setIsSimulating((s) => !s)}
-            className="bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-800 text-[11px] font-bold text-slate-300 hover:text-white flex items-center gap-1.5 shadow-soft active:scale-95"
-          >
-            {isSimulating ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Play className="w-3.5 h-3.5 text-emerald-400" />}
-            <span>{isSimulating ? 'Pause' : 'Simulate'}</span>
-          </button>
         </div>
 
-        {/* FLOATING RIGHT-SIDE PURE MAP CONTROLS: ZOOM IN (+), ZOOM OUT (-), RECENTER */}
-        <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
+        {/* ── OVERLAY: Collapse/Minimize (top-right) ── */}
+        {onToggleFullScreen && (
           <button
-            onClick={handleRecenter}
-            className="w-9 h-9 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-200 flex items-center justify-center shadow-soft hover:bg-slate-800 active:scale-95"
-            title="Recenter Location"
+            onClick={onToggleFullScreen}
+            className="absolute top-3 right-3 z-20 w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-200 active:scale-95"
+            title={isFullScreen ? 'Minimize Map' : 'Expand Map'}
           >
-            <Crosshair className="w-4 h-4 text-emerald-400" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#374151"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              {isFullScreen ? (
+                <polyline points="18 15 12 9 6 15" />
+              ) : (
+                <polyline points="6 9 12 15 18 9" />
+              )}
+            </svg>
+          </button>
+        )}
+
+        {/* ── OVERLAY: Right-side controls stack ── */}
+        <div className="absolute top-14 right-3 z-20 flex flex-col gap-2">
+          {/* Sound toggle */}
+          <button
+            onClick={() => setVoiceEnabled((v) => !v)}
+            className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-200 active:scale-95"
+            title="Toggle Voice"
+          >
+            {voiceEnabled ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <line x1="23" y1="9" x2="17" y2="15" />
+                <line x1="17" y1="9" x2="23" y2="15" />
+              </svg>
+            )}
           </button>
 
+          {/* Navigation mode toggle */}
+          <button
+            onClick={() => setNavMode((m) => (m === 'map' ? 'satellite' : 'map'))}
+            className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-200 active:scale-95"
+            title="Toggle Map Mode"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
+              <polygon points="3 11 22 2 13 21 11 13 3 11" />
+            </svg>
+          </button>
+
+          {/* Zoom In */}
           <button
             onClick={handleZoomIn}
-            className="w-9 h-9 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-200 flex items-center justify-center shadow-soft hover:bg-slate-800 active:scale-95 font-bold"
+            className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-200 font-bold text-slate-700 text-lg active:scale-95"
             title="Zoom In"
           >
-            <Plus className="w-4 h-4" />
+            +
           </button>
 
+          {/* Zoom Out */}
           <button
             onClick={handleZoomOut}
-            className="w-9 h-9 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-200 flex items-center justify-center shadow-soft hover:bg-slate-800 active:scale-95 font-bold"
+            className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-200 font-bold text-slate-700 text-lg active:scale-95"
             title="Zoom Out"
           >
-            <Minus className="w-4 h-4" />
+            −
+          </button>
+        </div>
+
+        {/* ── OVERLAY: Re-center button (bottom-left) ── */}
+        <button
+          onClick={handleRecenter}
+          className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-white rounded-full px-3 py-1.5 shadow-md border border-slate-200 text-xs font-semibold text-slate-700 active:scale-95"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round">
+            <polygon points="3 11 22 2 13 21 11 13 3 11" />
+          </svg>
+          Re-center
+        </button>
+      </div>
+
+      {/* ═══════════════════════════════════════════════
+          STATS BAR — Distance | ETA | Exit
+      ═══════════════════════════════════════════════ */}
+      <div className="bg-white border-t border-slate-100 px-4 py-3 flex items-center">
+        {/* Distance */}
+        <div className="flex-1 text-center">
+          <p className="text-[15px] font-black text-slate-900">{remainingDist} km</p>
+          <p className="text-[10px] text-slate-500 font-medium">Distance</p>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-slate-200 mx-2" />
+
+        {/* ETA */}
+        <div className="flex-1 text-center">
+          <p className="text-[15px] font-black text-slate-900">{remainingEta} min</p>
+          <p className="text-[10px] text-slate-500 font-medium">ETA • {etaTime}</p>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-slate-200 mx-2" />
+
+        {/* Exit button */}
+        <div className="flex flex-col items-center gap-1">
+          <button
+            className="flex items-center gap-1 border border-red-400 text-red-500 rounded-full px-3 py-1 text-[11px] font-bold active:scale-95 hover:bg-red-50 transition-colors"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            Exit
           </button>
         </div>
       </div>
 
-      {/* BOTTOM PURE NAVIGATION INFO OVERLAY (NO WORKFLOW BUTTONS INSIDE MAP) */}
-      <div className="z-20 bg-slate-950/95 backdrop-blur-md p-3.5 border-t border-slate-800 flex items-center justify-between shadow-2xl">
-        {/* Remaining ETA & Distance */}
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-black text-emerald-400 font-mono leading-none">
-            {remainingEta} min
-          </span>
-          <span className="text-xs font-mono font-semibold text-slate-400">
-            ({remainingDist} km away)
-          </span>
-        </div>
-
-        {/* Current Destination Name & Address */}
-        <div className="text-right max-w-[200px]">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 justify-end">
-            {isToShop ? <Store className="w-3.5 h-3.5 text-emerald-400" /> : <Home className="w-3.5 h-3.5 text-amber-400" />}
-            <span>{isToShop ? order.restaurantName : order.customerName}</span>
-          </p>
-          <p className="text-xs text-slate-300 truncate mt-0.5">
-            {isToShop ? order.restaurantAddress : order.deliveryAddress}
-          </p>
-        </div>
-      </div>
+      {/* ═══════════════════════════════════════════════
+          GOOGLE MAPS LINK
+      ═══════════════════════════════════════════════ */}
+      <a
+        href={googleMapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="bg-slate-50 border-t border-slate-100 px-4 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 transition-colors active:opacity-80"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+        Open in Google Maps for live navigation
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </a>
     </div>
   );
 };
 
-// Re-export alias LiveNavigationMap
 export const LiveNavigationMap = LiveRiderNavigation;

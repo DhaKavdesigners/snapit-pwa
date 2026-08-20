@@ -16,7 +16,7 @@ export const QuickStatsBento: React.FC = () => {
       >
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-secondary">
-            Today's Earnings
+            Today&apos;s Earnings
           </p>
           <span className="material-symbols-outlined text-[16px] text-primary group-hover:translate-x-0.5 transition-transform">
             trending_up

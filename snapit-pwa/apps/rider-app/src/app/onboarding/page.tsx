@@ -191,7 +191,7 @@ export default function OnboardingPage() {
             </div>
 
             <p className="text-[11px] text-secondary text-center leading-relaxed">
-              By continuing, you agree to Snapit's{' '}
+              By continuing, you agree to Snapit&apos;s{' '}
               <a href="#" className="text-primary underline">Terms of Service</a> and{' '}
               <a href="#" className="text-primary underline">Privacy Policy</a>
             </p>
