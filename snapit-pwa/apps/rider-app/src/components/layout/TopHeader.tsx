@@ -53,57 +53,45 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
     <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-200">
       <div className="w-full max-w-md mx-auto h-16 px-4 flex items-center justify-between glass-nav border-b border-surface-variant/40 shadow-sm">
 
-        {/* Left: Avatar + Name + Rating */}
-        {showBack ? (
-          <button
-            onClick={() => window.history.back()}
-            className="w-9 h-9 rounded-full bg-white/80 border border-outline-variant/30 flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors shadow-sm active:scale-95"
-            aria-label="Go back"
-          >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-          </button>
-        ) : (
-          <Link href="/profile" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-full relative overflow-hidden ring-2 ring-primary/20 p-[1px] bg-white shadow-sm transition-transform group-hover:scale-105 shrink-0">
-              <img
-                src={rider.selfieCapturedUrl || rider.avatarUrl}
-                alt={rider.name}
-                className="w-full h-full object-cover rounded-full"
-              />
-              <span
-                className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                  isBreakActive
-                    ? 'bg-amber-400'
-                    : isOnline
-                    ? 'bg-primary animate-pulse'
-                    : 'bg-secondary'
-                }`}
-              />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-xs text-on-surface">{rider.name}</span>
-              <span className="text-[10px] text-amber-500 font-semibold">⭐ {rider.rating} (400+ trips)</span>
-            </div>
-          </Link>
-        )}
-
-        {/* Center: Brand */}
-        <div className="flex flex-col items-center">
-          {title ? (
-            <div className="text-center">
-              <h1 className="font-bold text-base text-on-surface leading-tight">{title}</h1>
-              {subtitle && <p className="text-[11px] text-secondary">{subtitle}</p>}
-            </div>
+        {/* Left: Avatar + Snapit RIDER Branding */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {showBack ? (
+            <button
+              onClick={() => window.history.back()}
+              className="w-9 h-9 rounded-full bg-white/80 border border-outline-variant/30 flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors shadow-sm active:scale-95"
+              aria-label="Go back"
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+            </button>
           ) : (
-            <Link href="/" className="flex items-center gap-1 group">
-              <span className="text-xl font-black tracking-tighter bg-gradient-to-r from-primary to-primary-container bg-clip-text text-transparent">
-                Snapit
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">
-                Rider
-              </span>
+            <Link href="/profile" className="relative group cursor-pointer active:scale-95 transition-transform shrink-0" title="View Profile">
+              <div className="w-9 h-9 rounded-full relative overflow-hidden ring-2 ring-primary/20 p-[1px] bg-white shadow-sm transition-transform group-hover:scale-105">
+                <img
+                  src={rider.selfieCapturedUrl || rider.avatarUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover rounded-full"
+                />
+                <span
+                  className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
+                    isBreakActive
+                      ? 'bg-amber-400'
+                      : isOnline
+                      ? 'bg-primary animate-pulse'
+                      : 'bg-secondary'
+                  }`}
+                />
+              </div>
             </Link>
           )}
+
+          <Link href="/" className="flex items-center gap-1.5 group">
+            <span className="text-xl font-black tracking-tighter bg-gradient-to-r from-primary to-primary-container bg-clip-text text-transparent">
+              Snapit
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">
+              RIDER
+            </span>
+          </Link>
         </div>
 
         {/* Right: Online toggle + Bell */}

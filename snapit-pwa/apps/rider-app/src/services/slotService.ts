@@ -79,7 +79,7 @@ export function generateDailySlots(
 
   for (let h = config.operatingHourStart; h < config.operatingHourEnd; h++) {
     const startHourStr = h.toString().padStart(2, '0');
-    const endHourStr = (h + 1).toString().padStart(2, '0');
+    const endHourStr = ((h + 1) % 24).toString().padStart(2, '0');
     const startTs = timeToTodayMs(`${startHourStr}:00`, date);
     const endTs = startTs + config.slotDurationMinutes * 60 * 1000;
     const slotId = `slot-${date}-${h}`;

@@ -54,12 +54,6 @@ export const BottomNav: React.FC = () => {
       active: pathname === '/alerts',
       badge: unreadAlerts > 0 ? `${unreadAlerts}` : undefined,
     },
-    {
-      label: 'Profile',
-      href: '/profile',
-      icon: 'person',
-      active: pathname === '/profile',
-    },
   ];
 
   // Hide nav on onboarding or modal confirmation screens

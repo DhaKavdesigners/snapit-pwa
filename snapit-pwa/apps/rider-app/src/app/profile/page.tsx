@@ -5,7 +5,6 @@ import { AppShell } from '@/components/layout/AppShell';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import {
-  Star,
   ShieldCheck,
   Bike,
   CreditCard,
@@ -43,7 +42,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <AppShell title="Rider Profile" subtitle="Verified documents & settings">
+    <AppShell>
       <div className="flex flex-col gap-4 pt-2 pb-6 animate-fade-in">
         
         {/* Profile Card Header */}
@@ -64,58 +63,19 @@ export default function ProfilePage() {
               <h2 className="font-bold text-base text-on-surface truncate">{rider.name}</h2>
               <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
             </div>
-            <p className="text-xs font-mono font-semibold text-secondary">Rider ID: #RD-89421</p>
-            <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 mt-1">
+            <p className="text-xs font-semibold text-amber-500 flex items-center gap-1 mt-0.5">
+              <span>⭐ {rider.rating}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500 font-medium">400+ trips</span>
+            </p>
+            <p className="text-xs font-mono font-semibold text-secondary mt-0.5">Rider ID: #RD-89421</p>
+            <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
               Verified Partner
             </span>
           </div>
         </div>
 
-        {/* Performance Bento Grid */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
-            <span className="text-[10px] font-bold text-secondary uppercase">Rating</span>
-            <div className="flex items-center justify-center gap-1 mt-1 text-amber-500 font-bold text-base">
-              <Star className="w-4 h-4 fill-current" />
-              <span>{rider.rating}</span>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
-            <span className="text-[10px] font-bold text-secondary uppercase">Trips</span>
-            <p className="text-base font-bold text-on-surface font-mono mt-1">
-              {rider.totalDeliveries}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
-            <span className="text-[10px] font-bold text-secondary uppercase">Acceptance</span>
-            <p className="text-base font-bold text-primary font-mono mt-1">
-              {rider.acceptanceRate}%
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
-            <span className="text-[10px] font-bold text-secondary uppercase">Completion</span>
-            <p className="text-base font-bold text-blue-600 font-mono mt-1">
-              {rider.completionRate || 97}%
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
-            <span className="text-[10px] font-bold text-secondary uppercase">Slot Reliab.</span>
-            <p className="text-base font-bold text-orange-500 font-mono mt-1">
-              {rider.slotReliability || 96}%
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
-            <span className="text-[10px] font-bold text-secondary uppercase">On-Time</span>
-            <p className="text-base font-bold text-emerald-600 font-mono mt-1">
-              {rider.onTimeRate || 94}%
-            </p>
-          </div>
-        </div>
 
         {/* SECTION 1: LOCKED & VERIFIED DOCUMENTS (NON-EDITABLE) */}
         <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 flex flex-col gap-3.5">

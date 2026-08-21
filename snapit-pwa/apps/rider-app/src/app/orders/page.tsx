@@ -83,7 +83,7 @@ export default function OrdersPage() {
   const isDeliveredDone = activeOrder?.status === 'delivered';
 
   return (
-    <AppShell title="My Orders" subtitle="Manage active & past trips">
+    <AppShell>
       <div className="flex flex-col gap-4 pt-2 pb-8">
 
         {/* Acceptance warning banner */}

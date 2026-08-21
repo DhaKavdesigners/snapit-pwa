@@ -466,7 +466,7 @@ export default function SlotsPage() {
   const isBreakActive = riderBreak && !riderBreak.endedAt;
 
   return (
-    <AppShell title="My Slots" subtitle="Book and manage your work slots">
+    <AppShell>
       <div className="flex flex-col gap-4 pt-2 pb-6 animate-fade-in">
 
         {/* ── Zone Status Banner ───────────────────────── */}

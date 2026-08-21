@@ -8,7 +8,7 @@ import { ZoneStatusBanner } from '@/components/slots/ZoneStatusBanner';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Check, Hourglass, ChevronDown, MapPin, Flame, TrendingUp, BarChart2, Clock, Star, ChevronRight, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Check, Hourglass, ChevronDown, MapPin, Flame, TrendingUp, BarChart2, Clock, ChevronRight, AlertCircle } from 'lucide-react';
 
 // ─── Tiny sparkline SVG components ─────────────────────────────────
 const EarningsTrend = () => (
@@ -28,126 +28,6 @@ const OnlineTimeLine = () => (
     <polyline points="0,14 8,10 16,16 24,8 32,14 40,6 48,12 56,8" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
   </svg>
 );
-const StarRow = ({ rating }: { rating: number }) => (
-  <div className="flex gap-0.5 mt-0.5">
-    {[1, 2, 3, 4, 5].map((s) => (
-      <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill={s <= Math.floor(rating) ? '#f59e0b' : '#e5e7eb'}>
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-      </svg>
-    ))}
-  </div>
-);
-
-// ─── Map Component (inline, light-themed with heat zones) ─────────
-const DashboardMap: React.FC<{ isOnline: boolean; activeOrder: boolean; zoneName: string }> = ({
-  isOnline,
-  activeOrder,
-  zoneName,
-}) => {
-  const [showHeatmap, setShowHeatmap] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm" style={{ height: expanded ? 280 : 200 }}>
-      {/* Map background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuBgtdbyFa1-Md0dje5eC0PGii_kvQZXy3o-YKjm93DNqIpa_oEFEYWjpWIjQnk8dRhZKvuUouY2Lnc34P-ZR0nhLbvNECl_aC6Jytk_tziH1Z6zwK4qRbk0aNXxql50yMmFjGEsS8Vd_HiG4Df_ILUgQluS6nX9OA4A58UIWOZHcxYsxs5-mmBNw-Rv-0onSBFBDjFUjaOlcBBUcv6JrJpOyrwiKD5G868NGPi6o8YABlk3v17WdSFUEg')`,
-        }}
-      />
-
-      {/* SVG heatmap + rider overlay */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <radialGradient id="heatRed" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(239,68,68,0.45)" />
-            <stop offset="70%" stopColor="rgba(239,68,68,0.12)" />
-            <stop offset="100%" stopColor="rgba(239,68,68,0)" />
-          </radialGradient>
-          <radialGradient id="heatOrange" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(249,115,22,0.40)" />
-            <stop offset="70%" stopColor="rgba(249,115,22,0.10)" />
-            <stop offset="100%" stopColor="rgba(249,115,22,0)" />
-          </radialGradient>
-          <radialGradient id="heatGreen" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(34,197,94,0.35)" />
-            <stop offset="70%" stopColor="rgba(34,197,94,0.08)" />
-            <stop offset="100%" stopColor="rgba(34,197,94,0)" />
-          </radialGradient>
-        </defs>
-
-        {showHeatmap && (
-          <g>
-            <circle cx="200" cy="90" r="70" fill="url(#heatRed)" />
-            <circle cx="300" cy="60" r="55" fill="url(#heatOrange)" />
-            <circle cx="100" cy="130" r="50" fill="url(#heatOrange)" />
-            <circle cx="320" cy="150" r="40" fill="url(#heatGreen)" />
-          </g>
-        )}
-
-        {/* Green delivery zone markers */}
-        {[
-          { cx: 160, cy: 100 },
-          { cx: 290, cy: 80 },
-          { cx: 110, cy: 140 },
-        ].map((pt, i) => (
-          <g key={i}>
-            <circle cx={pt.cx} cy={pt.cy} r="12" fill="white" stroke="#16a34a" strokeWidth="2" />
-            <circle cx={pt.cx} cy={pt.cy} r="6" fill="#16a34a" />
-          </g>
-        ))}
-
-        {/* Rider blue dot */}
-        <circle cx="200" cy="120" r="20" fill="rgba(37,99,235,0.15)" />
-        <circle cx="200" cy="120" r="10" fill="#2563eb" stroke="white" strokeWidth="2.5" />
-      </svg>
-
-      {/* High Demand pill on map */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
-        <div className="bg-orange-500 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg whitespace-nowrap">
-          <Flame className="w-3 h-3" />
-          High Demand · 4 orders
-        </div>
-      </div>
-
-      {/* Right-side map controls */}
-      <div className="absolute right-3 top-3 z-20 flex flex-col gap-2">
-        <button
-          className="w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-200 active:scale-95"
-          title="Recenter"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="3" /><line x1="12" y1="2" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="22" y2="12" />
-          </svg>
-        </button>
-        <button
-          onClick={() => setShowHeatmap((h) => !h)}
-          className={`w-9 h-9 rounded-full shadow-md flex items-center justify-center border border-slate-200 active:scale-95 ${showHeatmap ? 'bg-primary/10' : 'bg-white'}`}
-          title="Toggle layers"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showHeatmap ? '#16a34a' : '#374151'} strokeWidth="2" strokeLinecap="round">
-            <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
-          </svg>
-        </button>
-        <button
-          onClick={() => setExpanded((e) => !e)}
-          className="w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-200 active:scale-95"
-          title="Expand map"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
-            {expanded
-              ? <><polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" /><line x1="10" y1="14" x2="21" y2="3" /><line x1="3" y1="21" x2="14" y2="10" /></>
-              : <><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></>
-            }
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // ─── Main Home Page ─────────────────────────────────────────────────
 export default function DashboardPage() {
   const {
@@ -298,13 +178,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Live Demand Map ───────────────────────────────── */}
-        <DashboardMap
-          isOnline={isOnline}
-          activeOrder={!!activeOrder}
-          zoneName={rider.selectedZone || 'Downtown Central'}
-        />
-
         {/* ── High Demand Strip ─────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -329,7 +202,7 @@ export default function DashboardPage() {
         {/* ── Incoming Order Modal (if any) ─────────────────── */}
         {incomingOrder && !activeOrder && <IncomingOrderModal />}
 
-        {/* ── Today's Overview 2×2 grid ────────────────────── */}
+        {/* ── Today's Overview 3-card grid ────────────────────── */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-[14px] font-bold text-slate-900">Today&apos;s Overview</h2>
@@ -338,62 +211,48 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {/* Earnings */}
-            <Link href="/earnings" className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex flex-col justify-between gap-2 active:scale-98 transition-transform">
+            <Link href="/earnings" className="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col justify-between gap-2 active:scale-98 transition-transform">
               <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-green-700" />
+                <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-3.5 h-3.5 text-green-700" />
                 </div>
                 <EarningsTrend />
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 font-medium">Today&apos;s Earnings</p>
-                <p className="text-[20px] font-black text-slate-900 font-mono leading-tight">₹{earnings.today.toLocaleString()}</p>
+                <p className="text-[10px] text-slate-500 font-medium truncate">Today&apos;s Earnings</p>
+                <p className="text-[17px] font-black text-slate-900 font-mono leading-tight">₹{earnings.today.toLocaleString()}</p>
               </div>
             </Link>
 
             {/* Deliveries */}
-            <Link href="/orders" className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex flex-col justify-between gap-2 active:scale-98 transition-transform">
+            <Link href="/orders" className="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col justify-between gap-2 active:scale-98 transition-transform">
               <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <BarChart2 className="w-4 h-4 text-blue-600" />
+                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                  <BarChart2 className="w-3.5 h-3.5 text-blue-600" />
                 </div>
                 <DeliveriesChart />
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 font-medium">Deliveries</p>
-                <p className="text-[20px] font-black text-slate-900 font-mono leading-tight">{earnings.todayDeliveries}</p>
+                <p className="text-[10px] text-slate-500 font-medium truncate">Deliveries</p>
+                <p className="text-[17px] font-black text-slate-900 font-mono leading-tight">{earnings.todayDeliveries}</p>
               </div>
             </Link>
 
             {/* Online Time */}
-            <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
+            <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
               <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-orange-500" />
+                <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-orange-500" />
                 </div>
                 <OnlineTimeLine />
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 font-medium">Online Time</p>
-                <p className="text-[20px] font-black text-slate-900 font-mono leading-tight">{onlineTimeStr}</p>
+                <p className="text-[10px] text-slate-500 font-medium truncate">Online Time</p>
+                <p className="text-[17px] font-black text-slate-900 font-mono leading-tight">{onlineTimeStr}</p>
               </div>
             </div>
-
-            {/* Rating */}
-            <Link href="/profile" className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex flex-col justify-between gap-2 active:scale-98 transition-transform">
-              <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Star className="w-4 h-4 text-amber-500" />
-                </div>
-                <StarRow rating={rider.rating} />
-              </div>
-              <div>
-                <p className="text-[11px] text-slate-500 font-medium">Rating</p>
-                <p className="text-[20px] font-black text-slate-900 font-mono leading-tight">{rider.rating}</p>
-              </div>
-            </Link>
           </div>
         </div>
 

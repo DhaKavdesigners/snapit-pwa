@@ -1,4 +1,4 @@
-﻿import { AdminConfig, OrderAcceptanceExceptionReason } from '@/types';
+import { AdminConfig, OrderAcceptanceExceptionReason } from '@/types';
 
 const ALL_EXCEPTION_REASONS: OrderAcceptanceExceptionReason[] = [
   'customer_cancelled',
@@ -16,8 +16,8 @@ const ALL_EXCEPTION_REASONS: OrderAcceptanceExceptionReason[] = [
 export const DEFAULT_ADMIN_CONFIG: AdminConfig = {
   slot: {
     slotDurationMinutes: 60,
-    operatingHourStart: 6,
-    operatingHourEnd: 23,
+    operatingHourStart: 0,
+    operatingHourEnd: 24,
     bookingCutoffMinutes: 60,
     earlyOnlineWindowMinutes: 5,
     maxConsecutiveSlots: 3,

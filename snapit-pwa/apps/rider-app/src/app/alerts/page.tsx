@@ -150,7 +150,7 @@ export default function AlertsPage() {
   const unread = alerts.filter((a) => !a.read).length;
 
   return (
-    <AppShell title="Alerts & Updates" subtitle="Live bonuses, slots, and system updates">
+    <AppShell>
       <div className="flex flex-col gap-4 pt-2 pb-6 animate-fade-in">
 
         {/* Header Actions */}

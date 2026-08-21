@@ -22,7 +22,7 @@ export default function EarningsPage() {
   const [showCashoutModal, setShowCashoutModal] = useState(false);
 
   return (
-    <AppShell title="Earnings & Wallet" subtitle="Wallet balance & bank payouts">
+    <AppShell>
       <div className="flex flex-col gap-4 pt-2 pb-6 animate-fade-in">
         
         {/* 1. MAIN RIDER WALLET CARD (ALL TRIP EARNINGS DEPOSIT HERE FIRST) */}
