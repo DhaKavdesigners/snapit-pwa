@@ -7,7 +7,7 @@ node_modules/
 
 # ── Build Outputs ─────────────────────────────────────────
 dist/
-dist-ssr/
+dist-ssr/ 
 build/
 .output/
 
