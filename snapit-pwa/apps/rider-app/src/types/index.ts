@@ -1,3 +1,4 @@
+// ─── Delivery & Navigation Types ────────────────────────────────────────────
 export type DeliveryStatus = 
   | 'pending'
   | 'accepted'
@@ -46,6 +47,7 @@ export interface Order {
   navStage?: NavigationStage;
 }
 
+// ─── Rider Profile ───────────────────────────────────────────────────────────
 export interface RiderProfile {
   name: string;
   dob: string;
@@ -75,13 +77,18 @@ export interface RiderProfile {
   rating: number;
   totalDeliveries: number;
   acceptanceRate: number;
+  completionRate?: number;
+  slotReliability?: number;
+  onTimeRate?: number;
   vehicleType: string;
   vehicleNumber: string;
   selectedZone: string;
+  selectedZoneId?: string;
   isVerified: boolean;
   verificationStep: number; // 1: submitted, 2: reviewing, 3: admin check, 4: approved
 }
 
+// ─── Earnings ────────────────────────────────────────────────────────────────
 export interface EarningsSummary {
   today: number;
   todayTarget: number;
@@ -103,6 +110,7 @@ export interface EarningsSummary {
   }[];
 }
 
+// ─── Zone ────────────────────────────────────────────────────────────────────
 export interface DeliveryZone {
   id: string;
   name: string;
@@ -110,14 +118,184 @@ export interface DeliveryZone {
   demand: 'HIGH' | 'MEDIUM' | 'NORMAL';
   estDailyEarnings: string;
   activeRiders: number;
+  // Geofence data
+  centerLat?: number;
+  centerLng?: number;
+  radiusMeters?: number;
+  // Capacity
+  capacity?: number;
+  booked?: number;
 }
+
+export type ZoneStatus =
+  | 'unknown'
+  | 'inside'
+  | 'outside'
+  | 'gps_error'
+  | 'permission_denied'
+  | 'gps_disabled'
+  | 'low_accuracy';
+
+// ─── Slots ───────────────────────────────────────────────────────────────────
+export type SlotStatus =
+  | 'available'
+  | 'booked'
+  | 'active'
+  | 'completed'
+  | 'cancelled'
+  | 'missed'
+  | 'full'
+  | 'waitlisted'
+  | 'booking_closed';
+
+export type DemandLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+
+export interface RiderSlot {
+  id: string;
+  date: string;            // YYYY-MM-DD
+  startTime: string;       // HH:mm (24h)
+  endTime: string;         // HH:mm (24h)
+  startTimestamp: number;  // epoch ms
+  endTimestamp: number;    // epoch ms
+  zoneId: string;
+  zoneName: string;
+  status: SlotStatus;
+  bookedAt: number | null;
+  startedAt: number | null;
+  endedAt: number | null;
+  extendedFromSlotId: string | null;
+  demandLevel: DemandLevel;
+  capacity: number;
+  bookedCount: number;
+  onWaitlist?: boolean;
+}
+
+// ─── Break ───────────────────────────────────────────────────────────────────
+export type BreakStatus = 'idle' | 'active' | 'grace' | 'completed' | 'emergency';
+
+export interface RiderBreak {
+  id: string;
+  slotId: string;
+  startedAt: number;           // epoch ms
+  endedAt: number | null;
+  allowedDurationMs: number;
+  actualDurationMs: number | null;
+  excessDurationMs: number | null;
+  status: BreakStatus;
+  isEmergency: boolean;
+  emergencyReason: string | null;
+  gracePeriodEndAt: number | null;
+}
+
+// ─── Order Acceptance ────────────────────────────────────────────────────────
+export type OrderAcceptanceResponse = 'accepted' | 'declined' | 'timeout';
+
+export type OrderAcceptanceExceptionReason =
+  | 'customer_cancelled'
+  | 'shop_cancelled'
+  | 'duplicate_assignment'
+  | 'system_error'
+  | 'network_error'
+  | 'admin_reassignment'
+  | 'outside_zone'
+  | 'active_delivery_conflict'
+  | 'safety_emergency'
+  | 'admin_approved';
+
+export interface OrderAcceptanceEvent {
+  id: string;
+  orderId: string;
+  slotId: string | null;
+  assignedAt: number;
+  respondedAt: number | null;
+  response: OrderAcceptanceResponse;
+  countedAsNonAcceptance: boolean;
+  exceptionReason: OrderAcceptanceExceptionReason | null;
+}
+
+// ─── Slot History ────────────────────────────────────────────────────────────
+export interface SlotHistoryEntry {
+  slot: RiderSlot;
+  onlineMinutes: number;
+  breakMinutes: number;
+  ordersCount: number;
+  acceptanceRate: number;
+  earnings: number;
+}
+
+// ─── Admin Config ─────────────────────────────────────────────────────────────
+export interface AdminSlotConfig {
+  slotDurationMinutes: number;
+  operatingHourStart: number;   // hour 0–23
+  operatingHourEnd: number;     // hour 0–23
+  bookingCutoffMinutes: number;
+  earlyOnlineWindowMinutes: number;
+  maxConsecutiveSlots: number;
+  extensionEnabled: boolean;
+  waitlistEnabled: boolean;
+}
+
+export interface AdminBreakConfig {
+  allowedBreakMinutes: number;
+  gracePeriodMinutes: number;
+  maxBreaksPerSlot: number;
+  emergencyBreakEnabled: boolean;
+  excessBreakPolicy: 'record_only' | 'warn' | 'charge';
+}
+
+export interface AdminOrderAcceptanceConfig {
+  acceptanceTimeoutSeconds: number;
+  warning1Threshold: number;
+  warning2Threshold: number;
+  maxNonAcceptances: number;
+  policyOnThreshold: 'warn' | 'pause' | 'charge' | 'review';
+  pauseDurationMinutes: number;
+  validExceptionReasons: OrderAcceptanceExceptionReason[];
+}
+
+export interface AdminConfig {
+  slot: AdminSlotConfig;
+  break: AdminBreakConfig;
+  orderAcceptance: AdminOrderAcceptanceConfig;
+}
+
+// ─── Alerts ──────────────────────────────────────────────────────────────────
+export type AlertNotificationType =
+  | 'surge'
+  | 'tip'
+  | 'payout'
+  | 'system'
+  | 'slot_booked'
+  | 'slot_reminder'
+  | 'slot_active'
+  | 'slot_ending'
+  | 'slot_ended'
+  | 'slot_extended'
+  | 'slot_cancelled'
+  | 'zone_entered'
+  | 'zone_exited'
+  | 'zone_required'
+  | 'break_started'
+  | 'break_ending'
+  | 'break_exceeded'
+  | 'break_emergency'
+  | 'acceptance_warning'
+  | 'acceptance_threshold'
+  | 'policy_action'
+  | 'online_enabled'
+  | 'online_disabled'
+  | 'waitlist_available';
 
 export interface AlertNotification {
   id: string;
   title: string;
   message: string;
   time: string;
-  type: 'surge' | 'tip' | 'payout' | 'system';
+  type: AlertNotificationType;
   read: boolean;
   amount?: number;
+  slotId?: string;
+  priority?: 'low' | 'normal' | 'high' | 'critical';
+  actionLabel?: string;
+  actionRoute?: string;
 }

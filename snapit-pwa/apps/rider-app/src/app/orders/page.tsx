@@ -9,7 +9,7 @@ import { Phone, Check, Package, Clock, AlertCircle, ShieldCheck, ChevronRight } 
 import { useRouter } from 'next/navigation';
 
 export default function OrdersPage() {
-  const { activeOrder, ordersHistory, advanceActiveOrderStatus, triggerMockOrder, markOrderPickedUp } = useRider();
+  const { activeOrder, ordersHistory, advanceActiveOrderStatus, triggerMockOrder, markOrderPickedUp, nonAcceptanceCount } = useRider();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'cancelled'>('active');
   const [isFullScreenNav, setIsFullScreenNav] = useState<boolean>(false);
   const router = useRouter();
@@ -85,6 +85,23 @@ export default function OrdersPage() {
   return (
     <AppShell title="My Orders" subtitle="Manage active & past trips">
       <div className="flex flex-col gap-4 pt-2 pb-8">
+
+        {/* Acceptance warning banner */}
+        {nonAcceptanceCount >= 1 && (
+          <div className={`rounded-2xl px-4 py-3 flex items-center gap-2.5 border ${
+            nonAcceptanceCount >= 3 ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'
+          }`}>
+            <AlertCircle className={`w-4 h-4 shrink-0 ${nonAcceptanceCount >= 3 ? 'text-red-500' : 'text-amber-600'}`} />
+            <div className="flex-1">
+              <p className="text-xs font-bold text-slate-800">
+                {nonAcceptanceCount >= 3 ? '🔴 Acceptance Threshold Reached' : '⚠️ Order Acceptance Warning'}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                {nonAcceptanceCount} non-accepted order{nonAcceptanceCount !== 1 ? 's' : ''} during current slot.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Segmented Control Filter Tabs */}
         <div className="flex bg-slate-200/80 p-1 rounded-2xl w-full border border-slate-300/60 shadow-inner">

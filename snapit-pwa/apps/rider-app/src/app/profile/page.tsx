@@ -94,6 +94,27 @@ export default function ProfilePage() {
               {rider.acceptanceRate}%
             </p>
           </div>
+
+          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
+            <span className="text-[10px] font-bold text-secondary uppercase">Completion</span>
+            <p className="text-base font-bold text-blue-600 font-mono mt-1">
+              {rider.completionRate || 97}%
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
+            <span className="text-[10px] font-bold text-secondary uppercase">Slot Reliab.</span>
+            <p className="text-base font-bold text-orange-500 font-mono mt-1">
+              {rider.slotReliability || 96}%
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 text-center">
+            <span className="text-[10px] font-bold text-secondary uppercase">On-Time</span>
+            <p className="text-base font-bold text-emerald-600 font-mono mt-1">
+              {rider.onTimeRate || 94}%
+            </p>
+          </div>
         </div>
 
         {/* SECTION 1: LOCKED & VERIFIED DOCUMENTS (NON-EDITABLE) */}
