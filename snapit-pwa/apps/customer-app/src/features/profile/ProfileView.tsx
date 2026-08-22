@@ -3,12 +3,14 @@ import { Button } from '../../components/ui/Button';
 import { 
   Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, 
   MessageCircle, Info, Copy, Check, RefreshCw, ShieldCheck, 
-  Sparkles, AlertCircle, Smartphone 
+  Sparkles, AlertCircle, Smartphone, ChefHat, Bike, Clock, 
+  ArrowRight, ChevronRight, Store, FileText, ChevronDown, ChevronUp, History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
+import { formatCurrency } from '../../utils/currency';
 
 // ─── Tiny Web Audio sound engine ─────────────────────────────────────────────
 type SoundType = 'success' | 'tap' | 'modal-pop' | 'sms-ping' | 'error';
@@ -132,6 +134,78 @@ export const ProfileView: React.FC = () => {
   // Dashboard modal states
   const [aboutModal, setAboutModal] = useState(false);
   const [policyModal, setPolicyModal] = useState<null | 'privacy' | 'terms' | 'refund'>(null);
+  const [ordersModal, setOrdersModal] = useState(false);
+  const [ordersTab, setOrdersTab] = useState<'active' | 'history'>('active');
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+
+  // Live Orders State
+  const [orders, setOrders] = useState<any[]>([]);
+  const [storesMap, setStoresMap] = useState<Record<string, string>>({
+    s1: 'Mhetha Stores',
+    s2: 'Vishal Mart',
+    s3: 'RR Bazar',
+    s4: 'Nandhini KGF',
+    f1: 'Bakio',
+    f2: 'Mayura',
+    f3: 'Ambur Biriyani KGF',
+    f4: 'Al Baik',
+    f5: 'Al Naz'
+  });
+
+  const fetchOrdersAndStores = async () => {
+    try {
+      const phone = userProfile?.phone || formData.phone || '8217649688';
+      
+      const [storesRes, ordersRes] = await Promise.all([
+        supabase.from('stores').select('id, name'),
+        supabase
+          .from('orders')
+          .select('*')
+          .or(`customer_id.eq.${phone},recipient_phone.eq.${phone}`)
+          .order('created_at', { ascending: false })
+      ]);
+
+      if (storesRes.data) {
+        const map: Record<string, string> = {};
+        storesRes.data.forEach((st: any) => {
+          map[st.id] = st.name;
+        });
+        setStoresMap(prev => ({ ...prev, ...map }));
+      }
+
+      if (ordersRes.data) {
+        setOrders(ordersRes.data);
+      }
+    } catch (err) {
+      console.warn("Failed to load customer orders:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrdersAndStores();
+
+    const phone = userProfile?.phone || formData.phone || '8217649688';
+    const channel = supabase
+      .channel(`customer-orders-live-${phone}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+        },
+        () => {
+          fetchOrdersAndStores();
+        }
+      )
+      .subscribe();
+
+    const interval = setInterval(fetchOrdersAndStores, 3500);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [userProfile?.phone, formData.phone]);
 
   // Timer countdown for resend
   useEffect(() => {
@@ -191,7 +265,7 @@ export const ProfileView: React.FC = () => {
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 200);
-    }, 1300);
+    }, 3000);
   };
 
   const handleCopyAndAutoFill = () => {
@@ -496,17 +570,135 @@ export const ProfileView: React.FC = () => {
 
     // ── Trust tier — read from persisted profile ─────────────────────────
     const deliveryVerified = userProfile?.deliveryVerified ?? false;
-    const orderCount       = userProfile?.completedOrdersCount ?? 0;
+    const orderCount       = orders.length || (userProfile?.completedOrdersCount ?? 0);
     const isTrusted        = deliveryVerified || orderCount >= 1;
+
+    // Active vs Past Orders
+    const activeOrders = orders.filter(o => 
+      ['PLACED', 'PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'READY_FOR_PICKUP', 'HANDED_OVER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.status)
+    );
+    const pastOrders = orders.filter(o => 
+      ['DELIVERED', 'REJECTED', 'CANCELLED'].includes(o.status)
+    );
+    const topActiveOrder = activeOrders[0] || (orders.length > 0 && orders[0].status !== 'DELIVERED' && orders[0].status !== 'REJECTED' ? orders[0] : null);
+
+    // Status Helper
+    const getOrderStatusInfo = (status: string, prepTime?: number, rejectionReason?: string) => {
+      switch (status) {
+        case 'PLACED':
+        case 'PENDING':
+          return {
+            stepIndex: 0,
+            title: 'Order Sent to Counter 📥',
+            subtitle: 'Waiting for store to confirm and begin packing...',
+            badgeText: 'Order Placed',
+            badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+            dotClass: 'bg-emerald-500 animate-ping',
+            step1Label: 'Placed',
+            step2Label: 'Packing',
+            step3Label: 'Handover',
+            progress: 25,
+            icon: Package,
+            iconColor: 'text-emerald-600',
+            isHandedOver: false
+          };
+        case 'ACCEPTED':
+        case 'PREPARING':
+          return {
+            stepIndex: 1,
+            title: 'Store is Preparing & Packing 🍳',
+            subtitle: `Store is assembling fresh items (ETA: ~${prepTime || 10}m)`,
+            badgeText: 'Store Preparing',
+            badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
+            dotClass: 'bg-amber-500 animate-pulse',
+            step1Label: 'Placed ✓',
+            step2Label: 'Packing Now ⏳',
+            step3Label: 'Handover',
+            progress: 60,
+            icon: ChefHat,
+            iconColor: 'text-amber-600',
+            isHandedOver: false
+          };
+        case 'READY':
+        case 'READY_FOR_PICKUP':
+        case 'HANDED_OVER':
+        case 'PICKED_UP':
+        case 'OUT_FOR_DELIVERY':
+          return {
+            stepIndex: 2,
+            title: 'Store Handover to Rider Complete! 🛵',
+            subtitle: 'Store has packed items and handed package to rider. Delivery in progress!',
+            badgeText: 'Handed Over to Rider',
+            badgeClass: 'bg-blue-100 text-blue-900 border-blue-300',
+            dotClass: 'bg-blue-600 animate-bounce',
+            step1Label: 'Placed ✓',
+            step2Label: 'Packed ✓',
+            step3Label: 'Handed Over 🛵',
+            progress: 95,
+            icon: Bike,
+            iconColor: 'text-blue-600',
+            isHandedOver: true
+          };
+        case 'DELIVERED':
+          return {
+            stepIndex: 3,
+            title: 'Delivered to Doorstep 🎉',
+            subtitle: 'Order fulfilled successfully. Enjoy your fresh order!',
+            badgeText: 'Delivered & Closed',
+            badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+            dotClass: 'bg-emerald-600',
+            step1Label: 'Placed ✓',
+            step2Label: 'Packed ✓',
+            step3Label: 'Delivered ✓',
+            progress: 100,
+            icon: CheckCircle2,
+            iconColor: 'text-emerald-600',
+            isHandedOver: true
+          };
+        case 'REJECTED':
+        case 'CANCELLED':
+          return {
+            stepIndex: -1,
+            title: 'Order Cancelled by Store ❌',
+            subtitle: rejectionReason ? `Reason: ${rejectionReason}` : 'Store was unable to fulfill this order.',
+            badgeText: 'Cancelled',
+            badgeClass: 'bg-red-100 text-red-900 border-red-300',
+            dotClass: 'bg-red-500',
+            step1Label: 'Placed',
+            step2Label: 'Cancelled',
+            step3Label: 'Refunded',
+            progress: 0,
+            icon: AlertCircle,
+            iconColor: 'text-red-600',
+            isHandedOver: false
+          };
+        default:
+          return {
+            stepIndex: 0,
+            title: 'Order Processing',
+            subtitle: 'Connecting with store...',
+            badgeText: status,
+            badgeClass: 'bg-gray-100 text-gray-800 border-gray-300',
+            dotClass: 'bg-gray-400',
+            step1Label: 'Placed',
+            step2Label: 'Packing',
+            step3Label: 'Delivery',
+            progress: 30,
+            icon: Package,
+            iconColor: 'text-gray-600',
+            isHandedOver: false
+          };
+      }
+    };
 
     const tiles = [
       {
         icon: Package,
         label: 'My Orders',
-        sublabel: 'Track active orders',
-        bg: 'bg-emerald-50',
+        sublabel: activeOrders.length > 0 ? `${activeOrders.length} active order${activeOrders.length > 1 ? 's' : ''}` : 'View orders & history',
+        bg: activeOrders.length > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 text-brand',
         iconColor: 'text-brand',
-        action: () => playSound('tap'),
+        action: () => { playSound('tap'); setOrdersModal(true); },
       },
       {
         icon: MapPin,
@@ -538,7 +730,7 @@ export const ProfileView: React.FC = () => {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col">
 
         {/* ── Hero header card ── */}
-        <div className="relative overflow-hidden rounded-3xl mb-5 bg-gradient-to-br from-emerald-600 via-brand to-emerald-800 p-5 shadow-[0_12px_40px_rgba(5,150,105,0.35)]">
+        <div className="relative overflow-hidden rounded-3xl mb-4 bg-gradient-to-br from-emerald-600 via-brand to-emerald-800 p-5 shadow-[0_12px_40px_rgba(5,150,105,0.35)]">
           <div className="absolute -top-8 -right-8 w-36 h-36 bg-white/10 rounded-full" />
           <div className="absolute -bottom-10 -left-6 w-28 h-28 bg-white/5 rounded-full" />
 
@@ -551,7 +743,7 @@ export const ProfileView: React.FC = () => {
               <h2 className="font-black text-xl text-white truncate leading-tight">{formData.name || 'User'}</h2>
               <p className="text-white/60 text-xs font-mono tracking-wider">+91 {formData.phone}</p>
             </div>
-            {/* Dynamic trust badge ─ upgrades silently after 1st delivery */}
+            {/* Dynamic trust badge */}
             {isTrusted ? (
               <div className="shrink-0 bg-amber-400/20 backdrop-blur-md text-amber-200 text-xs px-2.5 py-1 rounded-full font-bold border border-amber-300/40 flex items-center gap-1">
                 <span>⭐</span>
@@ -566,9 +758,91 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
 
+        {/* ── LIVE ACTIVE ORDER TRACKING BANNER (High Visibility) ── */}
+        {topActiveOrder && (() => {
+          const statusInfo = getOrderStatusInfo(topActiveOrder.status, topActiveOrder.prep_time_minutes, topActiveOrder.rejection_reason);
+          const storeName = storesMap[topActiveOrder.store_id] || (topActiveOrder.store_id === 's1' ? 'Mhetha Stores' : topActiveOrder.store_id === 's4' ? 'Nandhini KGF' : 'SnapIt Partner');
+          const itemsCount = topActiveOrder.items?.length || 1;
+
+          return (
+            <motion.div 
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/60 rounded-3xl p-5 shadow-[0_8px_30px_rgba(5,150,105,0.12)] border-2 border-emerald-300/80 mb-5 relative overflow-hidden"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-3 w-3 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-brand"></span>
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                    Live Order Tracker
+                  </span>
+                </div>
+                <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${statusInfo.badgeClass}`}>
+                  {statusInfo.badgeText}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between mb-1">
+                <div>
+                  <h3 className="font-black text-base text-gray-900 flex items-center gap-1.5">
+                    <Store className="w-4 h-4 text-brand" />
+                    {storeName}
+                  </h3>
+                  <p className="text-[11px] font-mono font-bold text-gray-500">{topActiveOrder.id}</p>
+                </div>
+                <span className="font-mono font-black text-lg text-brand bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-100">
+                  {formatCurrency(topActiveOrder.estimated_total)}
+                </span>
+              </div>
+
+              {/* Status Headline */}
+              <div className="bg-white/80 rounded-2xl p-3 border border-emerald-100 my-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0 ${statusInfo.iconColor}`}>
+                    <statusInfo.icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-xs text-gray-900 leading-tight">{statusInfo.title}</p>
+                    <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{statusInfo.subtitle}</p>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-3">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${statusInfo.progress}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className="h-full bg-gradient-to-r from-emerald-500 to-brand rounded-full"
+                  />
+                </div>
+
+                {/* 3 Steps Pills */}
+                <div className="flex justify-between text-[9px] font-bold text-gray-400 mt-2 px-1">
+                  <span className={statusInfo.stepIndex >= 0 ? 'text-emerald-700 font-black' : ''}>1. Received</span>
+                  <span className={statusInfo.stepIndex >= 1 ? 'text-amber-700 font-black' : ''}>2. Packing</span>
+                  <span className={statusInfo.stepIndex >= 2 ? 'text-blue-700 font-black' : ''}>3. Handover 🛵</span>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={() => { playSound('tap'); setOrdersModal(true); }}
+                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-brand text-white font-black rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wider active:scale-98 transition-all"
+              >
+                <span>Track Full Order Details</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          );
+        })()}
+
         {/* ── Stats bar: only visible when orderCount > 0 ── */}
-        {orderCount > 0 && (
-          <div className="bg-white rounded-2xl px-5 py-3 mb-5 shadow-sm border border-gray-100 flex items-center justify-center gap-2">
+        {orderCount > 0 && !topActiveOrder && (
+          <div className="bg-white rounded-2xl px-5 py-3 mb-4 shadow-sm border border-gray-100 flex items-center justify-center gap-2">
             <Package className="w-4 h-4 text-brand" />
             <span className="font-bold text-sm text-text-primary">📦 {orderCount} Total Orders Placed</span>
           </div>
@@ -615,6 +889,226 @@ export const ProfileView: React.FC = () => {
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
+
+        {/* ── MY ORDERS & LIVE TRACKING MODAL ── */}
+        <AnimatePresence>
+          {ordersModal && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center">
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+                onClick={() => setOrdersModal(false)} 
+              />
+              
+              <motion.div
+                initial={{ opacity: 0, y: '100%' }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: '100%' }}
+                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                className="relative bg-gray-50 rounded-t-[2.5rem] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden"
+              >
+                {/* Header */}
+                <div className="bg-white px-5 pt-5 pb-3 border-b border-gray-100 sticky top-0 z-10 shadow-xs">
+                  <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-3" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
+                        <Package className="w-5 h-5 text-brand" />
+                        My Orders
+                      </h2>
+                      <p className="text-[11px] text-gray-500 font-medium">Real-time status updates from stores in KGF</p>
+                    </div>
+                    <button 
+                      onClick={() => setOrdersModal(false)}
+                      className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex gap-2 mt-3 bg-gray-100 p-1 rounded-2xl">
+                    <button
+                      onClick={() => setOrdersTab('active')}
+                      className={`flex-1 py-2 rounded-xl font-black text-xs transition-all ${
+                        ordersTab === 'active' 
+                          ? 'bg-white text-brand shadow-sm' 
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      Active Orders ({activeOrders.length})
+                    </button>
+                    <button
+                      onClick={() => setOrdersTab('history')}
+                      className={`flex-1 py-2 rounded-xl font-black text-xs transition-all ${
+                        ordersTab === 'history' 
+                          ? 'bg-white text-gray-800 shadow-sm' 
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      Order History ({pastOrders.length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Orders Content */}
+                <div className="p-4 overflow-y-auto space-y-4 flex-1 pb-10">
+                  {ordersTab === 'active' ? (
+                    activeOrders.length === 0 ? (
+                      <div className="py-12 text-center text-gray-500 bg-white rounded-3xl p-6 border border-gray-100">
+                        <Package className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                        <h4 className="font-bold text-gray-800 text-sm">No Active Orders Right Now</h4>
+                        <p className="text-xs text-gray-400 mt-1">Place an order to track live preparation and delivery.</p>
+                      </div>
+                    ) : (
+                      activeOrders.map((order) => {
+                        const statusInfo = getOrderStatusInfo(order.status, order.prep_time_minutes, order.rejection_reason);
+                        const storeName = storesMap[order.store_id] || (order.store_id === 's1' ? 'Mhetha Stores' : order.store_id === 's4' ? 'Nandhini KGF' : 'Partner Store');
+
+                        return (
+                          <div key={order.id} className="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm space-y-4">
+                            {/* Top header */}
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                              <div>
+                                <h3 className="font-black text-base text-gray-900">{storeName}</h3>
+                                <p className="font-mono text-xs font-bold text-gray-400">{order.id}</p>
+                              </div>
+                              <span className={`text-[10px] font-black px-3 py-1 rounded-full border uppercase tracking-wider ${statusInfo.badgeClass}`}>
+                                {statusInfo.badgeText}
+                              </span>
+                            </div>
+
+                            {/* Live Stepper Card */}
+                            <div className="bg-gradient-to-r from-emerald-50/70 via-white to-teal-50/50 rounded-2xl p-4 border border-emerald-100">
+                              <div className="flex items-center gap-2.5 mb-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                                <h4 className="font-black text-sm text-gray-900">{statusInfo.title}</h4>
+                              </div>
+                              <p className="text-xs text-gray-600 font-medium leading-relaxed">{statusInfo.subtitle}</p>
+
+                              {/* Interactive Step Timeline */}
+                              <div className="mt-4 space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                                    ✓
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-bold text-xs text-gray-900">Order Received at Counter</p>
+                                    <p className="text-[10px] text-gray-400 font-mono">{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                    statusInfo.stepIndex >= 1 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-400'
+                                  }`}>
+                                    {statusInfo.stepIndex >= 1 ? (statusInfo.stepIndex > 1 ? '✓' : '2') : '2'}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className={`font-bold text-xs ${statusInfo.stepIndex >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>
+                                      Store Preparing &amp; Packing Fresh
+                                    </p>
+                                    <p className="text-[10px] text-gray-400">Items assembled and packed at counter</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                    statusInfo.stepIndex >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'
+                                  }`}>
+                                    {statusInfo.stepIndex >= 2 ? '✓' : '3'}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className={`font-bold text-xs ${statusInfo.stepIndex >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
+                                      Store Handover to Rider Complete 🛵
+                                    </p>
+                                    <p className="text-[10px] text-gray-400">Rider dispatched for doorstep drop</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Items List */}
+                            <div className="border-t border-gray-100 pt-3">
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Items Ordered</p>
+                              <div className="space-y-1.5">
+                                {order.items?.map((it: any, idx: number) => (
+                                  <div key={idx} className="flex justify-between text-xs text-gray-700">
+                                    <span>{it.quantity}x {it.name}</span>
+                                    <span className="font-mono font-bold text-gray-900">{formatCurrency((it.price_paise || 0) * it.quantity)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Total and Help */}
+                            <div className="border-t border-dashed border-gray-200 pt-3 flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] text-gray-400 font-bold block">Total Paid via UPI</span>
+                                <span className="font-mono font-black text-base text-brand">{formatCurrency(order.estimated_total)}</span>
+                              </div>
+                              <button
+                                onClick={() => window.open(`https://wa.me/918217649688?text=Hi%20SnapIt,%20need%20help%20with%20order%20${order.id}`, '_blank')}
+                                className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors"
+                              >
+                                Need Help?
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )
+                  ) : (
+                    pastOrders.length === 0 ? (
+                      <div className="py-12 text-center text-gray-500 bg-white rounded-3xl p-6 border border-gray-100">
+                        <History className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                        <h4 className="font-bold text-gray-800 text-sm">No Past Orders Yet</h4>
+                        <p className="text-xs text-gray-400 mt-1">Completed orders will be archived here.</p>
+                      </div>
+                    ) : (
+                      pastOrders.map((order) => {
+                        const isDelivered = order.status === 'DELIVERED';
+                        const storeName = storesMap[order.store_id] || 'Partner Store';
+
+                        return (
+                          <div key={order.id} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-black text-sm text-gray-900">{storeName}</h4>
+                                <p className="text-[10px] font-mono text-gray-400">{order.id} • {new Date(order.created_at).toLocaleDateString()}</p>
+                              </div>
+                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${
+                                isDelivered ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                              }`}>
+                                {isDelivered ? 'Delivered ✓' : 'Cancelled'}
+                              </span>
+                            </div>
+
+                            <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl">
+                              {order.items?.map((it: any) => `${it.quantity}x ${it.name}`).join(', ')}
+                            </div>
+
+                            <div className="flex justify-between items-center pt-1 text-xs">
+                              <span className="font-mono font-black text-gray-900">{formatCurrency(order.estimated_total)}</span>
+                              <button
+                                onClick={() => { setOrdersModal(false); navigate('/'); }}
+                                className="text-[11px] font-black text-brand uppercase tracking-wider hover:underline"
+                              >
+                                Reorder Items →
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* ── About SnapIt Modal ── */}
         <AnimatePresence>
