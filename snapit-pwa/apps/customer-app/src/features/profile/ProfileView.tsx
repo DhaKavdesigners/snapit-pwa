@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, MessageCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 
@@ -42,6 +43,7 @@ type RegistrationStep = 'form' | 'success' | 'dashboard';
 
 export const ProfileView: React.FC = () => {
   const { register, logout, isLoggedIn, userProfile } = useAuthStore();
+  const navigate = useNavigate();
 
   // If already registered, skip straight to dashboard.
   // Populate formData from persisted profile so the dashboard has the right name/phone.
@@ -262,7 +264,7 @@ export const ProfileView: React.FC = () => {
         </div>
 
         <button 
-          onClick={() => setStep('dashboard')}
+          onClick={() => { setStep('dashboard'); navigate('/'); }}
           className="w-full h-14 text-sm font-black text-white bg-gradient-to-r from-emerald-500 to-brand shadow-[0_8px_20px_rgba(5,150,105,0.35)] hover:shadow-[0_10px_28px_rgba(5,150,105,0.45)] hover:scale-[1.02] transition-all rounded-2xl flex items-center justify-center gap-2 uppercase tracking-widest"
         >
           <ShoppingBag className="w-5 h-5" />

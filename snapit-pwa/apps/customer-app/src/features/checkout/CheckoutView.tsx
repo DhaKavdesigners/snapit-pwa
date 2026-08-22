@@ -129,9 +129,10 @@ export const CheckoutView: React.FC = () => {
       });
       clearCart();
       navigate('/success');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error placing order:", error);
-      alert("Failed to place order. Please check the console.");
+      const msg = error?.message || error?.error_description || JSON.stringify(error);
+      alert(`Failed to place order: ${msg}`);
     }
   };
 
@@ -295,30 +296,6 @@ export const CheckoutView: React.FC = () => {
                 <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Recommended</span>
               </label>
 
-              {/* Option 1b: Pay on Delivery via UPI */}
-              <label
-                className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
-                  paymentMethod === 'upiDelivery' ? 'bg-brand/5' : 'hover:bg-gray-50'
-                }`}
-                onClick={() => setPaymentMethod('upiDelivery')}
-              >
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                  paymentMethod === 'upiDelivery' ? 'border-brand' : 'border-gray-300'
-                }`}>
-                  {paymentMethod === 'upiDelivery' && <div className="w-2.5 h-2.5 rounded-full bg-brand" />}
-                </div>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                  paymentMethod === 'upiDelivery' ? 'bg-brand' : 'bg-gray-100'
-                }`}>
-                  <Smartphone className={`w-5 h-5 ${paymentMethod === 'upiDelivery' ? 'text-white' : 'text-gray-400'}`} />
-                </div>
-                <div className="flex-1">
-                  <p className={`font-bold text-sm ${paymentMethod === 'upiDelivery' ? 'text-brand' : 'text-text-primary'}`}>
-                    Pay on Delivery via UPI
-                  </p>
-                  <p className="text-[11px] text-text-secondary">Strictly NO CASH accepted. Scan QR at doorstep.</p>
-                </div>
-              </label>
             </div>
 
             {/* 2. Cash Payment Group */}
@@ -329,7 +306,10 @@ export const CheckoutView: React.FC = () => {
               </div>
 
               {/* Option 3: Cash on Delivery — disabled */}
-              <div className="flex items-center gap-3 p-4 opacity-50 cursor-not-allowed select-none grayscale">
+              <div 
+                className="flex items-center gap-3 p-4 opacity-50 cursor-pointer select-none grayscale"
+                onClick={() => alert("It will get updated soon!")}
+              >
                 <div className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
                 <div className="w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center shrink-0">
                   <Banknote className="w-5 h-5 text-gray-500" />
