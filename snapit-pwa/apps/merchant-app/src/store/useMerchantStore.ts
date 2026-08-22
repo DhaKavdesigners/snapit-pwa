@@ -85,18 +85,26 @@ const DEFAULT_STORE_ID = 'f4'; // Al Baik KGF by default
 
 export const useMerchantStore = create<MerchantState>((set, get) => ({
   // Auth
-  isAuthenticated: true, // Default to true for instant smooth access, but full login flow supported
-  merchantUser: mockMerchants[0],
+  isAuthenticated: false, // Default to login screen
+  merchantUser: null,
   activeStore: mockStores[0],
 
   login: async (userId: string, _password?: string) => {
-    // Simulated validation
+    const trimmedId = userId.trim().toLowerCase();
+
+    // Find merchant by UID, store name, or phone number
     const foundMerchant = mockMerchants.find(
       (m) =>
-        m.uid.toLowerCase() === userId.trim().toLowerCase() ||
-        m.storeName.toLowerCase().includes(userId.trim().toLowerCase()) ||
-        m.phone.includes(userId.trim())
-    ) || mockMerchants[0];
+        m.uid.toLowerCase() === trimmedId ||
+        m.storeName.toLowerCase() === trimmedId ||
+        m.storeName.toLowerCase().replace(/\s+/g, '') === trimmedId ||
+        m.storeName.toLowerCase().includes(trimmedId) ||
+        m.phone.replace(/\s+/g, '').includes(trimmedId)
+    );
+
+    if (!foundMerchant) {
+      throw new Error('Merchant ID or Store not found. Please check your credentials.');
+    }
 
     const matchedStore = mockStores.find((s) => s.id === foundMerchant.storeId) || mockStores[0];
     const initialProducts = mockProductsByStore[matchedStore.id] || mockProductsByStore['f4'];
@@ -107,6 +115,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       activeStore: { ...matchedStore, isOpen: false }, // Initially OFFLINE as specified in rule
       isOnline: false,
       products: initialProducts,
+      orders: [], // Clean start - no orders until online
     });
 
     return { success: true };
@@ -421,7 +430,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       idempotencyKey: `idemp-sim-${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      paymentMethod: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
+      paymentMethod: 'UPI_NOW', // All orders are 100% Prepaid Online via UPI
       recipientName: selectedName,
       recipientPhone: '+91 9845' + Math.floor(100000 + Math.random() * 900000),
     };

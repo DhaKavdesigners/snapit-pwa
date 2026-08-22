@@ -163,29 +163,7 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
               <span>{rushMode ? '⚡ Rush Active' : 'Rush Mode'}</span>
             </button>
 
-            {/* Audio Mute / Sound Test */}
-            <div className="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
-              <button
-                type="button"
-                onClick={toggleMute}
-                title={isMuted ? 'Unmute counter sounds' : 'Mute counter sounds'}
-                className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                  isMuted
-                    ? 'bg-rose-100 text-rose-700'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-white'
-                }`}
-              >
-                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={handleTestSound}
-                title="Test audio chime"
-                className="p-2 text-slate-600 hover:text-slate-800 hover:bg-white rounded-lg transition-colors cursor-pointer hidden md:block"
-              >
-                <BellRing className="w-3.5 h-3.5" />
-              </button>
-            </div>
+
 
             {/* Laptop vs Mobile Phone Simulator Toggle */}
             {onToggleSimulatorMode && (

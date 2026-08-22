@@ -405,17 +405,10 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
             </div>
 
             <div className="flex items-center gap-1.5 mt-1">
-              {order.paymentMethod === 'UPI_NOW' ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                  <CreditCard className="w-3 h-3" />
-                  PAID ONLINE (UPI)
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">
-                  <Banknote className="w-3 h-3" />
-                  COD / UPI AT DOORSTEP
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800">
+                <CreditCard className="w-3 h-3 text-emerald-600" />
+                <span>PAID ONLINE (UPI)</span>
+              </span>
             </div>
           </div>
         </div>

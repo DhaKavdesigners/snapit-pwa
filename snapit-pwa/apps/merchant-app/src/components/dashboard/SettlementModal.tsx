@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
+  Receipt,
   X,
   CreditCard,
-  Banknote,
   CheckCircle2,
-  Receipt,
-  Download,
+  AlertCircle,
+  Building,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 import { formatCurrency } from '../../utils/formatters';
@@ -16,34 +17,24 @@ interface SettlementModalProps {
 }
 
 export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClose }) => {
-  const { historicalGroups, activeStore, gstPercent } = useMerchantStore();
+  const { historicalGroups, activeStore } = useMerchantStore();
   const [isSettled, setIsSettled] = useState(false);
 
   if (!isOpen) return null;
 
   const todayGroup = historicalGroups[0];
   const allDeliveredOrders = todayGroup?.orders.filter((o) => o.status === 'DELIVERED') || [];
-
-  // Breakdowns by payment method
-  const upiOnlineOrders = allDeliveredOrders.filter((o) => o.paymentMethod === 'UPI_NOW');
-  const upiOnlinePaise = upiOnlineOrders.reduce((sum, o) => sum + o.estimatedTotal, 0);
-
-  const doorstepOrders = allDeliveredOrders.filter((o) => o.paymentMethod === 'UPI_DELIVERY' || o.paymentMethod === 'CASH');
-  const doorstepPaise = doorstepOrders.reduce((sum, o) => sum + o.estimatedTotal, 0);
-
-  const totalCollectedPaise = todayGroup?.collectedPaise || 0;
+  const totalGrossPaise = todayGroup?.collectedPaise || 0;
+  const platformFeePaise = Math.round(totalGrossPaise * 0.05); // 5% platform commission
+  const netPayablePaise = totalGrossPaise - platformFeePaise;
   const totalLostPaise = todayGroup?.lostPaise || 0;
-
-  // Platform commission / deductions (5% platform fee)
-  const platformFeePaise = Math.round(totalCollectedPaise * 0.05);
-  const netPayablePaise = totalCollectedPaise - platformFeePaise;
 
   const handleSettleLedger = () => {
     setIsSettled(true);
     setTimeout(() => {
-      setIsSettled(false);
       onClose();
-    }, 2000);
+      setIsSettled(false);
+    }, 1800);
   };
 
   return (
@@ -68,14 +59,10 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
               Daily 11:00 PM Settlement
             </h3>
             <p className="text-xs text-slate-500 font-mono truncate">
-              {activeStore.name} &bull; KGF Dark Store
+              {activeStore.name} &bull; Ledger Reconciliation
             </p>
           </div>
         </div>
-
-        <p className="text-xs text-slate-600 mb-4 flex-shrink-0">
-          End-of-day UPI settlement verification and reconciliation ledger for daily merchant payout.
-        </p>
 
         {/* Scrollable Content Body */}
         <div className="overflow-y-auto flex-1 space-y-4 pr-1">
@@ -86,14 +73,14 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
                 Net Merchant Payout
               </span>
               <span className="text-[10px] sm:text-xs font-bold text-emerald-700 font-mono">
-                Auto-Transfer 11:30 PM
+                Auto-Transfer 11:00 PM
               </span>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-sans">
               {formatCurrency(netPayablePaise)}
             </div>
             <p className="text-[11px] text-emerald-800/90 mt-1 font-medium">
-              Calculated from {allDeliveredOrders.length} delivered orders after platform service charges.
+              Calculated from {allDeliveredOrders.length} delivered orders (100% Prepaid Online via UPI) after 5% platform fee.
             </p>
           </div>
 
@@ -104,43 +91,23 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
             </div>
 
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/50">
-              {/* UPI Online */}
-              <div className="p-3 flex items-center justify-between gap-2">
+              {/* UPI Online (100% Prepaid) */}
+              <div className="p-3.5 flex items-center justify-between gap-2 bg-white">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 flex-shrink-0">
+                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 flex-shrink-0">
                     <CreditCard className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-bold text-slate-900 truncate text-xs sm:text-sm">
-                      Direct UPI Online (Prepaid)
+                    <div className="font-extrabold text-slate-900 truncate text-xs sm:text-sm">
+                      100% Prepaid Online via UPI
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      {upiOnlineOrders.length} Orders
-                    </div>
-                  </div>
-                </div>
-                <span className="font-bold text-slate-900 font-sans text-xs sm:text-sm flex-shrink-0">
-                  {formatCurrency(upiOnlinePaise)}
-                </span>
-              </div>
-
-              {/* Doorstep COD / UPI */}
-              <div className="p-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 flex-shrink-0">
-                    <Banknote className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-slate-900 truncate text-xs sm:text-sm">
-                      Doorstep QR / Cash Collection
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      {doorstepOrders.length} Orders
+                    <div className="text-[10px] text-emerald-700 font-bold font-mono">
+                      {allDeliveredOrders.length} Completed Orders &bull; Direct Digital Payment
                     </div>
                   </div>
                 </div>
-                <span className="font-bold text-slate-900 font-sans text-xs sm:text-sm flex-shrink-0">
-                  {formatCurrency(doorstepPaise)}
+                <span className="font-black text-emerald-700 font-sans text-sm sm:text-base flex-shrink-0">
+                  {formatCurrency(totalGrossPaise)}
                 </span>
               </div>
 
@@ -164,6 +131,20 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Direct Bank Account Details */}
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Building className="w-4 h-4 text-slate-600" />
+              <div>
+                <span className="font-bold text-slate-900 block text-[11px]">Direct Bank Settlement</span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  SBI KGF Main Branch &bull; A/C ending **4821
+                </span>
+              </div>
+            </div>
+            <ArrowUpRight className="w-4 h-4 text-emerald-600" />
           </div>
         </div>
 
@@ -200,3 +181,5 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
     </div>
   );
 };
+
+export default SettlementModal;

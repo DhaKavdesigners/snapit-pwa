@@ -69,7 +69,7 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ onOpenSettleme
               {formatCurrency(collectedPaise)}
             </div>
             <span className="text-[10px] font-bold text-slate-500 block mt-1">
-              Gross UPI/COD
+              100% Prepaid UPI
             </span>
           </div>
           <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 flex-shrink-0">

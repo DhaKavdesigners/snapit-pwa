@@ -271,14 +271,20 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
         </div>
 
         {/* 5. Address & Total */}
-        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-          <div className="flex items-center gap-1 text-slate-600 truncate max-w-[65%]">
+        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+          <div className="flex items-center gap-1 text-slate-600 truncate max-w-[55%]">
             <MapPin className="w-3 h-3 flex-shrink-0 text-slate-500" />
             <span className="truncate">{order.deliveryAddress.line1}</span>
           </div>
-          <span className="font-black text-sm text-emerald-700 font-sans">
-            {formatCurrency(order.estimatedTotal)}
-          </span>
+
+          <div className="text-right flex items-center gap-1.5 flex-shrink-0">
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-800">
+              UPI PAID
+            </span>
+            <span className="font-black text-sm text-emerald-700 font-sans">
+              {formatCurrency(order.estimatedTotal)}
+            </span>
+          </div>
         </div>
 
         {/* 6. Action Buttons (52px Touch Targets) */}

@@ -140,17 +140,10 @@ export const OrderHistory: React.FC = () => {
                       {/* Right: Payment & Total Amount */}
                       <div className="flex items-center justify-between md:flex-col md:items-end gap-1.5 border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
                         <div className="flex items-center gap-1 text-xs">
-                          {order.paymentMethod === 'UPI_NOW' ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[11px]">
-                              <CreditCard className="w-3.5 h-3.5" />
-                              UPI Paid
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-amber-700 font-bold text-[11px]">
-                              <Banknote className="w-3.5 h-3.5" />
-                              COD / Doorstep
-                            </span>
-                          )}
+                          <span className="inline-flex items-center gap-1 text-emerald-700 font-extrabold text-[11px]">
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>UPI Paid (Online)</span>
+                          </span>
                         </div>
 
                         <span

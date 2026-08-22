@@ -7,8 +7,6 @@ import {
   Edit2,
   Trash2,
   Package,
-  Percent,
-  Truck,
 } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 import { formatCurrency } from '../../utils/formatters';
@@ -24,16 +22,9 @@ export const LiveMenuManager: React.FC = () => {
     setEditingProduct,
     setIsAddProductOpen,
     setDeletingProductId,
-    gstPercent,
-    setGstPercent,
-    deliveryFeePaise,
-    setDeliveryFeePaise,
   } = useMerchantStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [isEditingStoreSettings, setIsEditingStoreSettings] = useState(false);
-  const [tempGst, setTempGst] = useState(gstPercent.toString());
-  const [tempDeliveryFee, setTempDeliveryFee] = useState((deliveryFeePaise / 100).toString());
 
   // Dynamically compute category filters based on current store products
   const productCategories = Array.from(new Set(products.map((p) => p.category))).filter(Boolean);
@@ -48,12 +39,6 @@ export const LiveMenuManager: React.FC = () => {
       prod.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-
-  const handleSaveStoreSettings = () => {
-    setGstPercent(parseFloat(tempGst) || 0);
-    setDeliveryFeePaise(Math.round((parseFloat(tempDeliveryFee) || 0) * 100));
-    setIsEditingStoreSettings(false);
-  };
 
   const getAvailabilityBadge = (item: ProductInventoryItem) => {
     if (item.availability === 'AVAILABLE' && item.stockCount > 0) {
@@ -100,55 +85,7 @@ export const LiveMenuManager: React.FC = () => {
         </button>
       </div>
 
-      {/* 2. Store Operational Rates Banner (GST & Delivery Fee) */}
-      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5 text-xs">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 font-semibold text-slate-700">
-            <Percent className="w-3.5 h-3.5 text-emerald-600" />
-            <span>GST: <strong className="text-slate-900">{gstPercent}%</strong></span>
-          </div>
-          <div className="flex items-center gap-1 font-semibold text-slate-700">
-            <Truck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Delivery: <strong className="text-slate-900">{formatCurrency(deliveryFeePaise)}</strong></span>
-          </div>
-        </div>
-
-        {isEditingStoreSettings ? (
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              value={tempGst}
-              onChange={(e) => setTempGst(e.target.value)}
-              className="w-14 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-xs"
-              placeholder="GST %"
-            />
-            <input
-              type="number"
-              value={tempDeliveryFee}
-              onChange={(e) => setTempDeliveryFee(e.target.value)}
-              className="w-16 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-xs"
-              placeholder="Fee ₹"
-            />
-            <button
-              type="button"
-              onClick={handleSaveStoreSettings}
-              className="px-2 py-0.5 bg-emerald-600 text-white rounded font-bold text-[11px]"
-            >
-              Save
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setIsEditingStoreSettings(true)}
-            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
-          >
-            Edit Rates
-          </button>
-        )}
-      </div>
-
-      {/* 3. Search & Category Filters */}
+      {/* 2. Search & Category Filters */}
       <div className="space-y-2.5">
         {/* Search Input */}
         <div className="relative">
@@ -181,7 +118,7 @@ export const LiveMenuManager: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Products List (Sketch Design with Zero Blocking) */}
+      {/* 3. Products List (Sketch Design with Zero Blocking) */}
       <div className="space-y-3 pt-1 overflow-y-auto max-h-[620px] pr-0.5">
         {filteredProducts.length > 0 ? (
           filteredProducts.map((product) => {

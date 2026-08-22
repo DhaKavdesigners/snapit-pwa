@@ -1,9 +1,9 @@
 import React from 'react';
-import { BellRing, Volume2, VolumeX, ArrowRight } from 'lucide-react';
+import { BellRing, ArrowRight } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 
 export const AudioAlertBanner: React.FC = () => {
-  const { orders, isMuted, toggleMute, setPrepModalOrderId } = useMerchantStore();
+  const { orders, setPrepModalOrderId } = useMerchantStore();
 
   const pendingOrders = orders.filter((o) => o.status === 'PLACED');
 
@@ -14,30 +14,19 @@ export const AudioAlertBanner: React.FC = () => {
   return (
     <div className="bg-amber-500 text-slate-950 px-3.5 py-2.5 shadow-md border-b-2 border-amber-600 animate-ring-pulse z-20 w-full">
       <div className="space-y-2">
-        {/* Top Row: Bell icon + Title + Mute Button */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="p-1.5 rounded-lg bg-amber-950 text-amber-300 animate-bounce flex-shrink-0">
-              <BellRing className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs sm:text-sm font-black tracking-tight leading-tight truncate">
-                🚨 {pendingOrders.length} NEW ORDER{pendingOrders.length > 1 ? 'S' : ''} WAITING!
-              </h3>
-              <span className="text-[11px] font-bold text-amber-950 block truncate">
-                {firstPending.id} &bull; {firstPending.recipientName || 'Customer'}
-              </span>
-            </div>
+        {/* Top Row: Bell icon + Title */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="p-1.5 rounded-lg bg-amber-950 text-amber-300 animate-bounce flex-shrink-0">
+            <BellRing className="w-4 h-4" />
           </div>
-
-          <button
-            type="button"
-            onClick={toggleMute}
-            className="p-1.5 rounded-lg bg-amber-600/70 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-colors cursor-pointer flex-shrink-0"
-            title={isMuted ? 'Unmute' : 'Mute alarm'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs sm:text-sm font-black tracking-tight leading-tight truncate">
+              🚨 {pendingOrders.length} NEW ORDER{pendingOrders.length > 1 ? 'S' : ''} WAITING!
+            </h3>
+            <span className="text-[11px] font-bold text-amber-950 block truncate">
+              {firstPending.id} &bull; {firstPending.recipientName || 'Customer'}
+            </span>
+          </div>
         </div>
 
         {/* Action Button: Full width touch button */}
@@ -53,3 +42,5 @@ export const AudioAlertBanner: React.FC = () => {
     </div>
   );
 };
+
+export default AudioAlertBanner;
