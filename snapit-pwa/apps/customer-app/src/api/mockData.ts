@@ -9,16 +9,16 @@ export function imgWithFallback(localPath: string, fallbackUrl: string) {
 // STORES
 // ─────────────────────────────────────────────────────────────────────────────
 export const mockShoppingStores: Store[] = [
-  { id: 's1', name: 'Mhetha Stores',  logoUrl: '/images/stores/mhetha-stores/logo.jpg',        fallbackLogoUrl: 'https://picsum.photos/seed/ohr5ug/200/200', rating: 4.5, category: 'grocery', isOpen: true },
-  { id: 's2', name: 'Vishal Mart',    logoUrl: '/images/stores/vishal-mart/logo.jpg',           fallbackLogoUrl: 'https://picsum.photos/seed/6g5uzk/200/200', rating: 4.2, category: 'grocery', isOpen: true },
-  { id: 's3', name: 'RR Bazar',       logoUrl: '/images/stores/rr-bazar/logo.jpg',              fallbackLogoUrl: 'https://picsum.photos/seed/cn8b09/200/200', rating: 4.6, category: 'grocery', isOpen: true },
+  { id: 's1', name: 'Mhetha Stores',  logoUrl: '/images/stores/mhetha-stores/metha-stores.avif',        fallbackLogoUrl: 'https://picsum.photos/seed/ohr5ug/200/200', rating: 4.5, category: 'grocery', isOpen: true },
+  { id: 's2', name: 'Vishal Mart',    logoUrl: '/images/stores/vishal-mart/vishal_mart.jpg',           fallbackLogoUrl: 'https://picsum.photos/seed/6g5uzk/200/200', rating: 4.2, category: 'grocery', isOpen: true },
+  { id: 's3', name: 'RR Bazar',       logoUrl: '/images/stores/rr-bazar/rr-super-bazar.jpg',              fallbackLogoUrl: 'https://picsum.photos/seed/cn8b09/200/200', rating: 4.6, category: 'grocery', isOpen: true },
   { id: 's4', name: 'Nandhini KGF',   logoUrl: '/images/stores/nandhini-kgf/logo.jpg',          fallbackLogoUrl: 'https://picsum.photos/seed/7cmzc/200/200', rating: 4.9, category: 'grocery', isOpen: true },
 ];
 
 export const mockFoodStores: Store[] = [
-  { id: 'f1', name: 'Bakio',               logoUrl: '/images/stores/bakio/logo.jpg',              fallbackLogoUrl: 'https://picsum.photos/seed/7wvu1q/200/200', rating: 4.7, category: 'food', isOpen: true },
-  { id: 'f2', name: 'Mayura',              logoUrl: '/images/stores/mayura/logo.jpg',             fallbackLogoUrl: 'https://picsum.photos/seed/s3fgpb/200/200', rating: 4.4, category: 'food', isOpen: true },
-  { id: 'f3', name: 'Ambur Biriyani KGF', logoUrl: '/images/stores/ambur-biriyani-kgf/logo.jpg', fallbackLogoUrl: 'https://picsum.photos/seed/4vhgwt/200/200', rating: 4.8, category: 'food', isOpen: true },
+  { id: 'f1', name: 'Bakio',               logoUrl: '/images/stores/bakio/bakio_kgf.jpg',              fallbackLogoUrl: 'https://picsum.photos/seed/7wvu1q/200/200', rating: 4.7, category: 'food', isOpen: true },
+  { id: 'f2', name: 'Mayura',              logoUrl: '/images/stores/mayura/mayura_kgf.avif',             fallbackLogoUrl: 'https://picsum.photos/seed/s3fgpb/200/200', rating: 4.4, category: 'food', isOpen: true },
+  { id: 'f3', name: 'Ambur Biriyani KGF', logoUrl: '/images/stores/ambur-biriyani-kgf/venus ambur biriyani.jpg', fallbackLogoUrl: 'https://picsum.photos/seed/4vhgwt/200/200', rating: 4.8, category: 'food', isOpen: true },
   { id: 'f4', name: 'Al Baik',            logoUrl: '/images/stores/al-baik/logo.jpg',            fallbackLogoUrl: 'https://picsum.photos/seed/az3k9/200/200', rating: 4.5, category: 'food', isOpen: true },
   { id: 'f5', name: 'Al Naz',             logoUrl: '/images/stores/al-naz/logo.jpg',             fallbackLogoUrl: 'https://picsum.photos/seed/out76/200/200', rating: 4.3, category: 'food', isOpen: true },
 ];
