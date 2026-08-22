@@ -124,9 +124,10 @@ export const ProfileView: React.FC = () => {
       register(formData);
       setShowOtpModal(false);
       setStep('success');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to register user to Supabase:", err);
-      alert("Registration failed. Please try again.");
+      const errorMessage = err?.message || err?.error_description || "Unknown error";
+      alert(`Registration failed: ${errorMessage}\n\nMake sure your .env keys are correct and server is restarted!`);
     }
   };
 
