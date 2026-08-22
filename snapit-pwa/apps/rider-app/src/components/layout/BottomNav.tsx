@@ -7,9 +7,8 @@ import { useRider } from '@/context/RiderContext';
 
 export const BottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { activeOrder, alerts, activeSlot, riderBreak, nonAcceptanceCount, adminConfig } = useRider();
+  const { activeOrder, activeSlot, riderBreak, nonAcceptanceCount, adminConfig } = useRider();
 
-  const unreadAlerts = alerts.filter((a) => !a.read).length;
   const isBreakActive = riderBreak && !riderBreak?.endedAt;
   const hasSlotWarning = nonAcceptanceCount >= adminConfig.orderAcceptance.warning1Threshold;
 
@@ -46,13 +45,6 @@ export const BottomNav: React.FC = () => {
       href: '/earnings',
       icon: 'payments',
       active: pathname === '/earnings',
-    },
-    {
-      label: 'Alerts',
-      href: '/alerts',
-      icon: 'notifications',
-      active: pathname === '/alerts',
-      badge: unreadAlerts > 0 ? `${unreadAlerts}` : undefined,
     },
   ];
 
