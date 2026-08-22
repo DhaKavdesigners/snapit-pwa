@@ -26,7 +26,7 @@ interface MerchantState {
   merchantUser: MerchantUser | null;
   activeStore: Store;
   login: (idOrName: string, password?: string) => Promise<{ success: boolean }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   switchStoreOutlet: (storeId: string) => void;
 
   // Realtime Active Orders Pipeline
@@ -68,7 +68,7 @@ interface MerchantState {
   // Operational Toggles
   isOnline: boolean;
   toggleStoreStatus: () => Promise<void>;
-  setStoreStatus: (online: boolean) => void;
+  setStoreStatus: (online: boolean) => Promise<void>;
   rushMode: boolean;
   toggleRushMode: () => void;
   isMuted: boolean;
@@ -110,138 +110,113 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     isOpen: false, // Initially OFFLINE
   },
 
-  // ── 1. SECURE DATABASE & FALLBACK AUTHENTICATION ──────────────────────────
+  // ── 1. STRICT SUPABASE DATABASE AUTHENTICATION ──────────────────────────
   login: async (idOrName: string, password = '') => {
-    const trimmedId = idOrName.trim().toLowerCase();
+    const trimmedId = idOrName.trim();
     const cleanPass = password.trim();
 
-    // 1A. Attempt Supabase Database Authentication
-    if (isSupabaseConfigured) {
-      try {
-        const { data: merchants, error } = await supabase
-          .from('merchants')
-          .select('*, stores(*)')
-          .or(`uid.eq.${trimmedId},id.eq.${trimmedId},name.ilike.%${trimmedId}%`)
-          .limit(1);
-
-        if (!error && merchants && merchants.length > 0) {
-          const m = merchants[0];
-          // Check password
-          if (m.password && cleanPass && m.password !== cleanPass && cleanPass !== 'snapit2026') {
-            throw new Error('Incorrect password for this merchant account.');
-          }
-
-          const storeData = m.stores || {
-            id: m.store_id,
-            name: m.name,
-            logo_url: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300',
-            category: 'grocery',
-            is_online: false,
-            rating: 4.8,
-          };
-
-          const merchantUserObj: MerchantUser = {
-            uid: m.uid || m.id,
-            name: m.name,
-            phone: m.phone || '+91 98450 11223',
-            role: 'merchant',
-            storeId: m.store_id,
-            storeName: storeData.name || m.name,
-            category: storeData.category || 'grocery',
-          };
-
-          const activeStoreObj: Store = {
-            id: storeData.id,
-            name: storeData.name,
-            logoUrl: storeData.logo_url,
-            rating: storeData.rating || 4.8,
-            category: storeData.category || 'grocery',
-            isOpen: false, // Starts OFFLINE on login
-          };
-
-          set({
-            isAuthenticated: true,
-            merchantUser: merchantUserObj,
-            activeStore: activeStoreObj,
-            isOnline: false,
-          });
-
-          // Fetch real products & orders, then start Realtime listener
-          await get().fetchStoreDataFromSupabase(m.store_id);
-          get().initRealtimeSubscriptions(m.store_id);
-
-          return { success: true };
-        }
-      } catch (err: any) {
-        console.warn('Supabase auth check failed, evaluating fallback:', err);
-        if (err.message && err.message.includes('password')) {
-          throw err;
-        }
-      }
+    if (!trimmedId) {
+      throw new Error('Please enter your Merchant User ID.');
+    }
+    if (!cleanPass) {
+      throw new Error('Please enter your store password.');
     }
 
-    // 1B. Local High-Security Fallback for the 2 Stores (Mhetha & Nandhini)
-    const validAccounts: Record<string, { storeId: string; storeName: string; name: string; category: string; logoUrl: string }> = {
-      'm_mhetha': { storeId: 's1', storeName: 'Mhetha Stores', name: 'Ramesh Mhetha', category: 'grocery', logoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300&auto=format&fit=crop&q=80' },
-      'mhetha': { storeId: 's1', storeName: 'Mhetha Stores', name: 'Ramesh Mhetha', category: 'grocery', logoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300&auto=format&fit=crop&q=80' },
-      'm_nandhini': { storeId: 's4', storeName: 'Nandhini KGF', name: 'Suresh Kumar', category: 'dairy', logoUrl: 'https://images.unsplash.com/photo-1527153857715-3908f2ae5e81?w=300&auto=format&fit=crop&q=80' },
-      'nandhini': { storeId: 's4', storeName: 'Nandhini KGF', name: 'Suresh Kumar', category: 'dairy', logoUrl: 'https://images.unsplash.com/photo-1527153857715-3908f2ae5e81?w=300&auto=format&fit=crop&q=80' },
-    };
-
-    const matched = validAccounts[trimmedId];
-    if (!matched) {
-      throw new Error('Invalid Merchant ID. Use "m_mhetha" or "m_nandhini".');
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured. Please check your .env credentials.');
     }
 
-    // Validate password (supports specific password or snapit2026)
-    const expectedPass = trimmedId.includes('nandhini') ? 'nandhini123' : 'mhetha123';
-    if (cleanPass && cleanPass !== expectedPass && cleanPass !== 'snapit2026') {
-      throw new Error('Incorrect password. Please try again.');
+    // 1. Query Supabase `merchants` table matching `uid`
+    const { data: merchants, error } = await supabase
+      .from('merchants')
+      .select('*, stores(*)')
+      .ilike('uid', trimmedId)
+      .limit(1);
+
+    if (error) {
+      console.error('Supabase auth error:', error);
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    const merchantObj: MerchantUser = {
-      uid: trimmedId.startsWith('m_') ? trimmedId : `m_${trimmedId}`,
-      name: matched.name,
-      phone: '+91 98450 12345',
+    if (!merchants || merchants.length === 0) {
+      throw new Error(`Merchant ID "${trimmedId}" not found. Please check your User ID.`);
+    }
+
+    const m = merchants[0];
+
+    // 2. Validate Password against database field
+    if (m.password !== cleanPass) {
+      throw new Error('Incorrect password. Please verify your credentials and try again.');
+    }
+
+    // 3. Extract store information
+    let storeData = m.stores;
+    if (!storeData && m.store_id) {
+      const { data: sRes } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('id', m.store_id)
+        .single();
+      if (sRes) storeData = sRes;
+    }
+
+    const storeName = m.store_name || storeData?.name || m.name;
+    const storeCategory = m.store_category || storeData?.category || 'grocery';
+    const isStoreOnline = storeData?.is_online ?? false;
+
+    const merchantUserObj: MerchantUser = {
+      uid: m.uid,
+      name: m.name,
+      phone: m.phone || '+91 98450 11223',
       role: 'merchant',
-      storeId: matched.storeId,
-      storeName: matched.storeName,
-      category: matched.category,
+      storeId: m.store_id,
+      storeName: storeName,
+      category: storeCategory,
     };
 
-    const storeObj: Store = {
-      id: matched.storeId,
-      name: matched.storeName,
-      logoUrl: matched.logoUrl,
-      rating: 4.8,
-      category: matched.category,
-      isOpen: false,
+    const activeStoreObj: Store = {
+      id: m.store_id,
+      name: storeName,
+      logoUrl: storeData?.logo_url || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300',
+      rating: storeData?.rating || 4.8,
+      category: storeCategory,
+      isOpen: isStoreOnline,
     };
-
-    const initialProducts = mockProductsByStore[matched.storeId] || mockProductsByStore['s1'];
 
     set({
       isAuthenticated: true,
-      merchantUser: merchantObj,
-      activeStore: storeObj,
-      isOnline: false,
-      products: initialProducts,
-      orders: [],
+      merchantUser: merchantUserObj,
+      activeStore: activeStoreObj,
+      isOnline: isStoreOnline,
     });
 
-    if (isSupabaseConfigured) {
-      get().initRealtimeSubscriptions(matched.storeId);
-    }
+    // 4. Fetch live products & orders, then start Realtime listener
+    await get().fetchStoreDataFromSupabase(m.store_id);
+    get().initRealtimeSubscriptions(m.store_id);
 
     return { success: true };
   },
 
-  logout: () => {
+  logout: async () => {
+    const storeId = get().activeStore.id;
     if (realtimeChannel) {
       supabase.removeChannel(realtimeChannel);
       realtimeChannel = null;
     }
     counterAudio.stopPendingOrderAlarm();
+
+    // Update store is_online to false in Supabase
+    if (isSupabaseConfigured && storeId) {
+      try {
+        await supabase
+          .from('stores')
+          .update({ is_online: false, updated_at: new Date().toISOString() })
+          .eq('id', storeId);
+      } catch (err) {
+        console.warn('Error updating store offline on logout:', err);
+      }
+    }
+
     set((state) => ({
       isAuthenticated: false,
       merchantUser: null,
@@ -268,12 +243,31 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     }
   },
 
-  // ── 2. REAL-TIME SUPABASE DATA & SUBSCRIPTION ────────────────────────────
+  // ── 2. REAL-TIME SUPABASE DATA & SUBSCRIPTIONS ────────────────────────────
   fetchStoreDataFromSupabase: async (storeId: string) => {
     if (!isSupabaseConfigured) return;
 
     try {
-      // 1. Fetch live products from DB
+      // 1. Fetch live store online status from DB
+      const { data: storeInfo } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('id', storeId)
+        .single();
+
+      if (storeInfo) {
+        const online = storeInfo.is_online ?? false;
+        set((state) => ({
+          isOnline: online,
+          activeStore: {
+            ...state.activeStore,
+            name: storeInfo.name || state.activeStore.name,
+            isOpen: online,
+          },
+        }));
+      }
+
+      // 2. Fetch live products from DB
       const { data: dbProducts, error: prodError } = await supabase
         .from('products')
         .select('*')
@@ -296,7 +290,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         set({ products: formattedProds });
       }
 
-      // 2. Fetch live active orders from DB
+      // 3. Fetch live active orders from DB
       const { data: dbOrders, error: orderError } = await supabase
         .from('orders')
         .select('*')
@@ -344,10 +338,11 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       supabase.removeChannel(realtimeChannel);
     }
 
-    console.info(`⚡ [Realtime] Subscribing to live orders for Store ID: ${storeId}`);
+    console.info(`⚡ [Realtime] Subscribing to live orders & store status for Store ID: ${storeId}`);
 
     realtimeChannel = supabase
       .channel(`merchant-counter-${storeId}`)
+      // Listen to Orders table events
       .on(
         'postgres_changes',
         {
@@ -399,6 +394,26 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
                 orders: state.orders.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)),
               };
             });
+          }
+        }
+      )
+      // Listen to Stores table changes in Realtime for is_online status
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'stores',
+          filter: `id=eq.${storeId}`,
+        },
+        (payload) => {
+          console.info('⚡ [Realtime Store Status Event]:', payload);
+          if (payload.new && typeof payload.new.is_online === 'boolean') {
+            const online = payload.new.is_online;
+            set((state) => ({
+              isOnline: online,
+              activeStore: { ...state.activeStore, isOpen: online },
+            }));
           }
         }
       )
@@ -748,6 +763,9 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
   addProduct: async (newProdData) => {
     const newId = `p_${Date.now().toString().slice(-6)}`;
     const storeId = get().activeStore.id;
+    const storeName = get().activeStore.name;
+    const storeCategory = get().activeStore.category;
+
     const newProduct: ProductInventoryItem = {
       ...newProdData,
       id: newId,
@@ -765,6 +783,8 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       await supabase.from('products').insert({
         id: newId,
         store_id: storeId,
+        store_name: storeName,
+        store_category: storeCategory,
         name: newProduct.name,
         price: newProduct.price,
         image_url: newProduct.imageUrl,
@@ -790,7 +810,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     }
   },
 
-  // ── 5. OPERATIONAL CONTROLS ───────────────────────────────────────────────
+  // ── 5. OPERATIONAL CONTROLS & REALTIME STORE STATUS ───────────────────────
   isOnline: false,
   toggleStoreStatus: async () => {
     const nextStatus = !get().isOnline;
@@ -805,7 +825,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       counterAudio.playActionChime();
     }
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && storeId) {
       await supabase
         .from('stores')
         .update({ is_online: nextStatus, updated_at: new Date().toISOString() })
@@ -813,11 +833,19 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     }
   },
 
-  setStoreStatus: (online: boolean) => {
+  setStoreStatus: async (online: boolean) => {
+    const storeId = get().activeStore.id;
     set((state) => ({
       isOnline: online,
       activeStore: { ...state.activeStore, isOpen: online },
     }));
+
+    if (isSupabaseConfigured && storeId) {
+      await supabase
+        .from('stores')
+        .update({ is_online: online, updated_at: new Date().toISOString() })
+        .eq('id', storeId);
+    }
   },
 
   rushMode: false,
@@ -829,7 +857,6 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
   isMuted: false,
   toggleMute: () => {
-    // Kept for backward compatibility
     set((state) => ({ isMuted: !state.isMuted }));
   },
 
