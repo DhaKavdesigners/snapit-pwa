@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, MessageCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
+import { supabase } from '../../lib/supabase';
 
 // ─── Tiny Web Audio sound engine ─────────────────────────────────────────────
 const playSound = (type: 'success' | 'tap') => {
@@ -102,11 +103,31 @@ export const ProfileView: React.FC = () => {
 
   const isOtpValid = otp.length === 6;
 
-  const handleOtpConfirm = () => {
-    // Persist user to global store → TopBar will immediately show the location
-    register(formData);
-    setShowOtpModal(false);
-    setStep('success');
+  const handleOtpConfirm = async () => {
+    try {
+      // 1. Insert into Supabase
+      const { error } = await supabase
+        .from('users')
+        .insert({
+          phone: `+91${formData.phone}`,
+          name: formData.name,
+          role: 'CUSTOMER',
+          is_delivery_verified: false
+        });
+
+      // Ignore unique constraint violation if the user is just logging back in
+      if (error && error.code !== '23505') { 
+        throw error;
+      }
+
+      // 2. Persist user to global store → TopBar will immediately show the location
+      register(formData);
+      setShowOtpModal(false);
+      setStep('success');
+    } catch (err) {
+      console.error("Failed to register user to Supabase:", err);
+      alert("Registration failed. Please try again.");
+    }
   };
 
   const renderForm = () => (

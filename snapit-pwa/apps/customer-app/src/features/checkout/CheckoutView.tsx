@@ -9,6 +9,7 @@ import {
   ChevronLeft, MapPin, CreditCard, Banknote, Smartphone,
   CheckCircle2, AlertCircle, ArrowRight, X, User, Plus
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const allProducts = [...mockShoppingProducts, ...mockFoodProducts];
 
@@ -69,19 +70,69 @@ export const CheckoutView: React.FC = () => {
   const finalRecipientName = isSomeoneElse && recipientName.trim() ? recipientName : (userProfile?.name || 'Guest');
   const finalRecipientPhone = isSomeoneElse && recipientPhone.trim() ? recipientPhone : (userProfile?.phone || '');
 
-  const handlePlaceOrder = () => {
-    const orderId = `SN${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
-    
-    // In a real app, we'd include finalRecipientName, finalRecipientPhone, and the selected address details in the order payload.
-    
-    saveLastOrder({
-      orderId,
-      total,
-      itemNames: cartItemsWithDetails.map(i => i.product!.name),
-      paymentMethod: paymentMethod === 'online' ? 'upi' : 'upiDelivery',
-    });
-    clearCart();
-    navigate('/success');
+  const handlePlaceOrder = async () => {
+    try {
+      const displayId = `#${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      const activeAddressObject = {
+        title: displayTitle,
+        line1: displayAddressLine,
+        landmark: displayLandmark,
+        pincode: displayPin,
+        recipientName: finalRecipientName,
+        recipientPhone: finalRecipientPhone
+      };
+
+      const mappedPaymentMethod = paymentMethod === 'online' ? 'UPI_ONLINE' : 'UPI_ON_DELIVERY';
+
+      // 1. Insert Order
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          merchant_id: 'd4444444-4444-4444-4444-444444444444',
+          customer_id: 'a1111111-1111-1111-1111-111111111111',
+          display_id: displayId,
+          status: 'PLACED',
+          subtotal_paise: itemTotal, // Already in paise
+          delivery_fee_paise: deliveryFee, // Already in paise
+          grand_total_paise: total, // Already in paise
+          payment_method: mappedPaymentMethod,
+          delivery_address_snapshot: activeAddressObject
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Insert Order Items
+      const orderItems = cartItemsWithDetails.map(item => ({
+        order_id: orderData.id,
+        // Using mock string IDs will fail if DB enforces UUID. Assuming DB uses UUID, 
+        // we omit product_id if mock data isn't matching, or simply provide it if mock data is updated.
+        // For now, we will omit product_id to avoid UUID casting errors, relying on the snapshot.
+        product_name_snapshot: item.product!.name,
+        quantity: item.quantity,
+        unit_price_paise: item.product!.price
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      saveLastOrder({
+        orderId: displayId,
+        total,
+        itemNames: cartItemsWithDetails.map(i => i.product!.name),
+        paymentMethod: paymentMethod === 'online' ? 'upi' : 'upiDelivery',
+      });
+      clearCart();
+      navigate('/success');
+    } catch (error) {
+      console.error("Error placing order:", error);
+      alert("Failed to place order. Please check the console.");
+    }
   };
 
   const handleSaveNewAddress = () => {
