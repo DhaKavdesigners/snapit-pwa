@@ -74,56 +74,45 @@ export const CheckoutView: React.FC = () => {
   const finalRecipientPhone = isSomeoneElse && recipientPhone.trim() ? recipientPhone : (userProfile?.phone || '+91 98450 12345');
 
   const handlePlaceOrder = async () => {
-<<<<<<< Updated upstream
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
     try {
-      const displayId = `#${Math.floor(1000 + Math.random() * 9000)}`;
+      const displayId = `ORD-${Date.now().toString().slice(-6)}`;
+      const storeId = cartItemsWithDetails[0]?.product?.storeId || 's1';
       
       const activeAddressObject = {
         title: displayTitle,
         line1: displayAddressLine,
         landmark: displayLandmark,
-        pincode: displayPin,
-        recipientName: finalRecipientName,
-        recipientPhone: finalRecipientPhone
+        pincode: displayPin
       };
 
-      const mappedPaymentMethod = paymentMethod === 'online' ? 'UPI_ONLINE' : 'UPI_ON_DELIVERY';
+      const itemsJson = cartItemsWithDetails.map(item => ({
+        product_id: item.productId,
+        name: item.product!.name,
+        quantity: item.quantity,
+        price_paise: item.product!.price
+      }));
 
-      // 1. Insert Order
-      const { data: orderData, error: orderError } = await supabase
+      // 1. Insert Order (Single unified table)
+      const { error: orderError } = await supabase
         .from('orders')
         .insert({
-          merchant_id: 'd4444444-4444-4444-4444-444444444444',
-          customer_id: 'a1111111-1111-1111-1111-111111111111',
-          display_id: displayId,
+          id: displayId,
+          customer_id: userProfile?.phone || 'guest_user',
+          store_id: storeId,
           status: 'PLACED',
-          subtotal_paise: itemTotal, // Already in paise
-          delivery_fee_paise: deliveryFee, // Already in paise
-          grand_total_paise: total, // Already in paise
-          payment_method: mappedPaymentMethod,
-          delivery_address_snapshot: activeAddressObject
-        })
-        .select()
-        .single();
+          items: itemsJson,
+          estimated_total: total,
+          delivery_address: activeAddressObject,
+          payment_method: paymentMethod === 'online' ? 'UPI_NOW' : 'COD',
+          payment_status: paymentMethod === 'online' ? 'PAID' : 'PENDING',
+          recipient_name: finalRecipientName,
+          recipient_phone: finalRecipientPhone
+        });
 
       if (orderError) throw orderError;
-
-      // 2. Insert Order Items
-      const orderItems = cartItemsWithDetails.map(item => ({
-        order_id: orderData.id,
-        // Using mock string IDs will fail if DB enforces UUID. Assuming DB uses UUID, 
-        // we omit product_id if mock data isn't matching, or simply provide it if mock data is updated.
-        // For now, we will omit product_id to avoid UUID casting errors, relying on the snapshot.
-        product_name_snapshot: item.product!.name,
-        quantity: item.quantity,
-        unit_price_paise: item.product!.price
-      }));
-      
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
 
       saveLastOrder({
         orderId: displayId,
@@ -131,59 +120,16 @@ export const CheckoutView: React.FC = () => {
         itemNames: cartItemsWithDetails.map(i => i.product!.name),
         paymentMethod: paymentMethod === 'online' ? 'upi' : 'upiDelivery',
       });
+      
       clearCart();
       navigate('/success');
     } catch (error: any) {
       console.error("Error placing order:", error);
       const msg = error?.message || error?.error_description || JSON.stringify(error);
       alert(`Failed to place order: ${msg}`);
+    } finally {
+      setIsSubmitting(false);
     }
-=======
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-
-    const orderId = `SN${Math.floor(10000000 + Math.random() * 90000000)}`;
-    const storeId = cartItemsWithDetails[0]?.product?.storeId || 's1';
-
-    // 1. Insert into Supabase Realtime Database
-    try {
-      await supabase.from('orders').insert({
-        id: orderId,
-        customer_id: userProfile?.phone || 'cust_guest',
-        store_id: storeId,
-        status: 'PLACED',
-        items: cartItemsWithDetails.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          name: i.product!.name,
-          price: i.product!.price,
-        })),
-        estimated_total: total,
-        delivery_address: {
-          line1: displayAddressLine,
-          landmark: displayLandmark,
-          pincode: displayPin,
-          city: 'KGF',
-        },
-        payment_method: 'UPI_NOW',
-        payment_status: 'PAID',
-        recipient_name: finalRecipientName,
-        recipient_phone: finalRecipientPhone,
-      });
-      console.info(`⚡ Order ${orderId} successfully placed into Supabase!`);
-    } catch (err) {
-      console.warn('Could not sync order to Supabase:', err);
-    }
-    
-    saveLastOrder({
-      orderId,
-      total,
-      itemNames: cartItemsWithDetails.map(i => i.product!.name),
-      paymentMethod: 'upi',
-    });
-    clearCart();
-    navigate('/success');
->>>>>>> Stashed changes
   };
 
   const handleSaveNewAddress = () => {

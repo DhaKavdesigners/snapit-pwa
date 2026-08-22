@@ -107,28 +107,29 @@ export const ProfileView: React.FC = () => {
 
   const handleOtpConfirm = async () => {
     try {
-      // 1. Insert into Supabase
+      // 1. Upsert into Supabase profiles table (new schema)
       const { error } = await supabase
-        .from('users')
-        .insert({
-          phone: `+91${formData.phone}`,
+        .from('profiles')
+        .upsert({
+          id: formData.phone,
           name: formData.name,
-          role: 'CUSTOMER',
-          is_delivery_verified: false
+          phone: formData.phone,
+          address_line1: formData.addressLine1,
+          address_line2: formData.addressLine2,
+          landmark: formData.landmark,
+          pincode: formData.pincode,
+          delivery_verified: false
         });
 
-      // Ignore unique constraint violation if the user is just logging back in
-      if (error && error.code !== '23505') { 
-        throw error;
-      }
+      if (error) throw error;
 
-      // 2. Persist user to global store → TopBar will immediately show the location
+      // 2. Persist user to global store
       register(formData);
       setShowOtpModal(false);
       setStep('success');
     } catch (err: any) {
       console.error("Failed to register user to Supabase:", err);
-      const errorMessage = err?.message || err?.error_description || "Unknown error";
+      const errorMessage = err?.message || err?.error_description || JSON.stringify(err);
       alert(`Registration failed: ${errorMessage}\n\nMake sure your .env keys are correct and server is restarted!`);
     }
   };
