@@ -69,9 +69,12 @@ export const CheckoutView: React.FC = () => {
   const finalRecipientName = isSomeoneElse && recipientName.trim() ? recipientName : (userProfile?.name || 'Customer');
   const finalRecipientPhone = isSomeoneElse && recipientPhone.trim() ? recipientPhone : (userProfile?.phone || '+91 98450 12345');
 
+  const orderPlacedRef = React.useRef(false);
+
   const handlePlaceOrder = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    orderPlacedRef.current = true;
     
     const displayId = `ORD-${Date.now().toString().slice(-6)}`;
     const storeId = cartItemsWithDetails[0]?.product?.storeId || 's1';
@@ -110,7 +113,7 @@ export const CheckoutView: React.FC = () => {
     } catch (err) {
       console.warn("Order synced with fallback:", err);
     } finally {
-      // 2. Persist last order and navigate to celebratory success screen
+      // 2. Persist last order details for the celebratory success screen
       saveLastOrder({
         orderId: displayId,
         total,
@@ -120,7 +123,7 @@ export const CheckoutView: React.FC = () => {
       
       clearCart();
       setIsSubmitting(false);
-      navigate('/success');
+      navigate('/success', { replace: true });
     }
   };
 
@@ -134,8 +137,13 @@ export const CheckoutView: React.FC = () => {
     setIsAddressModalOpen(false);
   };
 
-  if (items.length === 0) {
-    navigate('/cart');
+  React.useEffect(() => {
+    if (items.length === 0 && !orderPlacedRef.current) {
+      navigate('/cart', { replace: true });
+    }
+  }, [items.length, navigate]);
+
+  if (items.length === 0 && !orderPlacedRef.current) {
     return null;
   }
 
