@@ -1,14 +1,15 @@
 import { RiderSlot, AdminSlotConfig, SlotStatus, DemandLevel } from '@/types';
+import { getNow, getNowDate } from './mockService';
 
 /** Returns today's date as YYYY-MM-DD */
 export function getTodayDateString(): string {
-  return new Date().toISOString().split('T')[0];
+  return getNowDate().toISOString().split('T')[0];
 }
 
 /** Converts HH:mm to epoch ms for today's date */
 export function timeToTodayMs(timeStr: string, date?: string): number {
   const [h, m] = timeStr.split(':').map(Number);
-  const d = date ? new Date(date) : new Date();
+  const d = date ? new Date(date) : getNowDate();
   d.setHours(h, m, 0, 0);
   return d.getTime();
 }
@@ -75,7 +76,7 @@ export function generateDailySlots(
 ): RiderSlot[] {
   const date = dateStr || getTodayDateString();
   const slots: RiderSlot[] = [];
-  const now = Date.now();
+  const now = getNow();
 
   for (let h = config.operatingHourStart; h < config.operatingHourEnd; h++) {
     const startHourStr = h.toString().padStart(2, '0');
@@ -130,20 +131,20 @@ export function generateDailySlots(
 /** Check if booking is still open for a slot */
 export function isBookingOpen(slot: RiderSlot, config: AdminSlotConfig): boolean {
   const cutoff = slot.startTimestamp - config.bookingCutoffMinutes * 60 * 1000;
-  return Date.now() < cutoff;
+  return getNow() < cutoff;
 }
 
 /** Check if rider can go online now for this slot (including early window) */
 export function isSlotOnlineReady(slot: RiderSlot | null, config: AdminSlotConfig): boolean {
   if (!slot) return false;
-  const now = Date.now();
+  const now = getNow();
   const earlyStart = slot.startTimestamp - config.earlyOnlineWindowMinutes * 60 * 1000;
   return now >= earlyStart && now < slot.endTimestamp;
 }
 
 /** Get the currently active/upcoming slot from a list */
 export function findActiveSlot(slots: RiderSlot[]): RiderSlot | null {
-  const now = Date.now();
+  const now = getNow();
   return slots.find((s) => s.status === 'active' || (s.status === 'booked' && now < s.endTimestamp)) || null;
 }
 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { computeBreakState } from '@/services/breakService';
+import { getNow } from '@/services/mockService';
 import { Coffee, AlertCircle, Play, XCircle, ShieldAlert } from 'lucide-react';
 
 interface BreakModalProps {
@@ -17,11 +18,11 @@ export const BreakModal: React.FC<BreakModalProps> = ({
   onOpenEmergency,
 }) => {
   const { riderBreak, adminConfig, startBreak, endBreak } = useRider();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(getNow());
 
   useEffect(() => {
     if (!isOpen) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
+    const interval = setInterval(() => setNow(getNow()), 1000);
     return () => clearInterval(interval);
   }, [isOpen]);
 

@@ -30,6 +30,7 @@ import {
   isBookingOpen,
   findNextSlot,
 } from '@/services/slotService';
+import { getNow } from '@/services/mockService';
 import { RiderSlot, DemandLevel, SlotStatus } from '@/types';
 
 // ─── Demand Badge ─────────────────────────────────────────────────────────────
@@ -75,10 +76,10 @@ const SlotStatusBadge: React.FC<{ status: SlotStatus }> = ({ status }) => {
 
 const CurrentSlotCard: React.FC<{ slot: RiderSlot }> = ({ slot }) => {
   const { isOnline, riderBreak, startBreak, endBreak, extendSlot, slots, adminConfig } = useRider();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(getNow());
 
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setNow(getNow()), 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -221,7 +222,7 @@ const AvailableSlotRow: React.FC<{
   isBooked: boolean;
 }> = ({ slot, onBook, onWaitlist, isBooked }) => {
   const { adminConfig } = useRider();
-  const now = Date.now();
+  const now = getNow();
   const isPast = now >= slot.endTimestamp;
   const bookingOpen = isBookingOpen(slot, adminConfig.slot);
   const capacityPct = Math.floor((slot.bookedCount / slot.capacity) * 100);
@@ -447,11 +448,11 @@ export default function SlotsPage() {
 
   const [selectedTab, setSelectedTab] = useState<'slots' | 'history'>('slots');
   const [bookingSlot, setBookingSlot] = useState<RiderSlot | null>(null);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(getNow());
 
   // Re-render every second for live countdowns
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setNow(getNow()), 1000);
     return () => clearInterval(t);
   }, []);
 
