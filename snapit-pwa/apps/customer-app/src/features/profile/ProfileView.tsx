@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../../components/ui/Button';
-import { Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, MessageCircle, Info } from 'lucide-react';
+import { 
+  Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, 
+  MessageCircle, Info, Copy, Check, RefreshCw, ShieldCheck, 
+  Sparkles, AlertCircle, Smartphone 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -61,12 +65,34 @@ export const ProfileView: React.FC = () => {
   });
 
   const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [generatedOtp, setGeneratedOtp] = useState('679527');
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [copied, setCopied] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [resendTimer, setResendTimer] = useState(30);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [showSmsBanner, setShowSmsBanner] = useState(false);
   const [phoneError, setPhoneError] = useState('');
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Dashboard modal states
   const [aboutModal, setAboutModal] = useState(false);
   const [policyModal, setPolicyModal] = useState<null | 'privacy' | 'terms' | 'refund'>(null);
+
+  // Timer countdown for resend
+  useEffect(() => {
+    let interval: any;
+    if (showOtpModal && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showOtpModal, resendTimer]);
+
+  const generateRandomOtp = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -84,7 +110,7 @@ export const ProfileView: React.FC = () => {
 
   const handleGetVerification = () => {
     if (!validatePhone(formData.phone)) {
-      setPhoneError('Please enter a valid Indian mobile number.');
+      setPhoneError('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
     if (formData.phone !== formData.confirmPhone) {
@@ -92,7 +118,102 @@ export const ProfileView: React.FC = () => {
       return;
     }
     setPhoneError('');
+    const newOtp = generateRandomOtp();
+    setGeneratedOtp(newOtp);
+    setOtpDigits(['', '', '', '', '', '']);
+    setOtpError('');
+    setCopied(false);
+    setResendTimer(30);
     setShowOtpModal(true);
+    setShowSmsBanner(true);
+    playSound('tap');
+    setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 400);
+  };
+
+  const handleCopyAndAutoFill = () => {
+    try {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(generatedOtp).catch(() => {});
+      }
+    } catch {}
+    setOtpDigits(generatedOtp.split(''));
+    setCopied(true);
+    setOtpError('');
+    playSound('tap');
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleDigitChange = (index: number, val: string) => {
+    const cleanVal = val.replace(/\D/g, '');
+    if (!cleanVal) {
+      const next = [...otpDigits];
+      next[index] = '';
+      setOtpDigits(next);
+      setOtpError('');
+      return;
+    }
+
+    if (cleanVal.length > 1) {
+      const chars = cleanVal.slice(0, 6).split('');
+      const next = [...otpDigits];
+      chars.forEach((c, i) => {
+        if (index + i < 6) next[index + i] = c;
+      });
+      setOtpDigits(next);
+      const nextFocus = Math.min(index + chars.length, 5);
+      inputRefs.current[nextFocus]?.focus();
+      setOtpError('');
+      return;
+    }
+
+    const next = [...otpDigits];
+    next[index] = cleanVal[cleanVal.length - 1];
+    setOtpDigits(next);
+    setOtpError('');
+    if (index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!otpDigits[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasteData) {
+      const chars = pasteData.split('');
+      const next = ['', '', '', '', '', ''];
+      chars.forEach((c, i) => {
+        if (i < 6) next[i] = c;
+      });
+      setOtpDigits(next);
+      setOtpError('');
+      const targetIdx = Math.min(chars.length, 5);
+      inputRefs.current[targetIdx]?.focus();
+    }
+  };
+
+  const handleResend = () => {
+    if (resendTimer > 0) return;
+    const newOtp = generateRandomOtp();
+    setGeneratedOtp(newOtp);
+    setOtpDigits(['', '', '', '', '', '']);
+    setOtpError('');
+    setCopied(false);
+    setResendTimer(30);
+    setShowSmsBanner(true);
+    playSound('tap');
+    setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 100);
   };
 
   const isFormValid = 
@@ -103,9 +224,17 @@ export const ProfileView: React.FC = () => {
     formData.addressLine2.trim() !== '' &&
     formData.pincode.length === 6;
 
-  const isOtpValid = otp.length === 6;
+  const enteredOtp = otpDigits.join('');
+  const isOtpValid = enteredOtp.length === 6;
 
   const handleOtpConfirm = async () => {
+    if (enteredOtp !== generatedOtp) {
+      setOtpError('Invalid code. Please check your 6-digit OTP.');
+      playSound('tap');
+      return;
+    }
+
+    setIsVerifying(true);
     try {
       // 1. Upsert into Supabase profiles table (new schema)
       const { error } = await supabase
@@ -131,6 +260,8 @@ export const ProfileView: React.FC = () => {
       console.error("Failed to register user to Supabase:", err);
       const errorMessage = err?.message || err?.error_description || JSON.stringify(err);
       alert(`Registration failed: ${errorMessage}\n\nMake sure your .env keys are correct and server is restarted!`);
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -482,6 +613,36 @@ export const ProfileView: React.FC = () => {
         {step === 'dashboard' && <React.Fragment key="dashboard">{renderDashboard()}</React.Fragment>}
       </AnimatePresence>
 
+      {/* Simulated SMS Notification Banner */}
+      <AnimatePresence>
+        {showOtpModal && showSmsBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+            className="fixed top-4 left-4 right-4 max-w-sm mx-auto z-[70] bg-slate-900/95 text-white backdrop-blur-xl rounded-2xl p-3.5 shadow-[0_12px_36px_rgba(0,0,0,0.35)] border border-white/10 flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-brand flex items-center justify-center shrink-0 shadow-sm">
+                <Smartphone className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black tracking-wider uppercase text-emerald-400">SnapIt Security • Just Now</p>
+                <p className="text-xs font-semibold text-gray-200 truncate">
+                  OTP is <span className="font-mono font-black text-white tracking-widest bg-white/10 px-1.5 py-0.5 rounded">{generatedOtp}</span>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleCopyAndAutoFill}
+              className="bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-black text-[11px] px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0 transition-all shadow-sm"
+            >
+              Auto-fill
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* SnapIt Phone Verification Modal */}
       <AnimatePresence>
         {showOtpModal && (
@@ -491,20 +652,20 @@ export const ProfileView: React.FC = () => {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setShowOtpModal(false)}
             />
             
-            {/* Bottom-sheet modal — SnapIt style */}
+            {/* Bottom-sheet modal — Modern SnapIt style */}
             <motion.div 
               initial={{ opacity: 0, y: '100%' }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0, y: '100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-              className="relative w-full max-w-sm bg-white rounded-t-[2.5rem] shadow-2xl px-6 pt-5 pb-10 flex flex-col"
+              transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+              className="relative w-full max-w-sm bg-white rounded-t-[2.5rem] shadow-2xl px-6 pt-4 pb-9 flex flex-col z-10"
             >
               {/* Drag handle */}
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+              <div className="w-10 h-1.5 bg-gray-200 rounded-full mx-auto mb-5" />
 
               {/* Close */}
               <button 
@@ -514,57 +675,151 @@ export const ProfileView: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
 
-              {/* SnapIt branded icon area */}
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center shadow-sm">
-                  <span className="text-2xl">🔐</span>
+              {/* Branded Header */}
+              <div className="flex items-center gap-3.5 mb-5">
+                <div className="w-13 h-13 bg-gradient-to-br from-emerald-500 to-brand border border-emerald-300 rounded-2xl flex items-center justify-center shadow-[0_4px_14px_rgba(5,150,105,0.25)] p-3">
+                  <ShieldCheck className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h2 className="font-black text-xl text-text-primary leading-tight">Quick Verify</h2>
-                  <p className="text-text-secondary text-xs font-medium">Confirm it's really you</p>
+                  <h2 className="font-black text-xl text-text-primary leading-tight flex items-center gap-1.5">
+                    Verify Mobile
+                    <Sparkles className="w-4 h-4 text-emerald-500" />
+                  </h2>
+                  <p className="text-text-secondary text-xs font-medium mt-0.5">
+                    Sent to <span className="font-bold text-gray-800">+91 {formData.phone}</span>
+                  </p>
                 </div>
               </div>
 
-              {/* Code display — SnapIt green pill */}
-              <div className="w-full bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between mb-5">
+              {/* Interactive Code Display Card (Copy & Auto-fill) */}
+              <div 
+                onClick={handleCopyAndAutoFill}
+                className={`w-full rounded-2xl p-4 flex items-center justify-between mb-5 border-2 transition-all cursor-pointer select-none ${
+                  copied 
+                    ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-400/20 shadow-sm' 
+                    : 'bg-gradient-to-r from-emerald-50/80 via-gray-50 to-emerald-50/80 border-emerald-200/90 hover:border-emerald-300 hover:bg-emerald-50/50 active:scale-[0.99]'
+                }`}
+              >
                 <div>
-                  <p className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Your code</p>
-                  <p className="font-mono font-black text-brand text-2xl tracking-[0.2em] mt-0.5">679527</p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-[9px] font-black text-emerald-800 uppercase tracking-widest">Instant OTP Code</p>
+                  </div>
+                  <p className="font-mono font-black text-brand text-2xl tracking-[0.25em]">
+                    {generatedOtp}
+                  </p>
                 </div>
-                <div className="bg-brand text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider">Tap to copy</div>
+
+                <div className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm ${
+                  copied 
+                    ? 'bg-emerald-600 text-white scale-105' 
+                    : 'bg-brand text-white hover:bg-emerald-700'
+                }`}>
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Auto-filled!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Tap to Copy</span>
+                    </>
+                  )}
+                </div>
               </div>
               
-              {/* Input */}
-              <div className="w-full mb-5">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-2 block">Type your code here</label>
-                <input 
-                  type="tel" 
-                  maxLength={6} 
-                  value={otp} 
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="_ _ _ _ _ _"
-                  className="w-full text-center text-3xl font-black tracking-[0.5em] py-4 bg-gray-50 rounded-2xl border-2 border-gray-200 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder:text-gray-200 placeholder:tracking-[0.4em]" 
-                  autoFocus
-                />
+              {/* Segmented 6-Digit PIN Boxes */}
+              <div className="w-full mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Enter 6-Digit Code</label>
+                  <span className="text-[10px] font-bold text-gray-400">{enteredOtp.length}/6 digits</span>
+                </div>
+
+                <motion.div 
+                  animate={otpError ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}}
+                  transition={{ duration: 0.35 }}
+                  className="flex items-center justify-between gap-1.5"
+                  onPaste={handlePaste}
+                >
+                  {otpDigits.map((digit, idx) => {
+                    const isFilled = Boolean(digit);
+                    const isCurrent = (enteredOtp.length === idx) || (idx === 5 && enteredOtp.length === 6);
+                    return (
+                      <input
+                        key={idx}
+                        ref={(el) => (inputRefs.current[idx] = el)}
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleDigitChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(idx, e)}
+                        className={`w-11 h-14 text-center text-2xl font-mono font-black rounded-2xl border-2 transition-all outline-none ${
+                          otpError 
+                            ? 'border-red-300 bg-red-50/50 text-red-700' 
+                            : isFilled 
+                            ? 'border-emerald-500 bg-emerald-50/40 text-emerald-900 shadow-sm' 
+                            : isCurrent 
+                            ? 'border-brand ring-4 ring-brand/15 bg-white scale-[1.04]' 
+                            : 'border-gray-200 bg-gray-50/80 text-gray-800'
+                        }`}
+                      />
+                    );
+                  })}
+                </motion.div>
+
+                {/* Error feedback */}
+                {otpError && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-1.5 mt-2.5 px-1 text-red-500 font-bold text-xs"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{otpError}</span>
+                  </motion.div>
+                )}
               </div>
 
-              {/* Action */}
+              {/* Action Button */}
               <button 
-                disabled={!isOtpValid}
+                disabled={!isOtpValid || isVerifying}
                 onClick={handleOtpConfirm}
-                className="w-full h-14 text-sm font-black text-white bg-gradient-to-r from-emerald-500 to-brand border-0 shadow-[0_8px_20px_rgba(5,150,105,0.30)] hover:shadow-[0_10px_25px_rgba(5,150,105,0.45)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest rounded-2xl mb-4 disabled:opacity-40 disabled:pointer-events-none"
+                className="w-full h-14 text-sm font-black text-white bg-gradient-to-r from-emerald-500 via-brand to-emerald-700 border-0 shadow-[0_8px_20px_rgba(5,150,105,0.35)] hover:shadow-[0_10px_25px_rgba(5,150,105,0.45)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest rounded-2xl mb-4 disabled:opacity-40 disabled:pointer-events-none"
               >
-                <CheckCircle2 className="w-5 h-5" />
-                Confirm &amp; Activate
+                {isVerifying ? (
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>Confirm &amp; Activate</span>
+                  </>
+                )}
               </button>
 
+              {/* Footer row */}
               <div className="flex items-center justify-between px-1">
-                <button onClick={() => setShowOtpModal(false)} className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1">
+                <button 
+                  onClick={() => setShowOtpModal(false)} 
+                  className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+                >
                   ← Wrong number?
                 </button>
-                <button className="text-xs font-black text-brand hover:text-emerald-700 transition-colors uppercase tracking-wider">
-                  Resend Code
-                </button>
+
+                {resendTimer > 0 ? (
+                  <span className="text-xs font-semibold text-gray-400">
+                    Resend code in <strong className="text-brand">{resendTimer}s</strong>
+                  </span>
+                ) : (
+                  <button 
+                    onClick={handleResend}
+                    className="text-xs font-black text-brand hover:text-emerald-700 transition-colors uppercase tracking-wider flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Resend Code
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>
