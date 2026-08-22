@@ -21,10 +21,6 @@ import {
 } from 'lucide-react';
 
 export const TestModePanel: React.FC = () => {
-  // Production guard: return null if not in development mode
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
 
   const {
     rider,

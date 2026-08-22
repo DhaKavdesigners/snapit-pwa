@@ -5,10 +5,6 @@ import { useRider } from '@/context/RiderContext';
 import { User, Wrench } from 'lucide-react';
 
 export const TestModeToggle: React.FC = () => {
-  // Production guard: return null if not in development mode
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
 
   const { testMode, setTestMode } = useRider();
 
