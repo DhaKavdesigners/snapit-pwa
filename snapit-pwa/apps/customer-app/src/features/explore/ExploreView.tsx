@@ -7,7 +7,7 @@ import { ProductCard } from '../../components/ProductCard';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useContextStore } from '../../store/contextStore';
 import { exploreShoppingCategories, exploreFoodCategories, mockShoppingStores, mockFoodStores } from '../../api/mockData';
-import { useAllProducts } from '../../api/queries';
+import { useAllProducts, useStores } from '../../api/queries';
 
 type ExploreTab = 'categories' | 'stores';
 type ExploreState = 'main' | 'category' | 'store';
@@ -27,6 +27,8 @@ export const ExploreView: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
 
   const { data: allProducts, isLoading } = useAllProducts();
+  const { data: shoppingStores = mockShoppingStores } = useStores('shopping');
+  const { data: foodStores = mockFoodStores } = useStores('food');
 
   const categories = isShopping ? exploreShoppingCategories : exploreFoodCategories;
 
@@ -104,7 +106,7 @@ export const ExploreView: React.FC = () => {
   }
 
   if (exploreState === 'store' && selectedStore) {
-    const store = [...mockShoppingStores, ...mockFoodStores].find(s => s.id === selectedStore);
+    const store = [...shoppingStores, ...foodStores].find(s => s.id === selectedStore);
     const storeProducts = allProducts?.filter(p => p.storeId === selectedStore) || [];
 
     return (
@@ -225,7 +227,7 @@ export const ExploreView: React.FC = () => {
                 </h2>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {mockShoppingStores.map((store) => (
+                {shoppingStores.map((store) => (
                   <div key={store.id} onClick={() => handleStoreClick(store.id)}>
                     <StoreCard store={store} />
                   </div>
@@ -243,7 +245,7 @@ export const ExploreView: React.FC = () => {
                 </h2>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {mockFoodStores.map((store) => (
+                {foodStores.map((store) => (
                   <div key={store.id} onClick={() => handleStoreClick(store.id)}>
                     <StoreCard store={store} />
                   </div>
