@@ -1,4 +1,5 @@
-﻿import { DeliveryZone, ZoneStatus } from '@/types';
+import { DeliveryZone, ZoneStatus } from '@/types';
+import { getTestMode } from './mockService';
 
 // Haversine distance in meters between two coordinates
 function haversineDistance(
@@ -21,6 +22,50 @@ const ZONE_GEOFENCES: Record<string, { lat: number; lng: number; radiusMeters: n
   'zone-2': { lat: 12.9698, lng: 77.7499, radiusMeters: 8000 },  // North Tech Park / Whitefield
   'zone-3': { lat: 12.9289, lng: 77.5838, radiusMeters: 12000 }, // South Suburbs / Jayanagar
 };
+
+export interface MockLocationConfig {
+  enabled: boolean;
+  coords: { lat: number; lng: number } | null;
+  zoneId?: string;
+}
+
+let mockLocationConfig: MockLocationConfig = {
+  enabled: false,
+  coords: null,
+};
+
+let activeWatchZone: DeliveryZone | null = null;
+let activeWatchCallback: ((result: ZoneCheckResult) => void) | null = null;
+
+export function setMockLocationConfig(config: MockLocationConfig): void {
+  if (process.env.NODE_ENV !== 'development') return;
+  mockLocationConfig = config;
+
+  if (activeWatchZone && activeWatchCallback) {
+    if (mockLocationConfig.enabled && mockLocationConfig.coords) {
+      const inside = isInsideZone(mockLocationConfig.coords.lat, mockLocationConfig.coords.lng, activeWatchZone);
+      const fence = ZONE_GEOFENCES[activeWatchZone.id];
+      const dist = fence
+        ? haversineDistance(mockLocationConfig.coords.lat, mockLocationConfig.coords.lng, fence.lat, fence.lng)
+        : null;
+      activeWatchCallback({
+        status: inside ? 'inside' : 'outside',
+        distanceMeters: dist,
+        accuracy: 5,
+      });
+    } else {
+      // Re-initialize watching real device GPS
+      const zoneToWatch = activeWatchZone;
+      const callbackToUse = activeWatchCallback;
+      stopWatchingZone();
+      startWatchingZone(zoneToWatch, callbackToUse);
+    }
+  }
+}
+
+export function getMockLocationConfig(): MockLocationConfig {
+  return mockLocationConfig;
+}
 
 /** Check if given GPS coords are inside a zone */
 export function isInsideZone(
@@ -54,6 +99,25 @@ export function checkZoneStatus(
   zone: DeliveryZone
 ): Promise<ZoneCheckResult> {
   return new Promise((resolve) => {
+    if (
+      process.env.NODE_ENV === 'development' &&
+      getTestMode() === 'tester' &&
+      mockLocationConfig.enabled &&
+      mockLocationConfig.coords
+    ) {
+      const inside = isInsideZone(mockLocationConfig.coords.lat, mockLocationConfig.coords.lng, zone);
+      const fence = ZONE_GEOFENCES[zone.id];
+      const dist = fence
+        ? haversineDistance(mockLocationConfig.coords.lat, mockLocationConfig.coords.lng, fence.lat, fence.lng)
+        : null;
+      resolve({
+        status: inside ? 'inside' : 'outside',
+        distanceMeters: dist,
+        accuracy: 5,
+      });
+      return;
+    }
+
     if (!navigator.geolocation) {
       resolve({ status: 'gps_disabled', distanceMeters: null, accuracy: null });
       return;
@@ -109,6 +173,27 @@ export function startWatchingZone(
   onUpdate: (result: ZoneCheckResult) => void
 ): void {
   stopWatchingZone();
+  activeWatchZone = zone;
+  activeWatchCallback = onUpdate;
+
+  if (
+    process.env.NODE_ENV === 'development' &&
+    getTestMode() === 'tester' &&
+    mockLocationConfig.enabled &&
+    mockLocationConfig.coords
+  ) {
+    const inside = isInsideZone(mockLocationConfig.coords.lat, mockLocationConfig.coords.lng, zone);
+    const fence = ZONE_GEOFENCES[zone.id];
+    const dist = fence
+      ? haversineDistance(mockLocationConfig.coords.lat, mockLocationConfig.coords.lng, fence.lat, fence.lng)
+      : null;
+    onUpdate({
+      status: inside ? 'inside' : 'outside',
+      distanceMeters: dist,
+      accuracy: 5,
+    });
+    return;
+  }
 
   if (!navigator.geolocation) {
     onUpdate({ status: 'gps_disabled', distanceMeters: null, accuracy: null });
@@ -146,3 +231,4 @@ export function stopWatchingZone(): void {
     watchId = null;
   }
 }
+

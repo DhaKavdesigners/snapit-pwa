@@ -3,6 +3,7 @@
 import React from 'react';
 import { RiderSlot, AdminSlotConfig, DemandLevel, SlotStatus } from '@/types';
 import { formatTimeAMPM, isBookingOpen } from '@/services/slotService';
+import { getNow } from '@/services/mockService';
 import { MapPin, Users, CheckCircle2 } from 'lucide-react';
 
 interface SlotCardProps {
@@ -55,7 +56,7 @@ export const SlotCard: React.FC<SlotCardProps> = ({
   adminConfig,
   isBooked,
 }) => {
-  const now = Date.now();
+  const now = getNow();
   const isPast = now >= slot.endTimestamp;
   const bookingOpen = isBookingOpen(slot, adminConfig);
   const capacityPct = Math.floor((slot.bookedCount / slot.capacity) * 100);

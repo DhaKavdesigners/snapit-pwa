@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { formatTimeAMPM, formatRemainingTime } from '@/services/slotService';
 import { computeBreakState } from '@/services/breakService';
+import { getNow } from '@/services/mockService';
 import Link from 'next/link';
 import { Calendar, Clock, Coffee, Zap, AlertCircle, ChevronRight } from 'lucide-react';
 
@@ -21,10 +22,10 @@ export const SlotStatusCard: React.FC = () => {
     canGoOnline,
   } = useRider();
 
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(getNow());
 
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setNow(getNow()), 1000);
     return () => clearInterval(t);
   }, []);
 

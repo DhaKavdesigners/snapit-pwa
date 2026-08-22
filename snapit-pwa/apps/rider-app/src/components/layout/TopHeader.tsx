@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRider } from '@/context/RiderContext';
 import { Smartphone, Monitor, Bell, MapPin, Calendar } from 'lucide-react';
+import { TestModeToggle } from '@/components/dev/TestModeToggle';
 
 interface TopHeaderProps {
   showBack?: boolean;
@@ -93,6 +94,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
             </span>
           </Link>
         </div>
+
+        {/* Center: Developer Test Mode Toggle (Dev Mode Only) */}
+        {process.env.NODE_ENV === 'development' && <TestModeToggle />}
 
         {/* Right: Online toggle + Bell */}
         <div className="flex items-center gap-2">

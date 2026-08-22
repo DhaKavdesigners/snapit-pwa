@@ -33,12 +33,25 @@ import {
   findNextSlot,
   buildExtendedSlot,
   isSlotOnlineReady,
+  timeToTodayMs,
 } from '@/services/slotService';
 import {
   checkZoneStatus,
   startWatchingZone,
   stopWatchingZone,
+  setMockLocationConfig,
+  getMockLocationConfig,
 } from '@/services/zoneService';
+import {
+  getNow,
+  getNowDate,
+  setMockTimeConfig,
+  getMockTimeConfig,
+  resetMockEnvironment as resetMockEnv,
+  TestAppMode,
+  setTestMode as setTestModeService,
+  getTestMode,
+} from '@/services/mockService';
 import {
   createSlotBookedAlert,
   createSlotReminderAlert,
@@ -116,6 +129,21 @@ interface RiderContextType {
     exceptionReason?: OrderAcceptanceExceptionReason
   ) => void;
   refreshZoneStatus: () => void;
+  refreshSlots: () => void;
+  // Dev Mock Location & Time & Mode
+  testMode: TestAppMode;
+  setTestMode: (mode: TestAppMode) => void;
+  isMockLocationEnabled: boolean;
+  mockZoneId: string | null;
+  enableMockLocation: (zoneId?: string, customCoords?: { lat: number; lng: number }) => void;
+  disableMockLocation: () => void;
+  setMockZone: (zoneId: string) => void;
+  isMockTimeEnabled: boolean;
+  mockTimestamp: number | null;
+  enableMockTime: (timeStr: string, dateStr?: string) => void;
+  disableMockTime: () => void;
+  setMockTimePreset: (preset: 'booked_slot_start' | 'active_slot' | 'slot_expiry' | 'cutoff_passed' | 'morning_10am') => void;
+  resetTestEnvironment: () => void;
 }
 
 // ─── Default Data ─────────────────────────────────────────────────────────────
@@ -419,7 +447,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     );
     setSlots(generated);
 
-    const now = Date.now();
+    const now = getNow();
     const earlyWindow = adminConfig.slot.earlyOnlineWindowMinutes * 60000;
 
     // Active slot: currently within start–end window (including early window)
@@ -450,7 +478,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     const interval = setInterval(() => {
       refreshSlots();
 
-      const now = Date.now();
+      const now = getNow();
       const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
       const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
 
@@ -506,7 +534,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     if (!riderBreak || riderBreak.status === 'completed' || riderBreak.endedAt) return;
 
     const interval = setInterval(() => {
-      const now = Date.now();
+      const now = getNow();
       const elapsed = now - riderBreak.startedAt;
       const allowedMs = adminConfig.break.allowedBreakMinutes * 60000;
       const graceMs = adminConfig.break.gracePeriodMinutes * 60000;
@@ -598,6 +626,166 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       stopWatchingZone();
     };
   }, [rider.selectedZoneId, zones]);
+
+  // ─── Dev Test Mode ─────────────────────────────────────────────────────────
+
+  const [testMode, setTestModeState] = useState<TestAppMode>(getTestMode());
+
+  const setTestMode = useCallback(
+    (mode: TestAppMode) => {
+      if (process.env.NODE_ENV !== 'development') return;
+      setTestModeState(mode);
+      setTestModeService(mode);
+      if (mode === 'driver') {
+        setIsMockLocationEnabled(false);
+        setMockZoneId(null);
+        setIsMockTimeEnabled(false);
+        setMockTimestamp(null);
+        setGpsCoords(null);
+      }
+      setTimeout(() => {
+        refreshSlots();
+        refreshZoneStatus();
+      }, 50);
+    },
+    [refreshSlots, refreshZoneStatus]
+  );
+
+  // ─── Dev Mock Location ─────────────────────────────────────────────────────
+
+  const [isMockLocationEnabled, setIsMockLocationEnabled] = useState<boolean>(false);
+  const [mockZoneId, setMockZoneId] = useState<string | null>(null);
+
+  const enableMockLocation = useCallback(
+    (zoneId?: string, customCoords?: { lat: number; lng: number }) => {
+      if (process.env.NODE_ENV !== 'development') return;
+      const targetZoneId = zoneId || rider.selectedZoneId || 'zone-1';
+      const targetZone = zones.find((z) => z.id === targetZoneId) || zones[0];
+      const coords = customCoords || {
+        lat: targetZone.centerLat ?? 12.9716,
+        lng: targetZone.centerLng ?? 77.6412,
+      };
+      setIsMockLocationEnabled(true);
+      setMockZoneId(targetZoneId);
+      setGpsCoords(coords);
+      setMockLocationConfig({
+        enabled: true,
+        coords,
+        zoneId: targetZoneId,
+      });
+    },
+    [rider.selectedZoneId, zones]
+  );
+
+  const disableMockLocation = useCallback(() => {
+    setIsMockLocationEnabled(false);
+    setMockZoneId(null);
+    setGpsCoords(null);
+    setMockLocationConfig({
+      enabled: false,
+      coords: null,
+    });
+    refreshZoneStatus();
+  }, [refreshZoneStatus]);
+
+  const setMockZone = useCallback(
+    (zoneId: string) => {
+      if (process.env.NODE_ENV !== 'development') return;
+      enableMockLocation(zoneId);
+    },
+    [enableMockLocation]
+  );
+
+  // ─── Dev Mock Time ─────────────────────────────────────────────────────────
+
+  const [isMockTimeEnabled, setIsMockTimeEnabled] = useState<boolean>(false);
+  const [mockTimestamp, setMockTimestamp] = useState<number | null>(null);
+
+  const enableMockTime = useCallback(
+    (timeStr: string, dateStr?: string) => {
+      if (process.env.NODE_ENV !== 'development') return;
+      const targetDate = dateStr || getTodayDateString();
+      const ts = timeToTodayMs(timeStr, targetDate);
+      setIsMockTimeEnabled(true);
+      setMockTimestamp(ts);
+      setMockTimeConfig({
+        enabled: true,
+        mockTimestamp: ts,
+        simulatedTimeStr: timeStr,
+        simulatedDateStr: targetDate,
+      });
+      setTimeout(refreshSlots, 50);
+    },
+    [refreshSlots]
+  );
+
+  const disableMockTime = useCallback(() => {
+    setIsMockTimeEnabled(false);
+    setMockTimestamp(null);
+    setMockTimeConfig({
+      enabled: false,
+      mockTimestamp: null,
+    });
+    setTimeout(refreshSlots, 50);
+  }, [refreshSlots]);
+
+  const setMockTimePreset = useCallback(
+    (preset: 'booked_slot_start' | 'active_slot' | 'slot_expiry' | 'cutoff_passed' | 'morning_10am') => {
+      if (process.env.NODE_ENV !== 'development') return;
+      const today = getTodayDateString();
+
+      if (preset === 'morning_10am') {
+        enableMockTime('10:00', today);
+        return;
+      }
+
+      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const allSlots = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
+      const booked = allSlots.find((s) => bookedSlotIds.includes(s.id)) || allSlots[2] || allSlots[0];
+
+      if (!booked) {
+        enableMockTime('10:00', today);
+        return;
+      }
+
+      if (preset === 'booked_slot_start') {
+        const targetTs = booked.startTimestamp - 15 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      } else if (preset === 'active_slot') {
+        const targetTs = booked.startTimestamp + 30 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      } else if (preset === 'slot_expiry') {
+        const targetTs = booked.endTimestamp + 5 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      } else if (preset === 'cutoff_passed') {
+        const targetTs = booked.startTimestamp - 15 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      }
+    },
+    [enableMockTime, zones, rider.selectedZoneId, adminConfig.slot, bookedSlotIds]
+  );
+
+  const resetTestEnvironment = useCallback(() => {
+    disableMockTime();
+    disableMockLocation();
+    resetMockEnv();
+    setTimeout(() => {
+      refreshSlots();
+      refreshZoneStatus();
+    }, 100);
+  }, [disableMockTime, disableMockLocation, refreshSlots, refreshZoneStatus]);
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -739,7 +927,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Check if there's a valid booked slot active or about to start
-    const now = Date.now();
+    const now = getNow();
     const earlyWindow = adminConfig.slot.earlyOnlineWindowMinutes * 60000;
     const validSlot = slots.find(
       (s) =>
@@ -1118,6 +1306,20 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         canGoOnline,
         recordOrderAcceptance,
         refreshZoneStatus,
+        refreshSlots,
+        testMode,
+        setTestMode,
+        isMockLocationEnabled,
+        mockZoneId,
+        enableMockLocation,
+        disableMockLocation,
+        setMockZone,
+        isMockTimeEnabled,
+        mockTimestamp,
+        enableMockTime,
+        disableMockTime,
+        setMockTimePreset,
+        resetTestEnvironment,
       }}
     >
       {children}
