@@ -11,13 +11,17 @@ import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 
 // ─── Tiny Web Audio sound engine ─────────────────────────────────────────────
-const playSound = (type: 'success' | 'tap') => {
+type SoundType = 'success' | 'tap' | 'modal-pop' | 'sms-ping' | 'error';
+
+const playSound = (type: SoundType) => {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
     const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
+
     if (type === 'success') {
       // A sweet two-tone rising chime: C5 → E5 → G5
       const notes = [523.25, 659.25, 783.99];
@@ -27,18 +31,67 @@ const playSound = (type: 'success' | 'tap') => {
         osc.connect(g); g.connect(ctx.destination);
         osc.type = 'sine';
         osc.frequency.value = freq;
-        g.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
-        g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.15 + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.4);
-        osc.start(ctx.currentTime + i * 0.15);
-        osc.stop(ctx.currentTime + i * 0.15 + 0.4);
+        g.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+        g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.12 + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35);
+        osc.start(ctx.currentTime + i * 0.12);
+        osc.stop(ctx.currentTime + i * 0.12 + 0.35);
+      });
+    } else if (type === 'modal-pop') {
+      // Gentle buoyant opening pop
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(320, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(580, ctx.currentTime + 0.12);
+      gainNode.gain.setValueAtTime(0.01, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.03);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc.connect(gainNode);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.22);
+    } else if (type === 'sms-ping') {
+      // Authentic high-clarity incoming SMS ping chime
+      const notes = [
+        { freq: 1174.66, time: 0, dur: 0.14 },
+        { freq: 1567.98, time: 0.07, dur: 0.4 },
+      ];
+      notes.forEach(({ freq, time, dur }) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + time);
+        g.gain.setValueAtTime(0, ctx.currentTime + time);
+        g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + time + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + dur);
+        osc.start(ctx.currentTime + time);
+        osc.stop(ctx.currentTime + time + dur);
+      });
+    } else if (type === 'error') {
+      // Double subtle low buzz
+      [180, 140].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+        g.gain.setValueAtTime(0.12, ctx.currentTime + i * 0.1);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.12);
+        osc.start(ctx.currentTime + i * 0.1);
+        osc.stop(ctx.currentTime + i * 0.1 + 0.12);
       });
     } else {
-      oscillator.type = 'sine';
-      oscillator.frequency.value = 600;
+      // Tactile click
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 650;
       gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-      oscillator.start(); oscillator.stop(ctx.currentTime + 0.08);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      osc.connect(gainNode);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.06);
     }
   } catch {}
 };
@@ -71,6 +124,7 @@ export const ProfileView: React.FC = () => {
   const [otpError, setOtpError] = useState('');
   const [resendTimer, setResendTimer] = useState(30);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isOtpSending, setIsOtpSending] = useState(false);
   const [showSmsBanner, setShowSmsBanner] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -124,12 +178,20 @@ export const ProfileView: React.FC = () => {
     setOtpError('');
     setCopied(false);
     setResendTimer(30);
+    setShowSmsBanner(false);
+    setIsOtpSending(true);
     setShowOtpModal(true);
-    setShowSmsBanner(true);
-    playSound('tap');
+    playSound('modal-pop');
+
+    // 1.3s realistic verification & SMS dispatch delay
     setTimeout(() => {
-      inputRefs.current[0]?.focus();
-    }, 400);
+      setIsOtpSending(false);
+      setShowSmsBanner(true);
+      playSound('sms-ping');
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 200);
+    }, 1300);
   };
 
   const handleCopyAndAutoFill = () => {
@@ -202,18 +264,25 @@ export const ProfileView: React.FC = () => {
   };
 
   const handleResend = () => {
-    if (resendTimer > 0) return;
+    if (resendTimer > 0 || isOtpSending) return;
     const newOtp = generateRandomOtp();
     setGeneratedOtp(newOtp);
     setOtpDigits(['', '', '', '', '', '']);
     setOtpError('');
     setCopied(false);
     setResendTimer(30);
-    setShowSmsBanner(true);
+    setShowSmsBanner(false);
+    setIsOtpSending(true);
     playSound('tap');
+
     setTimeout(() => {
-      inputRefs.current[0]?.focus();
-    }, 100);
+      setIsOtpSending(false);
+      setShowSmsBanner(true);
+      playSound('sms-ping');
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 200);
+    }, 1300);
   };
 
   const isFormValid = 
@@ -230,7 +299,7 @@ export const ProfileView: React.FC = () => {
   const handleOtpConfirm = async () => {
     if (enteredOtp !== generatedOtp) {
       setOtpError('Invalid code. Please check your 6-digit OTP.');
-      playSound('tap');
+      playSound('error');
       return;
     }
 
@@ -691,18 +760,43 @@ export const ProfileView: React.FC = () => {
                 </div>
               </div>
 
-              {/* SMS Dispatch Helper Note */}
-              <div className="w-full bg-gradient-to-r from-emerald-50/80 via-emerald-50/40 to-teal-50/50 border border-emerald-100/90 rounded-2xl p-3.5 flex items-center gap-3 mb-5">
-                <div className="w-9 h-9 rounded-xl bg-white border border-emerald-200/70 shadow-sm flex items-center justify-center shrink-0">
-                  <Smartphone className="w-4 h-4 text-brand" />
+              {/* SMS Dispatch & Loading State Card */}
+              {isOtpSending ? (
+                <div className="w-full bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-3.5 flex items-center gap-3.5 mb-5 shadow-sm">
+                  <div className="w-9 h-9 rounded-xl bg-white border border-emerald-200 shadow-sm flex items-center justify-center shrink-0">
+                    <RefreshCw className="w-4 h-4 text-brand animate-spin" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-gray-800 text-xs">Generating Secure OTP</p>
+                      <span className="flex gap-1 items-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand animate-bounce [animation-delay:-0.3s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand animate-bounce [animation-delay:-0.15s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand animate-bounce" />
+                      </span>
+                    </div>
+                    <p className="text-text-secondary text-[11px] mt-0.5 truncate">
+                      Dispatching via SMS gateway...
+                    </p>
+                  </div>
                 </div>
-                <div className="text-xs">
-                  <p className="font-bold text-gray-800 leading-tight">Verification SMS Sent</p>
-                  <p className="text-text-secondary text-[11px] mt-0.5 leading-snug">
-                    Tap <strong className="text-brand">Auto-fill</strong> in the banner above or enter the 6-digit OTP below.
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full bg-gradient-to-r from-emerald-50/90 via-emerald-50/50 to-teal-50/60 border border-emerald-200/90 rounded-2xl p-3.5 flex items-center gap-3 mb-5 shadow-sm"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white border border-emerald-200/80 shadow-sm flex items-center justify-center shrink-0">
+                    <Smartphone className="w-4 h-4 text-brand" />
+                  </div>
+                  <div className="text-xs">
+                    <p className="font-bold text-gray-800 leading-tight">Verification SMS Dispatched ✓</p>
+                    <p className="text-text-secondary text-[11px] mt-0.5 leading-snug">
+                      Tap <strong className="text-brand">Auto-fill</strong> in the banner above or enter the 6 digits below.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
               
               {/* Segmented 6-Digit PIN Boxes */}
               <div className="w-full mb-4">
