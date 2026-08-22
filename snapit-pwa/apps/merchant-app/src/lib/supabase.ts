@@ -1,17 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://satzvkmpatnbxpeiecvg.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Dj9NK5v5Dn1LiNhhg9BKsA_5QN5rtXp';
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = true;
 
-if (!isSupabaseConfigured) {
-  console.info(
-    '⚡ [SnapIt Merchant] Running in Local Counter Demo mode. Connect real Supabase by setting VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in apps/merchant-app/.env'
-  );
-}
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder-snapit.supabase.co',
-  supabaseAnonKey || 'placeholder-anon-key'
-);
