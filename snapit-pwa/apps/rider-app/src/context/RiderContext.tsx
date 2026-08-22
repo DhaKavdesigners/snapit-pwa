@@ -633,6 +633,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const setTestMode = useCallback(
     (mode: TestAppMode) => {
+      if (process.env.NODE_ENV !== 'development') return;
       setTestModeState(mode);
       setTestModeService(mode);
       if (mode === 'driver') {
@@ -657,6 +658,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const enableMockLocation = useCallback(
     (zoneId?: string, customCoords?: { lat: number; lng: number }) => {
+      if (process.env.NODE_ENV !== 'development') return;
       const targetZoneId = zoneId || rider.selectedZoneId || 'zone-1';
       const targetZone = zones.find((z) => z.id === targetZoneId) || zones[0];
       const coords = customCoords || {
@@ -688,6 +690,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const setMockZone = useCallback(
     (zoneId: string) => {
+      if (process.env.NODE_ENV !== 'development') return;
       enableMockLocation(zoneId);
     },
     [enableMockLocation]
@@ -700,6 +703,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const enableMockTime = useCallback(
     (timeStr: string, dateStr?: string) => {
+      if (process.env.NODE_ENV !== 'development') return;
       const targetDate = dateStr || getTodayDateString();
       const ts = timeToTodayMs(timeStr, targetDate);
       setIsMockTimeEnabled(true);
@@ -727,6 +731,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const setMockTimePreset = useCallback(
     (preset: 'booked_slot_start' | 'active_slot' | 'slot_expiry' | 'cutoff_passed' | 'morning_10am') => {
+      if (process.env.NODE_ENV !== 'development') return;
       const today = getTodayDateString();
 
       if (preset === 'morning_10am') {

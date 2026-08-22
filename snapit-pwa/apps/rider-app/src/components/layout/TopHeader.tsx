@@ -95,8 +95,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
           </Link>
         </div>
 
-        {/* Center: Developer Test Mode Toggle */}
-        <TestModeToggle />
+        {/* Center: Developer Test Mode Toggle (Dev Mode Only) */}
+        {process.env.NODE_ENV === 'development' && <TestModeToggle />}
 
         {/* Right: Online toggle + Bell */}
         <div className="flex items-center gap-2">
