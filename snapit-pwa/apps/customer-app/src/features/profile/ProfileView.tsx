@@ -691,41 +691,16 @@ export const ProfileView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Interactive Code Display Card (Copy & Auto-fill) */}
-              <div 
-                onClick={handleCopyAndAutoFill}
-                className={`w-full rounded-2xl p-4 flex items-center justify-between mb-5 border-2 transition-all cursor-pointer select-none ${
-                  copied 
-                    ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-400/20 shadow-sm' 
-                    : 'bg-gradient-to-r from-emerald-50/80 via-gray-50 to-emerald-50/80 border-emerald-200/90 hover:border-emerald-300 hover:bg-emerald-50/50 active:scale-[0.99]'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <p className="text-[9px] font-black text-emerald-800 uppercase tracking-widest">Instant OTP Code</p>
-                  </div>
-                  <p className="font-mono font-black text-brand text-2xl tracking-[0.25em]">
-                    {generatedOtp}
-                  </p>
+              {/* SMS Dispatch Helper Note */}
+              <div className="w-full bg-gradient-to-r from-emerald-50/80 via-emerald-50/40 to-teal-50/50 border border-emerald-100/90 rounded-2xl p-3.5 flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-xl bg-white border border-emerald-200/70 shadow-sm flex items-center justify-center shrink-0">
+                  <Smartphone className="w-4 h-4 text-brand" />
                 </div>
-
-                <div className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm ${
-                  copied 
-                    ? 'bg-emerald-600 text-white scale-105' 
-                    : 'bg-brand text-white hover:bg-emerald-700'
-                }`}>
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Auto-filled!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Tap to Copy</span>
-                    </>
-                  )}
+                <div className="text-xs">
+                  <p className="font-bold text-gray-800 leading-tight">Verification SMS Sent</p>
+                  <p className="text-text-secondary text-[11px] mt-0.5 leading-snug">
+                    Tap <strong className="text-brand">Auto-fill</strong> in the banner above or enter the 6-digit OTP below.
+                  </p>
                 </div>
               </div>
               
