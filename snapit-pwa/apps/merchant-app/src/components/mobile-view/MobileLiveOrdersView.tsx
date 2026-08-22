@@ -1,10 +1,10 @@
 import React from 'react';
-import { PlusCircle, Inbox } from 'lucide-react';
+import { Inbox, Radio } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 import { MobileOrderCard } from './MobileOrderCard';
 
 export const MobileLiveOrdersView: React.FC = () => {
-  const { orders, injectSimulatedOrder, isOnline } = useMerchantStore();
+  const { orders, isOnline, toggleStoreStatus } = useMerchantStore();
 
   const placedCount = orders.filter((o) => o.status === 'PLACED').length;
   const preparingCount = orders.filter((o) => o.status === 'PREPARING').length;
@@ -12,28 +12,24 @@ export const MobileLiveOrdersView: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Top Controls & Status Bar */}
+      {/* Top Status Header */}
       <div className="flex items-center justify-between gap-2 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div>
           <div className="flex items-center gap-1.5">
-            <h3 className="text-sm font-black text-slate-950">LIVE QUEUE</h3>
+            <h3 className="text-sm font-black text-slate-950">LIVE ORDERS QUEUE</h3>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 font-mono">
               {orders.length} ACTIVE
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-            Process orders in-place
+            Real-time kitchen order processing
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={injectSimulatedOrder}
-          className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-95 border border-emerald-200 text-emerald-800 text-xs font-extrabold transition-all flex items-center gap-1 cursor-pointer"
-        >
-          <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Test Order</span>
-        </button>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-bold">
+          <Radio className={`w-3.5 h-3.5 ${isOnline ? 'text-emerald-500 animate-pulse' : 'text-slate-400'}`} />
+          <span className="text-[10px] font-mono">{isOnline ? 'LISTENING' : 'PAUSED'}</span>
+        </div>
       </div>
 
       {/* Status Summary Chips */}
@@ -75,23 +71,15 @@ export const MobileLiveOrdersView: React.FC = () => {
           </h4>
           <p className="text-xs text-slate-500 max-w-xs mb-4">
             {isOnline
-              ? 'Store is ONLINE. Customer orders will appear and ring here automatically.'
-              : 'Store is OFFLINE. Switch ONLINE to start accepting orders.'}
+              ? 'Store is ONLINE. Incoming orders placed by customers will ring and appear here in real-time.'
+              : 'Store is OFFLINE. Switch your store ONLINE to start receiving orders.'}
           </p>
 
-          {isOnline ? (
+          {!isOnline && (
             <button
               type="button"
-              onClick={injectSimulatedOrder}
-              className="px-4 py-2 bg-emerald-600 active:scale-95 text-white text-xs font-extrabold rounded-xl shadow-md shadow-emerald-600/20"
-            >
-              Simulate Customer Order
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={useMerchantStore.getState().toggleStoreStatus}
-              className="px-4 py-2 bg-rose-600 active:scale-95 text-white text-xs font-extrabold rounded-xl shadow-md shadow-rose-600/20"
+              onClick={toggleStoreStatus}
+              className="px-4 py-2 bg-emerald-600 active:scale-95 text-white text-xs font-extrabold rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer"
             >
               Switch Store ONLINE
             </button>
@@ -101,3 +89,5 @@ export const MobileLiveOrdersView: React.FC = () => {
     </div>
   );
 };
+
+export default MobileLiveOrdersView;

@@ -3,9 +3,9 @@ import {
   ChefHat,
   BellRing,
   Sparkles,
-  PlusCircle,
   Inbox,
   Layers,
+  Radio,
 } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 import { LiveOrderCard } from './LiveOrderCard';
@@ -16,8 +16,8 @@ export const LiveOrdersQueue: React.FC = () => {
     orders,
     orderFilter,
     setOrderFilter,
-    injectSimulatedOrder,
     isOnline,
+    toggleStoreStatus,
   } = useMerchantStore();
 
   const placedCount = orders.filter((o) => o.status === 'PLACED' || o.status === 'PENDING').length;
@@ -64,19 +64,14 @@ export const LiveOrdersQueue: React.FC = () => {
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
-            In-place counter progression
+            Real-time kitchen order progression
           </p>
         </div>
 
-        {/* Simulate Order Trigger Button */}
-        <button
-          type="button"
-          onClick={injectSimulatedOrder}
-          className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-95 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all shadow-xs cursor-pointer flex-shrink-0"
-        >
-          <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Simulate Order</span>
-        </button>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold">
+          <Radio className={`w-3.5 h-3.5 ${isOnline ? 'text-emerald-500 animate-pulse' : 'text-slate-400'}`} />
+          <span className="text-[11px] font-mono">{isOnline ? 'ONLINE • RECEIVING ORDERS' : 'STORE OFFLINE'}</span>
+        </div>
       </div>
 
       {/* 2. Counter Status Summary Bar (Clickable quick filters, default is ALL ACTIVE) */}
@@ -178,25 +173,16 @@ export const LiveOrdersQueue: React.FC = () => {
             </h3>
             <p className="text-xs text-slate-600 max-w-sm mb-4">
               {isOnline
-                ? 'Your store is ONLINE and ready. New customer orders will ring here automatically and stay here until given to the delivery rider.'
+                ? 'Your store is ONLINE and ready. Real orders placed in the Customer app will ring here automatically.'
                 : 'Your store is currently OFFLINE. Switch your store ONLINE to start accepting customer orders.'}
             </p>
-            {isOnline ? (
+            {!isOnline && (
               <button
                 type="button"
-                onClick={injectSimulatedOrder}
+                onClick={toggleStoreStatus}
                 className="px-4 py-2 bg-emerald-600 text-white text-xs font-extrabold rounded-xl shadow-md shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
               >
-                <PlusCircle className="w-4 h-4" />
-                <span>Simulate Live Customer Order</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={useMerchantStore.getState().toggleStoreStatus}
-                className="px-4 py-2 bg-rose-600 text-white text-xs font-extrabold rounded-xl shadow-md shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <span>Switch Store ONLINE First</span>
+                <span>Switch Store ONLINE</span>
               </button>
             )}
           </div>
@@ -205,3 +191,5 @@ export const LiveOrdersQueue: React.FC = () => {
     </div>
   );
 };
+
+export default LiveOrdersQueue;

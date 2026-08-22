@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
+import { supabase } from '../../lib/supabase';
+
 const allProducts = [...mockShoppingProducts, ...mockFoodProducts];
 
 type PayMethod = 'online' | 'upiDelivery';
@@ -23,6 +25,7 @@ export const CheckoutView: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<PayMethod>('online');
   const [useCurrentLocation, setUseCurrentLocation] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState<'registered' | 'college' | 'new'>('registered');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Modal & Address States
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -61,16 +64,17 @@ export const CheckoutView: React.FC = () => {
   const displayAddressLine = isUsingNewAddress 
     ? newLine1 
     : isCollegeAddress ? 'Dttit kgf'
-    : hasProfile ? `${userProfile!.addressLine1}${userProfile!.addressLine2 ? `, ${userProfile!.addressLine2}` : ''}` : '';
+    : hasProfile ? `${userProfile!.addressLine1}${userProfile!.addressLine2 ? `, ${userProfile!.addressLine2}` : ''}` : 'KGF Main Road';
     
-  const displayLandmark = isUsingNewAddress ? newLandmark : isCollegeAddress ? 'oorgaum post' : userProfile?.landmark;
-  const displayPin = isUsingNewAddress ? newPin : isCollegeAddress ? '563120' : userProfile?.pincode;
+  const displayLandmark = isUsingNewAddress ? newLandmark : isCollegeAddress ? 'oorgaum post' : userProfile?.landmark || 'Near Town Hall';
+  const displayPin = isUsingNewAddress ? newPin : isCollegeAddress ? '563120' : userProfile?.pincode || '563122';
   const displayTitle = isUsingNewAddress ? (newTitle || 'NEW ADDRESS') : isCollegeAddress ? 'COLLEGE' : 'REGISTERED ADDRESS';
   
-  const finalRecipientName = isSomeoneElse && recipientName.trim() ? recipientName : (userProfile?.name || 'Guest');
-  const finalRecipientPhone = isSomeoneElse && recipientPhone.trim() ? recipientPhone : (userProfile?.phone || '');
+  const finalRecipientName = isSomeoneElse && recipientName.trim() ? recipientName : (userProfile?.name || 'Customer');
+  const finalRecipientPhone = isSomeoneElse && recipientPhone.trim() ? recipientPhone : (userProfile?.phone || '+91 98450 12345');
 
   const handlePlaceOrder = async () => {
+<<<<<<< Updated upstream
     try {
       const displayId = `#${Math.floor(1000 + Math.random() * 9000)}`;
       
@@ -134,6 +138,52 @@ export const CheckoutView: React.FC = () => {
       const msg = error?.message || error?.error_description || JSON.stringify(error);
       alert(`Failed to place order: ${msg}`);
     }
+=======
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    const orderId = `SN${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const storeId = cartItemsWithDetails[0]?.product?.storeId || 's1';
+
+    // 1. Insert into Supabase Realtime Database
+    try {
+      await supabase.from('orders').insert({
+        id: orderId,
+        customer_id: userProfile?.phone || 'cust_guest',
+        store_id: storeId,
+        status: 'PLACED',
+        items: cartItemsWithDetails.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          name: i.product!.name,
+          price: i.product!.price,
+        })),
+        estimated_total: total,
+        delivery_address: {
+          line1: displayAddressLine,
+          landmark: displayLandmark,
+          pincode: displayPin,
+          city: 'KGF',
+        },
+        payment_method: 'UPI_NOW',
+        payment_status: 'PAID',
+        recipient_name: finalRecipientName,
+        recipient_phone: finalRecipientPhone,
+      });
+      console.info(`⚡ Order ${orderId} successfully placed into Supabase!`);
+    } catch (err) {
+      console.warn('Could not sync order to Supabase:', err);
+    }
+    
+    saveLastOrder({
+      orderId,
+      total,
+      itemNames: cartItemsWithDetails.map(i => i.product!.name),
+      paymentMethod: 'upi',
+    });
+    clearCart();
+    navigate('/success');
+>>>>>>> Stashed changes
   };
 
   const handleSaveNewAddress = () => {

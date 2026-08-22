@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
 
 interface UserProfile {
   name: string;
@@ -8,11 +9,11 @@ interface UserProfile {
   addressLine2: string;
   landmark: string;
   pincode: string;
-  // ── Trust tier flags (mirrors Firestore schema) ──────────────────────────
+  // ── Trust tier flags ────────────────────────────────────────────────────────
   phoneVerified: boolean;       // true after OTP completion
   deliveryVerified: boolean;    // true after 1st successful delivery
   completedOrdersCount: number; // incremented on each delivery PIN handshake
-  maxCodLimit: number;          // in paise: 30000 = ₹300 (unverified), 100000 = ₹1000 (verified)
+  maxCodLimit: number;          // in paise
 }
 
 interface AuthState {
@@ -20,7 +21,7 @@ interface AuthState {
   userLandmark: string;
   userProfile: UserProfile | null;
   login: (landmark: string) => void;
-  register: (profile: Omit<UserProfile, 'phoneVerified' | 'deliveryVerified' | 'completedOrdersCount' | 'maxCodLimit'>) => void;
+  register: (profile: Omit<UserProfile, 'phoneVerified' | 'deliveryVerified' | 'completedOrdersCount' | 'maxCodLimit'>) => Promise<void>;
   /** Called by Rider Dashboard when delivery PIN is accepted */
   confirmDelivery: () => void;
   logout: () => void;
@@ -35,19 +36,43 @@ export const useAuthStore = create<AuthState>()(
 
       login: (landmark) => set({ isLoggedIn: true, userLandmark: landmark }),
 
-      register: (profileBase) => {
+      register: async (profileBase) => {
         const profile: UserProfile = {
           ...profileBase,
           phoneVerified: true,       // OTP passed → phone is confirmed
           deliveryVerified: false,   // stays false until first real delivery
           completedOrdersCount: 0,
-          maxCodLimit: 30000,        // ₹300 COD cap for new users
+          maxCodLimit: 30000,
         };
+
         set({
           isLoggedIn: true,
           userProfile: profile,
           userLandmark: profile.landmark?.trim() || profile.addressLine2?.trim() || 'Home (KGF)',
         });
+
+        // ⚡ Save registered customer profile directly into Supabase database!
+        try {
+          const { error } = await supabase.from('profiles').upsert({
+            id: profile.phone.trim(),
+            name: profile.name.trim(),
+            phone: profile.phone.trim(),
+            address_line1: profile.addressLine1.trim(),
+            address_line2: profile.addressLine2.trim(),
+            landmark: profile.landmark?.trim() || '',
+            pincode: profile.pincode.trim(),
+            delivery_verified: false,
+            updated_at: new Date().toISOString(),
+          });
+
+          if (error) {
+            console.warn('Supabase profiles sync note:', error.message);
+          } else {
+            console.info(`⚡ Customer profile for "${profile.name}" (${profile.phone}) successfully saved to Supabase!`);
+          }
+        } catch (err) {
+          console.warn('Could not sync customer profile to Supabase:', err);
+        }
       },
 
       /** Rider triggers this after the customer enters the correct delivery PIN */
@@ -60,7 +85,7 @@ export const useAuthStore = create<AuthState>()(
             ...prev,
             deliveryVerified: true,
             completedOrdersCount: newCount,
-            maxCodLimit: 100000, // ₹1,000 COD limit unlocked
+            maxCodLimit: 100000,
           },
         });
       },
