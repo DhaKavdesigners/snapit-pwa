@@ -2,11 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRider } from '@/context/RiderContext';
-import { formatTimeAMPM, formatRemainingTime } from '@/services/slotService';
+import { formatTimeAMPM, formatRemainingTime, isBookingOpen } from '@/services/slotService';
 import { computeBreakState } from '@/services/breakService';
 import { getNow } from '@/services/mockService';
 import Link from 'next/link';
-import { Calendar, Clock, Coffee, Zap, AlertCircle, ChevronRight } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  Coffee,
+  Zap,
+  AlertCircle,
+  Sparkles,
+  CheckCircle2,
+  MapPin,
+  Flame,
+  ArrowRight,
+} from 'lucide-react';
+import { RiderSlot } from '@/types';
 
 export const SlotStatusCard: React.FC = () => {
   const {
@@ -20,6 +32,7 @@ export const SlotStatusCard: React.FC = () => {
     endBreak,
     isOnline,
     canGoOnline,
+    rider,
   } = useRider();
 
   const [now, setNow] = useState(getNow());
@@ -33,51 +46,82 @@ export const SlotStatusCard: React.FC = () => {
   const isBreakActive = riderBreak && !riderBreak.endedAt;
   const onlineGate = canGoOnline();
 
-  // No active or upcoming slot
+  // ── 1. NO ACTIVE OR UPCOMING SLOT (Hero Slot Booking Widget) ──
   if (!activeSlot && !upcomingSlot) {
     return (
       <Link
         href="/slots"
-        className="bg-white rounded-2xl border border-dashed border-slate-300 shadow-sm px-4 py-3 flex items-center justify-between active:scale-98 transition-transform"
+        className="block bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-3xl p-6 shadow-lg border border-slate-700/60 relative overflow-hidden transition-all hover:scale-[1.01] active:scale-98 group"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-slate-400" />
+        {/* Background glow decorative elements */}
+        <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-500/15 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Top Header Label */}
+        <div className="flex items-center justify-between mb-4 relative z-10">
+          <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Slot Booking Required</span>
           </div>
-          <div>
-            <p className="text-[13px] font-bold text-slate-700">No Slot Booked</p>
-            <p className="text-[11px] text-slate-500">Tap to book a slot and receive orders</p>
+          <span className="text-[11px] text-slate-400 font-medium">Zone: <strong className="text-white">{rider.selectedZone || 'Downtown Central'}</strong></span>
+        </div>
+
+        {/* Main Title & Subtitle */}
+        <div className="relative z-10 mb-6">
+          <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
+            <Calendar className="w-7 h-7 text-emerald-400 shrink-0" />
+            Book Your Slot
+          </h2>
+          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+            You are currently offline. Tap to choose your preferred time slot and start receiving delivery orders.
+          </p>
+        </div>
+
+        {/* Big Action Button */}
+        <div className="relative z-10">
+          <div className="w-full py-4 bg-emerald-500 group-hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-2xl shadow-lift flex items-center justify-center gap-2 transition-all">
+            <Sparkles className="w-4 h-4 fill-slate-950" />
+            Book Your Slot
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-slate-400" />
       </Link>
     );
   }
 
-  // On break
+  // ── 2. ON BREAK ──
   if (isBreakActive) {
     return (
-      <div className="bg-amber-50 border border-amber-300 rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
-            <Coffee className="w-5 h-5 text-amber-600" />
+      <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-5 flex flex-col gap-3 shadow-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-200 text-amber-800 flex items-center justify-center">
+              <Coffee className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-md">
+                Duty Break Active
+              </span>
+              <h3 className="text-lg font-black text-amber-900 mt-0.5">ON BREAK</h3>
+            </div>
           </div>
-          <div>
-            <p className="text-[13px] font-bold text-amber-800">ON BREAK</p>
-            <p className="text-[11px] text-amber-600">{breakState.displayCountdown} remaining</p>
+          <div className="text-right">
+            <p className="text-base font-black text-amber-800 font-mono">{breakState.displayCountdown}</p>
+            <p className="text-[10px] text-amber-600 font-semibold">Remaining</p>
           </div>
         </div>
+
         <button
           onClick={endBreak}
-          className="bg-primary text-white text-[11px] font-bold px-3 py-2 rounded-xl shadow-sm active:scale-95"
+          className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
         >
-          Resume Online
+          Resume Duty (Go Online)
         </button>
       </div>
     );
   }
 
-  // Active slot
+  // ── 3. ACTIVE SLOT ──
   if (activeSlot) {
     const remaining = activeSlot.endTimestamp - now;
     const nextSlot = slots.find(
@@ -87,16 +131,19 @@ export const SlotStatusCard: React.FC = () => {
 
     if (now >= activeSlot.endTimestamp) {
       return (
-        <div className="bg-slate-800 text-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm">
+        <div className="bg-slate-900 text-white rounded-3xl p-5 flex items-center justify-between shadow-lg border border-slate-700">
           <div>
-            <p className="text-[13px] font-bold">YOUR SLOT HAS ENDED</p>
-            <p className="text-[11px] text-slate-400">You are now Offline</p>
+            <div className="inline-flex items-center gap-1.5 bg-red-500/20 text-red-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+              Slot Ended
+            </div>
+            <h3 className="text-base font-black text-white mt-1">YOUR SLOT HAS ENDED</h3>
+            <p className="text-xs text-slate-400">You are now Offline</p>
           </div>
           <Link
             href="/slots"
-            className="bg-primary text-white text-[11px] font-bold px-3 py-2 rounded-xl active:scale-95"
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black px-4 py-3 rounded-2xl active:scale-95 transition-all shadow-md"
           >
-            Book Next
+            Book Next Slot
           </Link>
         </div>
       );
@@ -104,23 +151,24 @@ export const SlotStatusCard: React.FC = () => {
 
     if (endingSoon) {
       return (
-        <div className="bg-amber-50 border border-amber-300 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-5 shadow-lg border border-amber-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[13px] font-bold text-amber-800">
-                SLOT ENDS IN {Math.ceil(remaining / 60000)} MIN
-              </p>
-              <p className="text-[11px] text-amber-600">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-black/20 px-2.5 py-0.5 rounded-full">
+                ⚠️ Ending Soon
+              </span>
+              <h3 className="text-lg font-black mt-1">SLOT ENDS IN {Math.ceil(remaining / 60000)} MIN</h3>
+              <p className="text-xs opacity-90 font-medium">
                 {formatTimeAMPM(activeSlot.startTimestamp)} – {formatTimeAMPM(activeSlot.endTimestamp)}
               </p>
             </div>
             {nextSlot && (
               <button
                 onClick={() => extendSlot(activeSlot.id, nextSlot.id)}
-                className="bg-primary text-white text-[11px] font-bold px-3 py-2 rounded-xl shadow-sm active:scale-95 shrink-0 ml-2"
+                className="bg-white text-orange-600 font-black text-xs px-4 py-3 rounded-2xl shadow-lg active:scale-95 transition-all shrink-0 ml-2 flex items-center gap-1.5"
               >
-                <Zap className="w-3 h-3 inline mr-1" />
-                Extend 1 Hour
+                <Zap className="w-4 h-4 fill-orange-500" />
+                Extend 1 Hr
               </button>
             )}
           </div>
@@ -128,48 +176,71 @@ export const SlotStatusCard: React.FC = () => {
       );
     }
 
+    const totalMs = activeSlot.endTimestamp - activeSlot.startTimestamp;
+    const elapsed = now - activeSlot.startTimestamp;
+    const progressPct = Math.min(100, Math.max(0, Math.floor((elapsed / totalMs) * 100)));
+
     return (
       <div
-        className={`rounded-2xl border shadow-sm overflow-hidden ${
-          !isOnline && !onlineGate.canGo ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'
+        className={`rounded-3xl border-2 shadow-lg p-5 transition-all ${
+          !isOnline && !onlineGate.canGo ? 'bg-amber-50 border-amber-300' : 'bg-white border-emerald-500/30'
         }`}
       >
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-[13px] font-bold text-slate-900">ACTIVE SLOT</p>
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              </div>
-              <p className="text-[11px] text-slate-500">
-                {formatTimeAMPM(activeSlot.startTimestamp)} – {formatTimeAMPM(activeSlot.endTimestamp)} ·{' '}
-                {activeSlot.zoneName}
-              </p>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </span>
+            <span className="text-xs font-black text-emerald-700 uppercase tracking-wider bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+              ACTIVE SLOT DUTY
+            </span>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-[12px] font-bold text-primary">{formatRemainingTime(remaining)}</p>
-            <p className="text-[10px] text-slate-400">remaining</p>
+
+          <div className="text-right">
+            <span className="text-sm font-black text-emerald-600 font-mono">{formatRemainingTime(remaining)}</span>
+            <span className="text-[10px] text-slate-400 block font-medium">remaining</span>
+          </div>
+        </div>
+
+        {/* Slot details */}
+        <div className="flex items-baseline justify-between mb-2">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 font-mono leading-none">
+              {formatTimeAMPM(activeSlot.startTimestamp)} – {formatTimeAMPM(activeSlot.endTimestamp)}
+            </h2>
+            <p className="text-xs text-slate-500 font-semibold flex items-center gap-1 mt-1">
+              <MapPin className="w-3.5 h-3.5 text-emerald-600" /> {activeSlot.zoneName}
+            </p>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="my-3">
+          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
         </div>
 
         {!onlineGate.canGo && !isOnline && (
-          <div className="px-4 pb-3 flex items-center gap-2 text-[11px] text-amber-700">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <div className="mt-2 p-2.5 bg-amber-100/80 rounded-xl flex items-center gap-2 text-xs font-semibold text-amber-800 border border-amber-200">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
             <span className="truncate">{onlineGate.reason}</span>
           </div>
         )}
 
+        {/* Action button */}
         {isOnline && (
-          <div className="px-4 pb-3 flex justify-end">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex justify-end">
             <button
               onClick={startBreak}
-              className="text-[11px] font-bold text-amber-700 border border-amber-200 bg-amber-50 px-3 py-1.5 rounded-lg flex items-center gap-1 active:scale-95"
+              className="text-xs font-bold text-amber-800 border border-amber-300 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 rounded-xl flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
             >
-              <Coffee className="w-3 h-3" />
+              <Coffee className="w-4 h-4 text-amber-600" />
               Take Break
             </button>
           </div>
@@ -178,39 +249,41 @@ export const SlotStatusCard: React.FC = () => {
     );
   }
 
-  // Upcoming slot
+  // ── 4. UPCOMING SLOT ──
   if (upcomingSlot) {
     const startsIn = upcomingSlot.startTimestamp - now;
     const isSoon = startsIn <= 10 * 60000;
     return (
       <div
-        className={`rounded-2xl border shadow-sm px-4 py-3 flex items-center justify-between ${
-          isSoon ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'
+        className={`rounded-3xl border-2 shadow-md p-5 flex items-center justify-between ${
+          isSoon ? 'bg-amber-50 border-amber-300' : 'bg-white border-blue-200'
         }`}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-              isSoon ? 'bg-amber-100' : 'bg-blue-50'
+            className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
+              isSoon ? 'bg-amber-200 text-amber-800' : 'bg-blue-100 text-blue-600'
             }`}
           >
-            <Clock className={`w-5 h-5 ${isSoon ? 'text-amber-600 animate-pulse' : 'text-blue-500'}`} />
+            <Clock className={`w-6 h-6 ${isSoon ? 'animate-pulse' : ''}`} />
           </div>
           <div>
-            <p className={`text-[13px] font-bold ${isSoon ? 'text-amber-800' : 'text-slate-900'}`}>
-              {isSoon ? '⏰ SLOT STARTS SOON' : 'UPCOMING SLOT'}
+            <span className={`text-[10px] font-extrabold uppercase tracking-wider ${isSoon ? 'text-amber-800' : 'text-blue-600'}`}>
+              {isSoon ? '⏰ SLOT STARTS SOON' : 'UPCOMING BOOKED SLOT'}
+            </span>
+            <p className="text-lg font-black text-slate-900 font-mono leading-tight">
+              {formatTimeAMPM(upcomingSlot.startTimestamp)} – {formatTimeAMPM(upcomingSlot.endTimestamp)}
             </p>
-            <p className="text-[11px] text-slate-500">
-              {formatTimeAMPM(upcomingSlot.startTimestamp)} – {formatTimeAMPM(upcomingSlot.endTimestamp)} ·{' '}
-              Starts in {formatRemainingTime(startsIn)}
+            <p className="text-xs text-slate-500 font-semibold mt-0.5">
+              Starts in {formatRemainingTime(startsIn)} · {upcomingSlot.zoneName}
             </p>
           </div>
         </div>
         <Link
           href="/slots"
-          className="text-[11px] font-bold text-primary border border-primary/20 bg-primary/5 px-2.5 py-1.5 rounded-xl shrink-0 active:scale-95"
+          className="text-xs font-bold text-primary border border-primary/30 bg-primary/10 px-3 py-2 rounded-xl shrink-0 active:scale-95 transition-all"
         >
-          View
+          View Slots
         </Link>
       </div>
     );
@@ -218,3 +291,4 @@ export const SlotStatusCard: React.FC = () => {
 
   return null;
 };
+

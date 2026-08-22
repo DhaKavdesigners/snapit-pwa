@@ -152,11 +152,11 @@ export default function DashboardPage() {
           </Link>
         </div>
 
+        {/* ── Live Slot Status & Booking Card (PROMINENT FIRST ELEMENT) ── */}
+        <SlotStatusCard />
+
         {/* ── Zone Status Banner (Geofence & Location Warning) ── */}
         <ZoneStatusBanner />
-
-        {/* ── Live Slot Status Card ───────────────────────── */}
-        <SlotStatusCard />
 
         {/* ── Non-acceptance warning card ── */}
         {nonAcceptanceCount >= 1 && (
