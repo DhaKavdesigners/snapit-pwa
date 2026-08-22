@@ -222,7 +222,7 @@ export const OrderSuccessView: React.FC = () => {
         >
           {/* Primary Track Order */}
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/profile', { state: { openOrders: true } })}
             className="w-full h-14 rounded-2xl bg-white text-brand font-black text-base flex items-center justify-center gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-transform uppercase tracking-wider"
           >
             <MapPin className="w-5 h-5 text-brand" />

@@ -7,7 +7,7 @@ import {
   ArrowRight, ChevronRight, Store, FileText, ChevronDown, ChevronUp, History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/currency';
@@ -103,6 +103,7 @@ type RegistrationStep = 'form' | 'success' | 'dashboard';
 export const ProfileView: React.FC = () => {
   const { register, logout, isLoggedIn, userProfile } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // If already registered, skip straight to dashboard.
   // Populate formData from persisted profile so the dashboard has the right name/phone.
@@ -206,6 +207,13 @@ export const ProfileView: React.FC = () => {
       clearInterval(interval);
     };
   }, [userProfile?.phone, formData.phone]);
+
+  // Automatically open "My Orders" if navigated from "Track Order" button
+  useEffect(() => {
+    if (location.state?.openOrders) {
+      setOrdersModal(true);
+    }
+  }, [location.state]);
 
   // Timer countdown for resend
   useEffect(() => {
@@ -691,38 +699,48 @@ export const ProfileView: React.FC = () => {
       }
     };
 
+    const hasActiveOrder = activeOrders.length > 0;
+
     const tiles = [
       {
+        id: 'orders',
         icon: Package,
         label: 'My Orders',
-        sublabel: activeOrders.length > 0 ? `${activeOrders.length} active order${activeOrders.length > 1 ? 's' : ''}` : 'View orders & history',
-        bg: activeOrders.length > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 text-brand',
-        iconColor: 'text-brand',
+        sublabel: hasActiveOrder ? 'Live tracking in progress ⚡' : 'View past orders & history',
+        bg: hasActiveOrder ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 text-brand',
+        iconColor: hasActiveOrder ? 'text-emerald-700' : 'text-brand',
         action: () => { playSound('tap'); setOrdersModal(true); },
+        isLive: hasActiveOrder,
       },
       {
+        id: 'addresses',
         icon: MapPin,
         label: 'Saved Addresses',
         sublabel: 'Manage delivery spots',
         bg: 'bg-blue-50',
         iconColor: 'text-blue-600',
         action: () => playSound('tap'),
+        isLive: false,
       },
       {
+        id: 'support',
         icon: MessageCircle,
         label: 'Help & Support',
         sublabel: 'Chat on WhatsApp',
         bg: 'bg-green-50',
         iconColor: 'text-green-600',
         action: () => window.open('https://wa.me/918217649688', '_blank'),
+        isLive: false,
       },
       {
+        id: 'about',
         icon: Info,
         label: 'About SnapIt',
         sublabel: 'App info & version',
         bg: 'bg-gray-50',
         iconColor: 'text-gray-500',
         action: () => setAboutModal(true),
+        isLive: false,
       },
     ];
 
@@ -730,7 +748,7 @@ export const ProfileView: React.FC = () => {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col">
 
         {/* ── Hero header card ── */}
-        <div className="relative overflow-hidden rounded-3xl mb-4 bg-gradient-to-br from-emerald-600 via-brand to-emerald-800 p-5 shadow-[0_12px_40px_rgba(5,150,105,0.35)]">
+        <div className="relative overflow-hidden rounded-3xl mb-5 bg-gradient-to-br from-emerald-600 via-brand to-emerald-800 p-5 shadow-[0_12px_40px_rgba(5,150,105,0.35)]">
           <div className="absolute -top-8 -right-8 w-36 h-36 bg-white/10 rounded-full" />
           <div className="absolute -bottom-10 -left-6 w-28 h-28 bg-white/5 rounded-full" />
 
@@ -758,115 +776,69 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
 
-        {/* ── LIVE ACTIVE ORDER TRACKING BANNER (High Visibility) ── */}
-        {topActiveOrder && (() => {
-          const statusInfo = getOrderStatusInfo(topActiveOrder.status, topActiveOrder.prep_time_minutes, topActiveOrder.rejection_reason);
-          const storeName = storesMap[topActiveOrder.store_id] || (topActiveOrder.store_id === 's1' ? 'Mhetha Stores' : topActiveOrder.store_id === 's4' ? 'Nandhini KGF' : 'SnapIt Partner');
-          const itemsCount = topActiveOrder.items?.length || 1;
-
-          return (
-            <motion.div 
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/60 rounded-3xl p-5 shadow-[0_8px_30px_rgba(5,150,105,0.12)] border-2 border-emerald-300/80 mb-5 relative overflow-hidden"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-3 w-3 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-brand"></span>
-                  </span>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
-                    Live Order Tracker
-                  </span>
-                </div>
-                <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${statusInfo.badgeClass}`}>
-                  {statusInfo.badgeText}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between mb-1">
-                <div>
-                  <h3 className="font-black text-base text-gray-900 flex items-center gap-1.5">
-                    <Store className="w-4 h-4 text-brand" />
-                    {storeName}
-                  </h3>
-                  <p className="text-[11px] font-mono font-bold text-gray-500">{topActiveOrder.id}</p>
-                </div>
-                <span className="font-mono font-black text-lg text-brand bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-100">
-                  {formatCurrency(topActiveOrder.estimated_total)}
-                </span>
-              </div>
-
-              {/* Status Headline */}
-              <div className="bg-white/80 rounded-2xl p-3 border border-emerald-100 my-3">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0 ${statusInfo.iconColor}`}>
-                    <statusInfo.icon className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-black text-xs text-gray-900 leading-tight">{statusInfo.title}</p>
-                    <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{statusInfo.subtitle}</p>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-3">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${statusInfo.progress}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="h-full bg-gradient-to-r from-emerald-500 to-brand rounded-full"
-                  />
-                </div>
-
-                {/* 3 Steps Pills */}
-                <div className="flex justify-between text-[9px] font-bold text-gray-400 mt-2 px-1">
-                  <span className={statusInfo.stepIndex >= 0 ? 'text-emerald-700 font-black' : ''}>1. Received</span>
-                  <span className={statusInfo.stepIndex >= 1 ? 'text-amber-700 font-black' : ''}>2. Packing</span>
-                  <span className={statusInfo.stepIndex >= 2 ? 'text-blue-700 font-black' : ''}>3. Handover 🛵</span>
-                </div>
-              </div>
-
-              {/* CTA */}
-              <button
-                onClick={() => { playSound('tap'); setOrdersModal(true); }}
-                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-brand text-white font-black rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wider active:scale-98 transition-all"
-              >
-                <span>Track Full Order Details</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </motion.div>
-          );
-        })()}
-
-        {/* ── Stats bar: only visible when orderCount > 0 ── */}
-        {orderCount > 0 && !topActiveOrder && (
-          <div className="bg-white rounded-2xl px-5 py-3 mb-4 shadow-sm border border-gray-100 flex items-center justify-center gap-2">
-            <Package className="w-4 h-4 text-brand" />
-            <span className="font-bold text-sm text-text-primary">📦 {orderCount} Total Orders Placed</span>
-          </div>
-        )}
-
         {/* ── 2×2 Action tiles ── */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          {tiles.map(({ icon: Icon, label, sublabel, bg, iconColor, action }) => (
+        <div className="grid grid-cols-2 gap-3.5 mb-5">
+          {tiles.map(({ id, icon: Icon, label, sublabel, bg, iconColor, action, isLive }) => (
             <motion.button
               key={label}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.96 }}
               onClick={action}
-              className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-start gap-3 text-left active:bg-gray-50 transition-colors"
+              className={`relative rounded-3xl p-4.5 text-left transition-all overflow-hidden flex flex-col items-start gap-3 ${
+                isLive
+                  ? 'bg-gradient-to-br from-emerald-50 via-white to-teal-50/90 border-2 border-emerald-400/90 shadow-[0_0_26px_rgba(16,185,129,0.38)] ring-2 ring-emerald-300/60 ring-offset-1'
+                  : 'bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:bg-gray-50'
+              }`}
             >
-              <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center`}>
+              {/* Magical Shimmer & Sparkle Effect for Active Tracking */}
+              {isLive && (
+                <>
+                  <motion.div
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '250%' }}
+                    transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent skew-x-12 pointer-events-none z-10"
+                  />
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md animate-pulse z-20">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-300 animate-spin" style={{ animationDuration: '3s' }} />
+                    <span>LIVE</span>
+                  </div>
+                </>
+              )}
+
+              <div className={`w-10 h-10 ${bg} rounded-2xl flex items-center justify-center relative shrink-0`}>
                 <Icon className={`h-5 w-5 ${iconColor}`} />
+                {isLive && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </span>
+                )}
               </div>
+
               <div>
-                <p className="font-black text-sm text-text-primary leading-tight">{label}</p>
-                <p className="text-[10px] text-text-secondary font-medium mt-0.5 leading-tight">{sublabel}</p>
+                <p className="font-black text-sm text-text-primary leading-tight flex items-center gap-1.5">
+                  {label}
+                </p>
+                {isLive ? (
+                  <p className="text-[11px] font-black text-emerald-700 mt-1 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                    Tracking live order ⚡
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-text-secondary font-medium mt-0.5 leading-tight">{sublabel}</p>
+                )}
               </div>
             </motion.button>
           ))}
         </div>
+
+        {/* ── Stats bar: only visible when orderCount > 0 ── */}
+        {orderCount > 0 && (
+          <div className="bg-white rounded-2xl px-5 py-3 mb-5 shadow-sm border border-gray-100 flex items-center justify-center gap-2">
+            <Package className="w-4 h-4 text-brand" />
+            <span className="font-bold text-sm text-text-primary">📦 {orderCount} Total Orders Placed</span>
+          </div>
+        )}
 
         {/* ── Legal footer ── */}
         <div className="flex justify-center gap-5 mb-5">
@@ -907,10 +879,10 @@ export const ProfileView: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: '100%' }}
                 transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                className="relative bg-gray-50 rounded-t-[2.5rem] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden"
+                className="relative bg-slate-50 rounded-t-[2.5rem] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden"
               >
                 {/* Header */}
-                <div className="bg-white px-5 pt-5 pb-3 border-b border-gray-100 sticky top-0 z-10 shadow-xs">
+                <div className="bg-white px-5 pt-5 pb-3.5 border-b border-gray-100 sticky top-0 z-10 shadow-xs">
                   <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-3" />
                   <div className="flex items-center justify-between">
                     <div>
@@ -918,7 +890,9 @@ export const ProfileView: React.FC = () => {
                         <Package className="w-5 h-5 text-brand" />
                         My Orders
                       </h2>
-                      <p className="text-[11px] text-gray-500 font-medium">Real-time status updates from stores in KGF</p>
+                      <p className="text-[11px] text-gray-500 font-medium">
+                        {hasActiveOrder ? 'Live store & rider tracking active' : 'View your completed orders and receipts'}
+                      </p>
                     </div>
                     <button 
                       onClick={() => setOrdersModal(false)}
@@ -927,95 +901,93 @@ export const ProfileView: React.FC = () => {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-
-                  {/* Tabs */}
-                  <div className="flex gap-2 mt-3 bg-gray-100 p-1 rounded-2xl">
-                    <button
-                      onClick={() => setOrdersTab('active')}
-                      className={`flex-1 py-2 rounded-xl font-black text-xs transition-all ${
-                        ordersTab === 'active' 
-                          ? 'bg-white text-brand shadow-sm' 
-                          : 'text-gray-500 hover:text-gray-800'
-                      }`}
-                    >
-                      Active Orders ({activeOrders.length})
-                    </button>
-                    <button
-                      onClick={() => setOrdersTab('history')}
-                      className={`flex-1 py-2 rounded-xl font-black text-xs transition-all ${
-                        ordersTab === 'history' 
-                          ? 'bg-white text-gray-800 shadow-sm' 
-                          : 'text-gray-500 hover:text-gray-800'
-                      }`}
-                    >
-                      Order History ({pastOrders.length})
-                    </button>
-                  </div>
                 </div>
 
                 {/* Orders Content */}
                 <div className="p-4 overflow-y-auto space-y-4 flex-1 pb-10">
-                  {ordersTab === 'active' ? (
-                    activeOrders.length === 0 ? (
-                      <div className="py-12 text-center text-gray-500 bg-white rounded-3xl p-6 border border-gray-100">
-                        <Package className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                        <h4 className="font-bold text-gray-800 text-sm">No Active Orders Right Now</h4>
-                        <p className="text-xs text-gray-400 mt-1">Place an order to track live preparation and delivery.</p>
+                  {/* 1. LIVE ACTIVE ORDERS SECTION */}
+                  {activeOrders.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 px-1">
+                        <span className="flex h-2.5 w-2.5 relative">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand"></span>
+                        </span>
+                        <h3 className="text-xs font-black uppercase tracking-wider text-emerald-800">
+                          Live Active Orders ({activeOrders.length})
+                        </h3>
                       </div>
-                    ) : (
-                      activeOrders.map((order) => {
+
+                      {activeOrders.map((order) => {
                         const statusInfo = getOrderStatusInfo(order.status, order.prep_time_minutes, order.rejection_reason);
                         const storeName = storesMap[order.store_id] || (order.store_id === 's1' ? 'Mhetha Stores' : order.store_id === 's4' ? 'Nandhini KGF' : 'Partner Store');
 
                         return (
-                          <div key={order.id} className="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm space-y-4">
+                          <div key={order.id} className="bg-white rounded-3xl p-5 border-2 border-emerald-300 shadow-[0_4px_20px_rgba(5,150,105,0.1)] space-y-4">
                             {/* Top header */}
                             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                               <div>
-                                <h3 className="font-black text-base text-gray-900">{storeName}</h3>
+                                <h3 className="font-black text-base text-gray-900 flex items-center gap-1.5">
+                                  <Store className="w-4 h-4 text-brand" />
+                                  {storeName}
+                                </h3>
                                 <p className="font-mono text-xs font-bold text-gray-400">{order.id}</p>
                               </div>
-                              <span className={`text-[10px] font-black px-3 py-1 rounded-full border uppercase tracking-wider ${statusInfo.badgeClass}`}>
+                              <span className={`text-[9px] font-black px-2.5 py-1 rounded-full border uppercase tracking-wider ${statusInfo.badgeClass}`}>
                                 {statusInfo.badgeText}
                               </span>
                             </div>
 
-                            {/* Live Stepper Card */}
-                            <div className="bg-gradient-to-r from-emerald-50/70 via-white to-teal-50/50 rounded-2xl p-4 border border-emerald-100">
-                              <div className="flex items-center gap-2.5 mb-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                                <h4 className="font-black text-sm text-gray-900">{statusInfo.title}</h4>
+                            {/* Live Stepper Status Card */}
+                            <div className="bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/60 rounded-2xl p-4 border border-emerald-200">
+                              <div className="flex items-center gap-2.5 mb-1.5">
+                                <div className={`w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 ${statusInfo.iconColor}`}>
+                                  <statusInfo.icon className="w-4 h-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-black text-xs text-gray-900 leading-tight">{statusInfo.title}</h4>
+                                  <p className="text-[11px] text-gray-600 font-medium leading-tight mt-0.5">{statusInfo.subtitle}</p>
+                                </div>
                               </div>
-                              <p className="text-xs text-gray-600 font-medium leading-relaxed">{statusInfo.subtitle}</p>
 
-                              {/* Interactive Step Timeline */}
-                              <div className="mt-4 space-y-2">
+                              {/* Progress bar */}
+                              <div className="w-full bg-gray-200/80 h-2 rounded-full overflow-hidden mt-3">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${statusInfo.progress}%` }}
+                                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                                  className="h-full bg-gradient-to-r from-emerald-500 to-brand rounded-full"
+                                />
+                              </div>
+
+                              {/* 3 Step Timeline */}
+                              <div className="mt-4 space-y-2.5 border-t border-emerald-100/60 pt-3">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                                  <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-black shrink-0">
                                     ✓
                                   </div>
                                   <div className="flex-1">
-                                    <p className="font-bold text-xs text-gray-900">Order Received at Counter</p>
+                                    <p className="font-bold text-xs text-gray-900">Order Received at Store Counter</p>
                                     <p className="text-[10px] text-gray-400 font-mono">{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                   </div>
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
                                     statusInfo.stepIndex >= 1 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-400'
                                   }`}>
                                     {statusInfo.stepIndex >= 1 ? (statusInfo.stepIndex > 1 ? '✓' : '2') : '2'}
                                   </div>
                                   <div className="flex-1">
                                     <p className={`font-bold text-xs ${statusInfo.stepIndex >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                      Store Preparing &amp; Packing Fresh
+                                      Store Preparing &amp; Packing Items
                                     </p>
-                                    <p className="text-[10px] text-gray-400">Items assembled and packed at counter</p>
+                                    <p className="text-[10px] text-gray-400">Fresh packing at counter</p>
                                   </div>
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
                                     statusInfo.stepIndex >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'
                                   }`}>
                                     {statusInfo.stepIndex >= 2 ? '✓' : '3'}
@@ -1024,15 +996,15 @@ export const ProfileView: React.FC = () => {
                                     <p className={`font-bold text-xs ${statusInfo.stepIndex >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
                                       Store Handover to Rider Complete 🛵
                                     </p>
-                                    <p className="text-[10px] text-gray-400">Rider dispatched for doorstep drop</p>
+                                    <p className="text-[10px] text-gray-400">Rider rolling to your address</p>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Items List */}
+                            {/* Items Summary */}
                             <div className="border-t border-gray-100 pt-3">
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Items Ordered</p>
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Items in Package</p>
                               <div className="space-y-1.5">
                                 {order.items?.map((it: any, idx: number) => (
                                   <div key={idx} className="flex justify-between text-xs text-gray-700">
@@ -1046,7 +1018,7 @@ export const ProfileView: React.FC = () => {
                             {/* Total and Help */}
                             <div className="border-t border-dashed border-gray-200 pt-3 flex items-center justify-between">
                               <div>
-                                <span className="text-[10px] text-gray-400 font-bold block">Total Paid via UPI</span>
+                                <span className="text-[10px] text-gray-400 font-bold block">Paid via UPI</span>
                                 <span className="font-mono font-black text-base text-brand">{formatCurrency(order.estimated_total)}</span>
                               </div>
                               <button
@@ -1058,14 +1030,32 @@ export const ProfileView: React.FC = () => {
                             </div>
                           </div>
                         );
-                      })
-                    )
-                  ) : (
-                    pastOrders.length === 0 ? (
+                      })}
+                    </div>
+                  )}
+
+                  {/* 2. PREVIOUS ORDERS HISTORY SECTION */}
+                  <div className="space-y-3 pt-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 px-1 flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-gray-400" />
+                      Previous Orders ({pastOrders.length})
+                    </h3>
+
+                    {pastOrders.length === 0 && activeOrders.length === 0 ? (
                       <div className="py-12 text-center text-gray-500 bg-white rounded-3xl p-6 border border-gray-100">
-                        <History className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                        <h4 className="font-bold text-gray-800 text-sm">No Past Orders Yet</h4>
-                        <p className="text-xs text-gray-400 mt-1">Completed orders will be archived here.</p>
+                        <Package className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                        <h4 className="font-bold text-gray-800 text-sm">No Orders Yet</h4>
+                        <p className="text-xs text-gray-400 mt-1 mb-4">Delicious meals and fresh groceries are waiting in KGF.</p>
+                        <button
+                          onClick={() => { setOrdersModal(false); navigate('/'); }}
+                          className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-brand text-white font-black text-xs rounded-xl uppercase tracking-wider shadow-sm"
+                        >
+                          Start Shopping
+                        </button>
+                      </div>
+                    ) : pastOrders.length === 0 ? (
+                      <div className="text-center py-4 text-xs text-gray-400 bg-white rounded-2xl border border-gray-100 p-3">
+                        No previous completed orders yet.
                       </div>
                     ) : (
                       pastOrders.map((order) => {
@@ -1102,8 +1092,8 @@ export const ProfileView: React.FC = () => {
                           </div>
                         );
                       })
-                    )
-                  )}
+                    )}
+                  </div>
                 </div>
               </motion.div>
             </div>
