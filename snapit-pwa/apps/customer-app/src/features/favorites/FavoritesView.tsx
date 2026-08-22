@@ -3,12 +3,12 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ProductCard } from '../../components/ProductCard';
 import { useFavoritesStore } from '../../store/favoritesStore';
 import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
+import { useAllProducts } from '../../api/queries';
 import { Heart } from 'lucide-react';
-
-const allProducts = [...mockShoppingProducts, ...mockFoodProducts];
 
 export const FavoritesView: React.FC = () => {
   const { favoriteIds } = useFavoritesStore();
+  const { data: allProducts = [...mockShoppingProducts, ...mockFoodProducts] } = useAllProducts();
   const favoritedProducts = allProducts.filter((p) => favoriteIds.includes(p.id));
 
   return (

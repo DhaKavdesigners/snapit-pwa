@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import { Button } from '../../components/ui/Button';
 import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
+import { useAllProducts } from '../../api/queries';
 import {
   ChevronLeft, MapPin, CreditCard, Banknote,
   CheckCircle2, ArrowRight, X, User, Plus, ShieldCheck,
@@ -13,12 +14,11 @@ import {
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 
-const allProducts = [...mockShoppingProducts, ...mockFoodProducts];
-
 type PayMethod = 'online' | 'upiDelivery';
 
 export const CheckoutView: React.FC = () => {
   const { items, clearCart, saveLastOrder } = useCartStore();
+  const { data: allProducts = [...mockShoppingProducts, ...mockFoodProducts] } = useAllProducts();
   const { userProfile } = useAuthStore();
   const navigate = useNavigate();
   

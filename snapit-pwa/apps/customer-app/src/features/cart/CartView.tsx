@@ -2,15 +2,15 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
 import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
+import { useAllProducts } from '../../api/queries';
 import { formatCurrency } from '../../utils/currency';
 import { Plus, Minus, ArrowRight, ShoppingBag, Sparkles, Clock, Zap, Store } from 'lucide-react';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { motion } from 'framer-motion';
 
-const allProducts = [...mockShoppingProducts, ...mockFoodProducts];
-
 export const CartView: React.FC = () => {
   const { items, updateQuantity } = useCartStore();
+  const { data: allProducts = [...mockShoppingProducts, ...mockFoodProducts] } = useAllProducts();
   const navigate = useNavigate();
 
   const cartItemsWithDetails = items.map(item => ({
