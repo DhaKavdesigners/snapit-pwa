@@ -75,10 +75,14 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
     const storeMap = new Map(storesResult.map(s => [s.id, s.name]));
     const dbProducts = productsResult.data || [];
 
-    const dbProductMap = new Map<string, Product>();
+    // 1. Map all real database products
+    const dbStoreIdsWithProducts = new Set<string>();
+    const mappedDbProducts: Product[] = [];
+
     for (const p of dbProducts) {
+      dbStoreIdsWithProducts.add(p.store_id);
       const isFood = p.category?.toUpperCase().includes('FOOD') || p.category?.toUpperCase().includes('BIRYANI');
-      dbProductMap.set(p.id, {
+      mappedDbProducts.push({
         id: p.id,
         name: p.name,
         price: Number(p.price) || 0,
@@ -100,35 +104,19 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
         ? mockFoodProducts 
         : [...mockShoppingProducts, ...mockFoodProducts];
 
-    const mergedList: Product[] = [];
-    const usedDbIds = new Set<string>();
+    // 2. Remove dummy products for any store that has real database products
+    const filteredDummyProducts = baseProducts
+      .filter(mock => !dbStoreIdsWithProducts.has(mock.storeId))
+      .map(mock => ({
+        ...mock,
+        storeName: storeMap.get(mock.storeId) || mock.storeName
+      }));
 
-    for (const base of baseProducts) {
-      if (dbProductMap.has(base.id)) {
-        const live = dbProductMap.get(base.id)!;
-        mergedList.push({
-          ...base,
-          ...live,
-          imageUrl: live.imageUrl || base.imageUrl,
-          fallbackImageUrl: base.fallbackImageUrl,
-          storeName: storeMap.get(live.storeId) || base.storeName
-        });
-        usedDbIds.add(base.id);
-      } else {
-        mergedList.push({
-          ...base,
-          storeName: storeMap.get(base.storeId) || base.storeName
-        });
-      }
-    }
+    // 3. Filter DB products by context if requested
+    const filteredDbProducts = mappedDbProducts.filter(live => !context || live.category === context);
 
-    for (const [id, live] of dbProductMap.entries()) {
-      if (!usedDbIds.has(id)) {
-        if (!context || live.category === context) {
-          mergedList.unshift(live);
-        }
-      }
-    }
+    // 4. Combine: Real products first, then dummy items for unseeded stores
+    const mergedList = [...filteredDbProducts, ...filteredDummyProducts];
 
     if (category) {
       return mergedList.filter(p => p.category === category || p.subCategory === category);
