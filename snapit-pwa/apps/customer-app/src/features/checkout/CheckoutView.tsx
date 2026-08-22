@@ -11,8 +11,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
-import { supabase } from '../../lib/supabase';
-
 const allProducts = [...mockShoppingProducts, ...mockFoodProducts];
 
 type PayMethod = 'online' | 'upiDelivery';
