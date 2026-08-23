@@ -37,10 +37,17 @@ export const MobileStoreSettingsView: React.FC = () => {
               Merchant: <strong className="text-slate-800">{merchantUser?.name || 'Authorized Merchant'}</strong>
             </p>
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              {/* 1. GROCERY / FOOD */}
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase font-mono">
-                {activeStore.category}
+                {activeStore.category || 'GROCERY'}
               </span>
               <span className="text-slate-300">&bull;</span>
+              {/* 2. Store Address */}
+              <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
+                {activeStore.address || 'Robertsonpet, KGF'}
+              </span>
+              <span className="text-slate-300">&bull;</span>
+              {/* 3. KGF Dark Store */}
               <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
                 KGF Dark Store
               </span>

@@ -337,119 +337,13 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
   ],
 };
 
-// 1. INITIALLY DON'T TAKE ANY ORDERS (Queue is empty until store goes ONLINE)
-export const initialLiveOrders: Order[] = [];
-
 export const initialHistoricalGroups: HistoricalDateGroup[] = [
   {
     dateKey: 'Today (Live Activity)',
-    orderCount: 4,
-    collectedPaise: 94400, // ₹944
+    orderCount: 0,
+    collectedPaise: 0,
     rejectedCount: 0,
     lostPaise: 0,
-    orders: [
-      {
-        id: '#6988',
-        customerId: 'cust_04',
-        storeId: 'f4',
-        status: 'DELIVERED',
-        items: [
-          { productId: 'ak01', quantity: 2 },
-          { productId: 'ak06', quantity: 2 },
-        ],
-        estimatedTotal: 43000,
-        deliveryAddress: {
-          label: 'Home',
-          line1: 'Champion Reefs, Block 3',
-          city: 'KGF',
-          pincode: '563117',
-        },
-        idempotencyKey: 'idemp-6988',
-        createdAt: new Date(Date.now() - 95 * 60 * 1000).toISOString(),
-        updatedAt: new Date(Date.now() - 70 * 60 * 1000).toISOString(),
-        paymentMethod: 'UPI_NOW',
-        recipientName: 'Deepak V',
-        recipientPhone: '+91 98860 12399',
-      },
-      {
-        id: '#6982',
-        customerId: 'cust_05',
-        storeId: 'f4',
-        status: 'DELIVERED',
-        items: [
-          { productId: 'ak03', quantity: 3 },
-          { productId: 'ak04', quantity: 1 },
-        ],
-        estimatedTotal: 51900,
-        deliveryAddress: {
-          label: 'Work',
-          line1: 'Geetha Road Commercial Complex',
-          city: 'KGF',
-          pincode: '563122',
-        },
-        idempotencyKey: 'idemp-6982',
-        createdAt: new Date(Date.now() - 160 * 60 * 1000).toISOString(),
-        updatedAt: new Date(Date.now() - 130 * 60 * 1000).toISOString(),
-        paymentMethod: 'UPI_NOW',
-        recipientName: 'Shankar Gowda',
-        recipientPhone: '+91 94481 55667',
-      },
-    ],
-  },
-  {
-    dateKey: '30-Jul-2026 Thursday',
-    orderCount: 2,
-    collectedPaise: 67700, // ₹677
-    rejectedCount: 0,
-    lostPaise: 0,
-    orders: [
-      {
-        id: '#6744',
-        customerId: 'cust_06',
-        storeId: 'f4',
-        status: 'DELIVERED',
-        items: [
-          { productId: 'ak02', quantity: 1 },
-          { productId: 'ak04', quantity: 1 },
-          { productId: 'ak06', quantity: 2 },
-        ],
-        estimatedTotal: 42900,
-        deliveryAddress: {
-          label: 'Home',
-          line1: 'Marikuppam, Hospital Road',
-          city: 'KGF',
-          pincode: '563119',
-        },
-        idempotencyKey: 'idemp-6744',
-        createdAt: '2026-07-30T14:22:00Z',
-        updatedAt: '2026-07-30T14:48:00Z',
-        paymentMethod: 'UPI_NOW',
-        recipientName: 'Vinod Kumar',
-        recipientPhone: '+91 98450 77889',
-      },
-      {
-        id: '#6741',
-        customerId: 'cust_07',
-        storeId: 'f4',
-        status: 'DELIVERED',
-        items: [
-          { productId: 'ak01', quantity: 1 },
-          { productId: 'ak03', quantity: 1 },
-        ],
-        estimatedTotal: 24800,
-        deliveryAddress: {
-          label: 'Home',
-          line1: 'Oorgaum Post, Near Club',
-          city: 'KGF',
-          pincode: '563120',
-        },
-        idempotencyKey: 'idemp-6741',
-        createdAt: '2026-07-30T12:05:00Z',
-        updatedAt: '2026-07-30T12:28:00Z',
-        paymentMethod: 'UPI_NOW',
-        recipientName: 'Meenakshi N',
-        recipientPhone: '+91 97410 99881',
-      },
-    ],
+    orders: [],
   },
 ];

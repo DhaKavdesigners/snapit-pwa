@@ -357,6 +357,94 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
           set({ isAlarmPlaying: true });
         }
       }
+
+      // 4. Fetch completed / archived / settled orders from DB for this store
+      const { data: dbCompletedOrders } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('store_id', storeId)
+        .in('status', ['DELIVERED', 'REJECTED', 'CANCELLED'])
+        .order('created_at', { ascending: false });
+
+      if (dbCompletedOrders) {
+        const now = new Date();
+        const todayDateStr = now.toDateString();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayDateStr = yesterday.toDateString();
+
+        // Map dateKey -> Order[]
+        const groupsMap = new Map<string, Order[]>();
+
+        for (const o of dbCompletedOrders) {
+          const createdAt = o.created_at || new Date().toISOString();
+          const d = new Date(createdAt);
+          let dateKey = '';
+
+          if (d.toDateString() === todayDateStr) {
+            dateKey = 'Today (Live Activity)';
+          } else if (d.toDateString() === yesterdayDateStr) {
+            dateKey = `Yesterday (${d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`;
+          } else {
+            dateKey = `${d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • ${d.toLocaleDateString('en-GB', { weekday: 'long' })}`;
+          }
+
+          const formatted: Order = {
+            id: o.id,
+            customerId: o.customer_id || 'cust_guest',
+            storeId: o.store_id,
+            riderId: o.rider_id,
+            status: o.status,
+            items: Array.isArray(o.items) ? o.items : [],
+            estimatedTotal: o.estimated_total,
+            deliveryAddress: o.delivery_address || { label: 'Home', line1: 'KGF', city: 'KGF', pincode: '563122' },
+            cookingInstructions: o.cooking_instructions,
+            idempotencyKey: o.idempotency_key || `idemp-${o.id}`,
+            createdAt: o.created_at || new Date().toISOString(),
+            updatedAt: o.updated_at || new Date().toISOString(),
+            paymentMethod: o.payment_method || 'UPI_NOW',
+            recipientName: o.recipient_name || 'Customer',
+            recipientPhone: o.recipient_phone || '+91 98450 00000',
+          };
+
+          if (!groupsMap.has(dateKey)) {
+            groupsMap.set(dateKey, []);
+          }
+          groupsMap.get(dateKey)!.push(formatted);
+        }
+
+        const formattedGroups: HistoricalDateGroup[] = [];
+        // Ensure "Today (Live Activity)" is always first
+        const todayOrders = groupsMap.get('Today (Live Activity)') || [];
+        const todayDelivered = todayOrders.filter((o) => o.status === 'DELIVERED');
+        const todayRejected = todayOrders.filter((o) => (o.status as any) === 'REJECTED' || o.status === 'CANCELLED');
+
+        formattedGroups.push({
+          dateKey: 'Today (Live Activity)',
+          orderCount: todayDelivered.length,
+          collectedPaise: todayDelivered.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+          rejectedCount: todayRejected.length,
+          lostPaise: todayRejected.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+          orders: todayOrders,
+        });
+
+        // Add all previous day groups
+        for (const [key, ords] of groupsMap.entries()) {
+          if (key === 'Today (Live Activity)') continue;
+          const delivered = ords.filter((o) => o.status === 'DELIVERED');
+          const rejected = ords.filter((o) => (o.status as any) === 'REJECTED' || o.status === 'CANCELLED');
+          formattedGroups.push({
+            dateKey: key,
+            orderCount: delivered.length,
+            collectedPaise: delivered.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+            rejectedCount: rejected.length,
+            lostPaise: rejected.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+            orders: ords,
+          });
+        }
+
+        set({ historicalGroups: formattedGroups });
+      }
     } catch (err) {
       console.warn('Error fetching store data from Supabase:', err);
     }
