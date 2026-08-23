@@ -107,26 +107,53 @@ export const ExploreView: React.FC = () => {
 
   if (exploreState === 'store' && selectedStore) {
     const store = [...shoppingStores, ...foodStores].find(s => s.id === selectedStore);
-    const storeProducts = allProducts?.filter(p => p.storeId === selectedStore) || [];
+    const isStoreOpen = store !== undefined ? store.isOpen : true;
+    const storeProducts = (allProducts?.filter(p => p.storeId === selectedStore) || []).map(p => ({
+      ...p,
+      storeIsOpen: isStoreOpen
+    }));
 
     return (
       <div className="flex flex-col h-full bg-slate-50 min-h-screen">
-        <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-20 p-4 flex items-center gap-3">
-          <button onClick={goBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95">
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <div className="flex items-center gap-3">
-            <img src={store?.logoUrl} alt={store?.name} className="w-8 h-8 rounded-full border border-gray-100 object-cover" />
-            <div>
-              <h2 className="font-bold text-lg text-gray-900 leading-tight">{store?.name}</h2>
-              <div className="text-xs text-gray-500 font-semibold flex items-center gap-1">
+        <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-20 p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={goBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95 shrink-0">
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
+            <img src={store?.logoUrl} alt={store?.name} className="w-9 h-9 rounded-full border border-gray-100 object-cover shrink-0" />
+            <div className="min-w-0">
+              <h2 className="font-bold text-base text-gray-900 leading-tight truncate">{store?.name}</h2>
+              <div className="text-xs text-gray-500 font-semibold flex items-center gap-1.5">
                 <span className="text-yellow-500">★</span> {store?.rating} • {store?.category === 'food' ? 'Food' : 'Grocery'}
               </div>
             </div>
           </div>
+          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
+            isStoreOpen ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'
+          }`}>
+            {isStoreOpen ? 'Open' : 'Closed'}
+          </span>
         </div>
         
         <div className="p-4 pb-28">
+          {/* Store Offline Notice */}
+          {!isStoreOpen && (
+            <div className="bg-red-50 border border-red-200/90 rounded-2xl p-3.5 mb-4 flex items-center gap-3 shadow-xs">
+              <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <span className="text-sm">🔴</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-black text-xs text-red-900 leading-tight">Store is Currently Offline</h4>
+                  <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase">Closed</span>
+                </div>
+                <p className="text-[11px] text-red-700 font-medium leading-tight mt-0.5">
+                  This store is not accepting orders right now. Products are displayed for viewing only.
+                </p>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="grid grid-cols-3 gap-2">
               {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />)}

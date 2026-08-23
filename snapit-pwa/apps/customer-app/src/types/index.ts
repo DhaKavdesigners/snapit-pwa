@@ -11,6 +11,7 @@ export interface Product {
   inStock: boolean;
   description?: string;
   storeName?: string;
+  storeIsOpen?: boolean;
 }
 
 export interface Store {

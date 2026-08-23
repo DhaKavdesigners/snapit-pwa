@@ -41,6 +41,7 @@ export const CartView: React.FC = () => {
       </div>
     );
   }
+  const hasOfflineItems = cartItemsWithDetails.some(item => item.product?.storeIsOpen === false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col relative pb-36">
@@ -57,6 +58,14 @@ export const CartView: React.FC = () => {
             {cartItemsWithDetails.length} {cartItemsWithDetails.length === 1 ? 'Item' : 'Items'}
           </span>
         </div>
+
+        {/* ⚠️ Store Offline Alert if any item is from a closed store */}
+        {hasOfflineItems && (
+          <div className="bg-red-50 border border-red-200/90 text-red-900 rounded-2xl p-3.5 mb-4 text-xs font-bold flex items-center gap-2.5 shadow-xs">
+            <span className="text-base shrink-0">⚠️</span>
+            <span>Some items belong to a store that is currently closed. Please remove them to proceed.</span>
+          </div>
+        )}
 
         {/* ⚡ Lightning Delivery Promise Banner */}
         <div className="bg-gradient-to-r from-emerald-500 via-brand to-teal-600 text-white rounded-2xl p-3.5 shadow-md shadow-emerald-500/20 mb-5 flex items-center justify-between">
@@ -76,55 +85,71 @@ export const CartView: React.FC = () => {
 
         {/* Item Cards */}
         <div className="bg-white rounded-3xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-emerald-100/60 mb-6 flex flex-col gap-3.5">
-          {cartItemsWithDetails.map((item) => (
-            <motion.div 
-              layout
-              key={item.productId} 
-              className="flex gap-3.5 p-3 rounded-2xl bg-gray-50/70 border border-gray-100 hover:border-emerald-200 transition-all"
-            >
-              <div className="w-18 h-18 w-16 h-16 rounded-xl bg-white p-1 border border-gray-100 overflow-hidden flex-shrink-0 shadow-xs">
-                <img 
-                  src={item.product!.imageUrl} 
-                  alt={item.product!.name} 
-                  className="w-full h-full object-cover rounded-lg" 
-                  onError={(e) => { 
-                    if (item.product!.fallbackImageUrl) (e.target as HTMLImageElement).src = item.product!.fallbackImageUrl; 
-                  }} 
-                />
-              </div>
-              
-              <div className="flex-1 flex flex-col justify-between min-w-0">
-                <div>
-                  <h4 className="font-bold text-sm text-gray-900 truncate leading-snug">{item.product!.name}</h4>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Store className="w-3 h-3 text-emerald-600" />
-                    <span className="text-[11px] font-bold text-emerald-800 truncate">{item.product!.storeName || 'Local Store'}</span>
+          {cartItemsWithDetails.map((item) => {
+            const isItemStoreClosed = item.product?.storeIsOpen === false;
+
+            return (
+              <motion.div 
+                key={item.productId}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`flex gap-3.5 items-center p-2 rounded-2xl border transition-all ${
+                  isItemStoreClosed ? 'bg-red-50/50 border-red-200 opacity-80' : 'bg-gray-50/50 border-gray-100/80'
+                }`}
+              >
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-white border border-gray-100 shrink-0">
+                  <img 
+                    src={item.product!.imageUrl} 
+                    alt={item.product!.name} 
+                    className={`w-full h-full object-cover ${isItemStoreClosed ? 'grayscale-[80%]' : ''}`} 
+                  />
+                  {isItemStoreClosed && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[8px] font-black text-white uppercase tracking-wider">
+                      Closed
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${isItemStoreClosed ? 'text-red-600' : 'text-emerald-700'}`}>
+                      {item.product!.storeName || 'SnapIt Store'}
+                    </span>
+                    {isItemStoreClosed && (
+                      <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase">Offline</span>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-xs text-gray-900 truncate">{item.product!.name}</h4>
+                  <div className="font-mono font-black text-xs text-gray-900 mt-1">
+                    {formatCurrency(item.product!.price * item.quantity)}
                   </div>
                 </div>
-                
-                <div className="flex items-center justify-between mt-2 pt-1 border-t border-gray-100">
-                  <span className="font-black text-sm text-brand font-mono">{formatCurrency(item.product!.price)}</span>
-                  
-                  {/* Quantity Stepper */}
-                  <div className="flex items-center bg-white border border-emerald-200 rounded-full h-8 px-1 shadow-xs">
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center bg-white border border-emerald-200/80 rounded-xl h-8 overflow-hidden shadow-xs">
                     <button 
-                      onClick={() => updateQuantity(item.productId, item.quantity - 1)} 
-                      className="w-6 h-6 flex items-center justify-center bg-gray-50 rounded-full text-emerald-800 hover:bg-gray-100 active:scale-95 transition-transform"
+                      onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                      className="w-7 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
                     >
                       <Minus className="h-3 w-3" />
                     </button>
-                    <span className="text-xs font-black w-6 text-center text-gray-800">{item.quantity}</span>
+                    <span className="font-mono font-black text-xs w-4 text-center text-gray-900">{item.quantity}</span>
                     <button 
-                      onClick={() => updateQuantity(item.productId, item.quantity + 1)} 
-                      className="w-6 h-6 flex items-center justify-center bg-gradient-to-br from-emerald-500 to-brand rounded-full text-white shadow-xs active:scale-95 transition-transform"
+                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                      disabled={isItemStoreClosed}
+                      className={`w-7 h-8 flex items-center justify-center transition-colors ${
+                        isItemStoreClosed ? 'text-gray-300 cursor-not-allowed' : 'text-brand hover:bg-emerald-50 active:bg-emerald-100'
+                      }`}
                     >
                       <Plus className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
 
       </div>
@@ -147,18 +172,21 @@ export const CartView: React.FC = () => {
         </div>
 
         <button
-          className="w-full h-14 bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white font-black text-sm rounded-2xl shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_30px_rgba(5,150,105,0.5)] active:scale-[0.98] transition-all flex items-center justify-between px-6 uppercase tracking-wider"
-          onClick={() => navigate('/checkout')}
+          disabled={hasOfflineItems}
+          className={`w-full h-14 font-black text-sm rounded-2xl transition-all flex items-center justify-between px-6 uppercase tracking-wider ${
+            hasOfflineItems 
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+              : 'bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_30px_rgba(5,150,105,0.5)] active:scale-[0.98]'
+          }`}
+          onClick={() => !hasOfflineItems && navigate('/checkout')}
         >
-          <span>Proceed to Checkout</span>
+          <span>{hasOfflineItems ? 'Store is Offline' : 'Proceed to Checkout'}</span>
           <div className="flex items-center gap-2">
             <span className="font-mono">{formatCurrency(total)}</span>
-            <ArrowRight className="h-5 w-5 animate-pulse" />
+            {!hasOfflineItems && <ArrowRight className="h-5 w-5 animate-pulse" />}
           </div>
         </button>
       </div>
     </div>
   );
 };
-
-
