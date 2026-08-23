@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useRider } from '@/context/RiderContext';
 import { Bell } from 'lucide-react';
-import { TestModeToggle } from '@/components/dev/TestModeToggle';
 
 interface TopHeaderProps {
   showBack?: boolean;
@@ -18,31 +17,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
     isOnline,
     toggleOnline,
     alerts,
-    canGoOnline,
-    activeSlot,
-    zoneStatus,
     riderBreak,
   } = useRider();
 
-  const [showBlockedReason, setShowBlockedReason] = useState(false);
-
   const unreadCount = alerts?.filter((a) => !a.read).length || 0;
-  const onlineGate = canGoOnline();
   const isBreakActive = riderBreak && !riderBreak.endedAt;
-
-  // Determine toggle state visual
-  const canToggleOn = onlineGate.canGo || isOnline; // if already online, can always go offline
-  const toggleDisabled = !isOnline && !onlineGate.canGo;
-
-  const handleToggle = () => {
-    if (!isOnline && !onlineGate.canGo) {
-      // Show reason tooltip briefly
-      setShowBlockedReason(true);
-      setTimeout(() => setShowBlockedReason(false), 3000);
-      return;
-    }
-    toggleOnline();
-  };
 
   // Online toggle label
   let onlineLabel = isOnline ? 'Online' : 'Offline';
@@ -93,88 +72,50 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
           </Link>
         </div>
 
-        {/* Center: Rider / Tester Mode Toggle */}
-        <div className="flex items-center justify-center shrink-0">
-          <TestModeToggle />
-        </div>
-
         {/* Right: Online toggle + Bell */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Online toggle with gate */}
-          <div className="relative shrink-0">
-            <div
-              onClick={handleToggle}
-              className={`flex items-center gap-1 select-none ${
-                toggleDisabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+          {/* Online toggle */}
+          <div
+            onClick={toggleOnline}
+            className="flex items-center gap-1 select-none cursor-pointer"
+            title={isOnline ? 'Go Offline' : 'Go Online'}
+          >
+            <span
+              className={`text-[11px] font-bold ${
+                isBreakActive
+                  ? 'text-amber-500'
+                  : isOnline
+                  ? 'text-primary'
+                  : 'text-secondary'
               }`}
-              title={
-                isOnline
-                  ? 'Go Offline'
-                  : toggleDisabled
-                  ? onlineGate.reason
-                  : 'Go Online'
-              }
             >
-              <span
-                className={`text-[11px] font-bold ${
-                  isBreakActive
-                    ? 'text-amber-500'
-                    : isOnline
-                    ? 'text-primary'
-                    : 'text-secondary'
-                }`}
-              >
-                {onlineLabel}
-              </span>
+              {onlineLabel}
+            </span>
+            <div
+              className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-300 relative shadow-inner ${
+                isBreakActive
+                  ? 'bg-amber-400 border border-amber-500'
+                  : isOnline
+                  ? 'bg-primary border border-primary-container shadow-glow'
+                  : 'bg-slate-300 border border-slate-400/60'
+              }`}
+            >
               <div
-                className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-300 relative shadow-inner ${
-                  isBreakActive
-                    ? 'bg-amber-400 border border-amber-500'
-                    : isOnline
-                    ? 'bg-primary border border-primary-container shadow-glow'
-                    : toggleDisabled
-                    ? 'bg-slate-200 border border-slate-300'
-                    : 'bg-slate-300 border border-slate-400/60'
+                className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${
+                  isOnline ? 'translate-x-[16px]' : 'translate-x-0'
                 }`}
               >
                 <div
-                  className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${
-                    isOnline ? 'translate-x-[16px]' : 'translate-x-0'
+                  className={`w-1 h-1 rounded-full ${
+                    isBreakActive
+                      ? 'bg-amber-400'
+                      : isOnline
+                      ? 'bg-primary animate-pulse'
+                      : 'bg-slate-400'
                   }`}
-                >
-                  <div
-                    className={`w-1 h-1 rounded-full ${
-                      isBreakActive
-                        ? 'bg-amber-400'
-                        : isOnline
-                        ? 'bg-primary animate-pulse'
-                        : 'bg-slate-400'
-                    }`}
-                  />
-                </div>
+                />
               </div>
             </div>
-
-            {/* Blocked reason tooltip */}
-            {showBlockedReason && !isOnline && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 text-white text-[10px] rounded-xl p-2 shadow-xl z-50 leading-relaxed animate-fade-in">
-                <p className="font-bold text-amber-400 mb-0.5">
-                  {!rider.isVerified
-                    ? '🔒 Not Verified'
-                    : !activeSlot
-                    ? '📅 No Active Slot'
-                    : zoneStatus === 'outside'
-                    ? '📍 Outside Zone'
-                    : '⚠️ Cannot Go Online'}
-                </p>
-                <p>{onlineGate.reason}</p>
-                {!activeSlot && (
-                  <Link href="/slots" className="block mt-1 text-primary-fixed font-bold underline text-[10px]">
-                    → Book a Slot
-                  </Link>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Bell icon with unread badge */}

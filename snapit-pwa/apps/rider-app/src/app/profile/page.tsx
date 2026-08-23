@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { rider, updateRiderProfile, resetOnboarding } = useRider();
+  const { rider, updateRiderProfile, logout } = useRider();
   
   // Editable fields state
   const [altPhone, setAltPhone] = useState(rider.altPhone || '+91 98111 22334');
@@ -239,18 +239,17 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Re-test Onboarding Flow Button */}
-        <Link
-          href="/onboarding"
-          onClick={resetOnboarding}
-          className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex items-center justify-between text-primary font-bold text-xs hover:bg-primary/20 transition-colors"
+        {/* Log Out / Switch Account */}
+        <button
+          type="button"
+          onClick={() => {
+            logout();
+            window.location.href = '/onboarding';
+          }}
+          className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-xs rounded-2xl p-4 flex items-center justify-center gap-2 transition-colors active:scale-98"
         >
-          <div className="flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" />
-            <span>Reset & Test Full Onboarding / KYC Flow</span>
-          </div>
-          <ChevronRight className="w-4 h-4" />
-        </Link>
+          <span>Log Out / Switch Account</span>
+        </button>
 
       </div>
     </AppShell>

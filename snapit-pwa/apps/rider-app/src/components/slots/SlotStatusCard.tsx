@@ -51,38 +51,38 @@ export const SlotStatusCard: React.FC = () => {
     return (
       <Link
         href="/slots"
-        className="block bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-3xl p-6 shadow-lg border border-slate-700/60 relative overflow-hidden transition-all hover:scale-[1.01] active:scale-98 group"
+        className="block bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-2xl p-4 shadow-md border border-slate-700/60 relative overflow-hidden transition-all hover:scale-[1.01] active:scale-98 group"
       >
         {/* Background glow decorative elements */}
-        <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-500/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-blue-500/15 rounded-full blur-2xl pointer-events-none" />
 
         {/* Top Header Label */}
-        <div className="flex items-center justify-between mb-4 relative z-10">
-          <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="flex items-center justify-between mb-2.5 relative z-10">
+          <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>Slot Booking Required</span>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Zone: <strong className="text-white">{rider.selectedZone || 'Downtown Central'}</strong></span>
+          <span className="text-[10px] text-slate-400 font-medium">Zone: <strong className="text-white">{rider.selectedZone || 'Downtown Central'}</strong></span>
         </div>
 
         {/* Main Title & Subtitle */}
-        <div className="relative z-10 mb-6">
-          <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
-            <Calendar className="w-7 h-7 text-emerald-400 shrink-0" />
+        <div className="relative z-10 mb-3">
+          <h2 className="text-base font-black tracking-tight text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-emerald-400 shrink-0" />
             Book Your Slot
           </h2>
-          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+          <p className="text-[11px] text-slate-300 mt-1 leading-normal">
             You are currently offline. Tap to choose your preferred time slot and start receiving delivery orders.
           </p>
         </div>
 
-        {/* Big Action Button */}
+        {/* Action Button (Clicking Area) */}
         <div className="relative z-10">
-          <div className="w-full py-4 bg-emerald-500 group-hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-2xl shadow-lift flex items-center justify-center gap-2 transition-all">
-            <Sparkles className="w-4 h-4 fill-slate-950" />
-            Book Your Slot
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          <div className="w-full py-2.5 bg-emerald-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lift flex items-center justify-center gap-2 transition-all">
+            <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+            Book Here
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
       </Link>

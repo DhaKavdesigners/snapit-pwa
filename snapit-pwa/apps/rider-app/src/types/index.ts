@@ -86,6 +86,8 @@ export interface RiderProfile {
   selectedZoneId?: string;
   isVerified: boolean;
   verificationStep: number; // 1: submitted, 2: reviewing, 3: admin check, 4: approved
+  mpin?: string;
+  isAuthenticated?: boolean;
 }
 
 // ─── Earnings ────────────────────────────────────────────────────────────────

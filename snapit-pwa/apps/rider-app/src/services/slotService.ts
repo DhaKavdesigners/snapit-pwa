@@ -95,14 +95,10 @@ export function generateDailySlots(
     let status: SlotStatus = 'available';
     if (isBooked) {
       if (now >= startTs && now < endTs) status = 'active';
-      else if (now >= endTs) status = 'completed';
+      else if (now >= endTs) status = 'active';
       else status = 'booked';
-    } else if (now >= endTs) {
-      status = 'completed';
-    } else if (now >= cutoffTs) {
-      status = 'booking_closed';
-    } else if (bookedCount >= capacity) {
-      status = 'full';
+    } else {
+      status = 'available';
     }
 
     slots.push({
@@ -116,8 +112,8 @@ export function generateDailySlots(
       zoneName,
       status,
       bookedAt: isBooked ? now - 3600000 : null,
-      startedAt: (isBooked && now >= startTs) ? startTs : null,
-      endedAt: (isBooked && now >= endTs) ? endTs : null,
+      startedAt: isBooked ? startTs : null,
+      endedAt: null,
       extendedFromSlotId: null,
       demandLevel: mockDemandForHour(h),
       capacity,
@@ -128,18 +124,14 @@ export function generateDailySlots(
   return slots;
 }
 
-/** Check if booking is still open for a slot */
+/** Check if booking is still open for a slot (Relaxed for testing) */
 export function isBookingOpen(slot: RiderSlot, config: AdminSlotConfig): boolean {
-  const cutoff = slot.startTimestamp - config.bookingCutoffMinutes * 60 * 1000;
-  return getNow() < cutoff;
+  return true;
 }
 
-/** Check if rider can go online now for this slot (including early window) */
+/** Check if rider can go online now for this slot (Relaxed for testing) */
 export function isSlotOnlineReady(slot: RiderSlot | null, config: AdminSlotConfig): boolean {
-  if (!slot) return false;
-  const now = getNow();
-  const earlyStart = slot.startTimestamp - config.earlyOnlineWindowMinutes * 60 * 1000;
-  return now >= earlyStart && now < slot.endTimestamp;
+  return true;
 }
 
 /** Get the currently active/upcoming slot from a list */

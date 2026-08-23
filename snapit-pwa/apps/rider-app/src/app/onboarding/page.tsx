@@ -15,13 +15,26 @@ import {
   Check,
   AlertCircle,
   FileCheck,
+  Lock,
+  Phone,
+  Eye,
+  EyeOff,
+  HelpCircle,
+  X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function OnboardingPage() {
-  const { rider, zones, updateRiderProfile, simulateApproval } = useRider();
+  const { rider, zones, updateRiderProfile, simulateApproval, registerRider, loginWithMpinOnly } = useRider();
   const [step, setStep] = useState<'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'status'>('splash');
   
+  // Login form state (MPIN ONLY)
+  const [loginMpin, setLoginMpin] = useState('');
+  const [showLoginMpin, setShowLoginMpin] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+
   // Step 1: Selfie
   const [capturedSelfie, setCapturedSelfie] = useState<string>(rider.selfieCapturedUrl || '');
 
@@ -33,12 +46,20 @@ export default function OnboardingPage() {
   const [confirmPhone, setConfirmPhone] = useState(rider.phone || '+91 98765 43210');
   const [altPhone, setAltPhone] = useState(rider.altPhone || '+91 98111 22334');
   const [address, setAddress] = useState(rider.address || 'Flat 302, Green Meadows, 4th Cross, Indiranagar, Bengaluru');
+  const [vehicleType, setVehicleType] = useState(rider.vehicleType || 'Motorcycle');
+  const [vehicleNumber, setVehicleNumber] = useState(rider.vehicleNumber || 'KA 03 EQ 8821');
+  const [createMpin, setCreateMpin] = useState('');
+  const [confirmMpin, setConfirmMpin] = useState('');
+  const [showRegMpin, setShowRegMpin] = useState(false);
   const [phoneError, setPhoneError] = useState('');
 
   // Step 3: KYC Details & Attachments
   const [aadhaarNumber, setAadhaarNumber] = useState(rider.aadhaarNumber || '4829-1029-8921');
+  const [aadhaarDocUrl, setAadhaarDocUrl] = useState('');
   const [panNumber, setPanNumber] = useState(rider.panNumber || 'ABCDE1234F');
+  const [panDocUrl, setPanDocUrl] = useState('');
   const [dlNumber, setDlNumber] = useState(rider.dlNumber || 'KA03-2020-0089124');
+  const [dlDocUrl, setDlDocUrl] = useState('');
   const [upiId, setUpiId] = useState(rider.upiId || 'rahul.k@okicici');
 
   // Step 4: Zone
@@ -46,7 +67,29 @@ export default function OnboardingPage() {
 
   const router = useRouter();
 
-  // Validate personal details & phone numbers matching
+  // Handle Login with MPIN ONLY
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+
+    if (!loginMpin || loginMpin.length < 4) {
+      setLoginError('Please enter your 4-digit MPIN.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    const result = await loginWithMpinOnly(loginMpin);
+    setIsLoggingIn(false);
+
+    if (!result.success) {
+      setLoginError(result.error || 'Incorrect MPIN. Please try again.');
+      return;
+    }
+
+    router.push('/');
+  };
+
+  // Validate personal details & phone numbers matching & MPIN
   const handlePersonalSubmit = () => {
     setPhoneError('');
     const cleanPhone1 = phone.replace(/[^0-9]/g, '');
@@ -62,6 +105,16 @@ export default function OnboardingPage() {
       return;
     }
 
+    if (!createMpin || createMpin.length < 4) {
+      setPhoneError('Please create a 4-digit login MPIN.');
+      return;
+    }
+
+    if (createMpin !== confirmMpin) {
+      setPhoneError('Create MPIN and Confirm MPIN do not match!');
+      return;
+    }
+
     updateRiderProfile({
       name: fullName,
       dob,
@@ -69,6 +122,9 @@ export default function OnboardingPage() {
       phone,
       altPhone,
       address,
+      vehicleType,
+      vehicleNumber,
+      mpin: createMpin,
     });
 
     setStep('kyc');
@@ -85,17 +141,34 @@ export default function OnboardingPage() {
     setStep('zone');
   };
 
-  // Submit Zone & lock to status tracking
-  const handleZoneSubmit = () => {
-    const matchedZone = zones.find((z) => z.id === selectedZoneId);
-    if (matchedZone) {
-      updateRiderProfile({
-        selectedZone: matchedZone.name,
-        isVerified: false,
-        verificationStep: 2,
-      });
-    }
-    setStep('status');
+  // Submit Zone & complete instant approval
+  const handleZoneSubmit = async () => {
+    const matchedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
+    const cleanPhone1 = phone.replace(/[^0-9]/g, '');
+
+    await registerRider({
+      name: fullName,
+      phone: cleanPhone1,
+      mpin: createMpin,
+      dob,
+      vehicleType,
+      vehicleNumber: vehicleNumber.toUpperCase(),
+      selectedZoneId: matchedZone?.id || 'zone-1',
+      selectedZone: matchedZone?.name || 'Downtown Central',
+      altPhone,
+      email,
+      address,
+      aadhaarNumber,
+      aadhaarDocUrl,
+      panNumber,
+      panDocUrl,
+      dlNumber,
+      dlDocUrl,
+      upiId,
+      selfieCapturedUrl: capturedSelfie,
+    });
+
+    router.push('/');
   };
 
   // Admin Approval Simulator
@@ -158,36 +231,78 @@ export default function OnboardingPage() {
               <h2 className="text-2xl font-black text-on-surface mb-1.5">
                 Sign in to your account
               </h2>
-              <p className="text-xs text-secondary mb-8">
+              <p className="text-xs text-secondary mb-4">
                 Start delivering in your city today
               </p>
 
-              <button
-                onClick={() => setStep('selfie')}
-                className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 shadow-soft rounded-2xl py-3.5 px-6 hover:bg-slate-50 active:scale-98 transition-all"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-                <span className="text-xs font-bold text-on-surface">
-                  Continue with Google
-                </span>
-              </button>
+              {/* Login Form (MPIN ONLY) */}
+              <form onSubmit={handleLoginSubmit} className="w-full bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 space-y-4 text-left mb-3">
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-primary" />
+                      <span>Enter 4-Digit Login MPIN</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotModal(true)}
+                      className="text-[11px] font-bold text-primary hover:underline"
+                    >
+                      Forgot MPIN?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showLoginMpin ? 'text' : 'password'}
+                      value={loginMpin}
+                      onChange={(e) => setLoginMpin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                      placeholder="••••"
+                      maxLength={4}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center text-lg font-mono tracking-widest font-bold text-slate-900 outline-none focus:border-primary focus:bg-white shadow-inner"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginMpin(!showLoginMpin)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    >
+                      {showLoginMpin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {loginError && (
+                  <div className="flex items-center gap-2 bg-red-50 text-red-700 p-2.5 rounded-xl border border-red-200 text-xs font-semibold">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full py-3 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>{isLoggingIn ? 'Logging in...' : 'Login with MPIN'}</span>
+                </button>
+              </form>
+
+              {/* Register Profile Option */}
+              <div className="w-full text-center">
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink mx-3 text-[11px] font-bold text-slate-400 uppercase">New to Snapit?</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <button
+                  onClick={() => setStep('selfie')}
+                  className="w-full py-3.5 bg-white border border-primary text-primary font-bold text-xs rounded-2xl shadow-soft hover:bg-primary/5 active:scale-98 transition-all flex items-center justify-center gap-2 mt-1"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Register Profile</span>
+                </button>
+              </div>
             </div>
 
             <p className="text-[11px] text-secondary text-center leading-relaxed">
@@ -360,6 +475,77 @@ export default function OnboardingPage() {
                 />
               </div>
 
+              {/* Vehicle Type & Number */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface">Vehicle Type</label>
+                  <select
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                  >
+                    <option value="Motorcycle">Motorcycle</option>
+                    <option value="Electric Scooter">EV Scooter</option>
+                    <option value="Scooter">Scooter</option>
+                    <option value="Bicycle">Bicycle</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface">Vehicle Number</label>
+                  <input
+                    type="text"
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value)}
+                    placeholder="KA 03 EQ 8821"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary uppercase"
+                  />
+                </div>
+              </div>
+
+              {/* ── CREATE & CONFIRM MPIN SLOTS ── */}
+              <div className="p-3.5 bg-primary/5 border border-primary/20 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-primary flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Create Login MPIN</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowRegMpin(!showRegMpin)}
+                    className="text-[11px] font-bold text-primary flex items-center gap-1"
+                  >
+                    {showRegMpin ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] font-bold text-secondary block mb-1">Create MPIN *</span>
+                    <input
+                      type={showRegMpin ? 'text' : 'password'}
+                      value={createMpin}
+                      onChange={(e) => setCreateMpin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                      placeholder="••••"
+                      maxLength={4}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-center text-sm font-mono tracking-widest font-bold text-slate-900 outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold text-secondary block mb-1">Confirm MPIN *</span>
+                    <input
+                      type={showRegMpin ? 'text' : 'password'}
+                      value={confirmMpin}
+                      onChange={(e) => setConfirmMpin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                      placeholder="••••"
+                      maxLength={4}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-center text-sm font-mono tracking-widest font-bold text-slate-900 outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Residential Address */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-on-surface">Residential Address</label>
@@ -410,74 +596,50 @@ export default function OnboardingPage() {
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 space-y-4">
               {/* 1. Aadhaar Card */}
-              <div className="space-y-1.5 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-                <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-primary">badge</span>
-                  <span>Aadhaar Card Details</span>
-                </label>
-                <input
-                  type="text"
-                  value={aadhaarNumber}
-                  onChange={(e) => setAadhaarNumber(e.target.value)}
-                  placeholder="12-digit Aadhaar Number (XXXX-XXXX-XXXX)"
-                  className="w-full bg-surface-container-low border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary"
-                />
+              <div className="space-y-1.5">
                 <DocumentUploadCard
-                  icon="badge"
-                  title="Aadhaar Card Attachment"
-                  subtitle="Front & Back (JPG/PDF)"
+                  title="Aadhaar Card"
+                  subtitle="Front & Back (JPG/PNG/PDF)"
+                  documentType="aadhaar"
+                  documentNumber={aadhaarNumber}
+                  onNumberChange={setAadhaarNumber}
+                  onFileUploaded={(url) => setAadhaarDocUrl(url)}
                 />
               </div>
 
               {/* 2. PAN Card */}
-              <div className="space-y-1.5 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-                <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-indigo-600">credit_card</span>
-                  <span>PAN Card Details</span>
-                </label>
-                <input
-                  type="text"
-                  value={panNumber}
-                  onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
-                  placeholder="10-digit PAN Number (e.g. ABCDE1234F)"
-                  className="w-full bg-surface-container-low border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary uppercase"
-                />
+              <div className="space-y-1.5">
                 <DocumentUploadCard
-                  icon="credit_card"
-                  title="PAN Card Attachment"
-                  subtitle="Upload front scan"
+                  title="PAN Card"
+                  subtitle="Front scan (JPG/PNG/PDF)"
+                  documentType="pan"
+                  documentNumber={panNumber}
+                  onNumberChange={setPanNumber}
+                  onFileUploaded={(url) => setPanDocUrl(url)}
                 />
               </div>
 
               {/* 3. Driving License */}
-              <div className="space-y-1.5 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-                <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-amber-600">directions_car</span>
-                  <span>Driving License (DL)</span>
-                </label>
-                <input
-                  type="text"
-                  value={dlNumber}
-                  onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
-                  placeholder="Valid Driver License Number"
-                  className="w-full bg-surface-container-low border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary uppercase"
-                />
+              <div className="space-y-1.5">
                 <DocumentUploadCard
-                  icon="directions_car"
-                  title="Driving License Attachment"
-                  subtitle="Front & Back license scan"
+                  title="Driving License (DL)"
+                  subtitle="Front & Back scan (JPG/PNG/PDF)"
+                  documentType="dl"
+                  documentNumber={dlNumber}
+                  onNumberChange={setDlNumber}
+                  onFileUploaded={(url) => setDlDocUrl(url)}
                 />
               </div>
 
               {/* 4. Payout UPI ID */}
-              <div className="space-y-1 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-                <label className="text-xs font-bold text-on-surface">Payout UPI ID (For Wallet Cashout)</label>
+              <div className="space-y-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <label className="text-xs font-bold text-slate-900">Payout UPI ID (For Wallet Cashout)</label>
                 <input
                   type="text"
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value)}
                   placeholder="yourname@bank"
-                  className="w-full bg-surface-container-low border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-semibold text-slate-900 outline-none focus:border-primary focus:bg-white"
                 />
               </div>
             </div>
@@ -628,6 +790,49 @@ export default function OnboardingPage() {
               <p className="text-[10px] text-center text-secondary">
                 Riders cannot open the main cockpit until approved.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* FORGOT MPIN MODAL */}
+        {showForgotModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-scale-up relative">
+              <button
+                onClick={() => setShowForgotModal(false)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
+                <HelpCircle className="w-6 h-6" />
+              </div>
+
+              <div>
+                <h3 className="text-base font-black text-slate-900">Forgot your MPIN?</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Direct SMS OTP reset will be configured soon. For now, please contact Snapit Rider Support to reset your MPIN.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 text-xs space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-bold">Helpline:</span>
+                  <span className="text-slate-900 font-mono font-bold">+91 80000 12345</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-bold">Support Email:</span>
+                  <span className="text-primary font-bold">riders@snapit.in</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowForgotModal(false)}
+                className="w-full py-3 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition-all"
+              >
+                Got It
+              </button>
             </div>
           </div>
         )}

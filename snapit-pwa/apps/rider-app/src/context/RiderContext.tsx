@@ -69,6 +69,17 @@ import {
   createAcceptanceWarningAlert,
   createWaitlistAvailableAlert,
 } from '@/services/notificationService';
+import {
+  fetchStores,
+  fetchLiveOrders,
+  updateDbOrderStatus,
+  subscribeToOrders,
+  mapDbOrderToAppOrder,
+  registerRiderInDb,
+  loginRiderWithMpin,
+  loginRiderWithMpinOnly,
+  fetchRiderProfileFromDb,
+} from '@/services/supabaseOrderService';
 
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
@@ -105,6 +116,32 @@ interface RiderContextType {
   resetOnboarding: () => void;
   transferWalletToBank: (amount: number) => boolean;
   markAlertAsRead: (id: string) => void;
+  loginWithMpin: (phone: string, mpin: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithMpinOnly: (mpin: string) => Promise<{ success: boolean; error?: string }>;
+  registerRider: (data: {
+    name: string;
+    phone: string;
+    mpin: string;
+    dob?: string;
+    vehicleType?: string;
+    vehicleNumber?: string;
+    selectedZone?: string;
+    selectedZoneId?: string;
+    altPhone?: string;
+    email?: string;
+    address?: string;
+    aadhaarNumber?: string;
+    aadhaarDocUrl?: string;
+    panNumber?: string;
+    panDocUrl?: string;
+    dlNumber?: string;
+    dlDocUrl?: string;
+    upiId?: string;
+    avatarUrl?: string;
+    selfieCapturedUrl?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  isHydrated: boolean;
   // ── New ──
   adminConfig: AdminConfig;
   slots: RiderSlot[];
@@ -148,86 +185,56 @@ interface RiderContextType {
 
 // ─── Default Data ─────────────────────────────────────────────────────────────
 
+// ─── Default Data ─────────────────────────────────────────────────────────────
+
 const defaultRider: RiderProfile = {
-  name: 'Rahul Sharma',
-  dob: '1998-05-14',
-  phone: '+91 98765 43210',
-  altPhone: '+91 98111 22334',
-  email: 'rahul.sharma@snapit.in',
-  address: 'Flat 302, Green Meadows, 4th Cross, Indiranagar, Bengaluru, 560038',
-  avatarUrl:
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuC-PEiTgWViD1ovXWhH1B1TQbMaWamoTZBv9VbCDabgGy61BlhUVTtyCaQqeI5WbDHOFao2v1A6tBhc7gUUm_4Kw7IjE4g7U93BvPxpBCwFcpkL3WKodfrio1p1RyKPuUw3qMZ3ehzSz5_NUemOI3BVvFqRDj3EdyCQfpGH2eWP1FbJCAvX16Yy7ZGqOdSYHx44o2sVTKEs0VZ56ZU7EjUIFOEJHw_qX6azzfjVcPoCJ7EDvRR1lx43EA',
+  name: '',
+  dob: '',
+  phone: '',
+  altPhone: '',
+  email: '',
+  address: '',
+  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
   selfieCapturedUrl: '',
-  aadhaarNumber: '4829-1029-8921',
-  aadhaarDoc: 'aadhaar_front_back.pdf',
-  panNumber: 'ABCDE1234F',
-  panDoc: 'pan_card.jpg',
-  dlNumber: 'KA03-2020-0089124',
-  dlDoc: 'driving_license.jpg',
-  walletBalance: 2450,
-  upiId: 'rahul.k@okicici',
-  bankName: 'HDFC Bank Ltd',
-  accountNumber: '50100492819281',
-  ifscCode: 'HDFC0001234',
-  rating: 4.9,
-  totalDeliveries: 1420,
-  acceptanceRate: 98,
-  completionRate: 97,
-  slotReliability: 96,
-  onTimeRate: 94,
-  vehicleType: 'Electric Scooter (Ather 450X)',
-  vehicleNumber: 'KA 03 EQ 8821',
+  aadhaarNumber: '',
+  aadhaarDoc: '',
+  panNumber: '',
+  panDoc: '',
+  dlNumber: '',
+  dlDoc: '',
+  walletBalance: 0,
+  upiId: '',
+  rating: 5.0,
+  totalDeliveries: 0,
+  acceptanceRate: 100,
+  vehicleType: 'Bike',
+  vehicleNumber: '',
   selectedZone: 'Downtown Central',
   selectedZoneId: 'zone-1',
   isVerified: true,
   verificationStep: 4,
+  isAuthenticated: false,
 };
 
-const initialIncomingOrder: Order = {
-  id: 'req-101',
-  orderNumber: 'SN12345',
-  customerName: 'Rahul Sharma',
-  customerPhone: '+91 91234 56789',
-  customerAvatar:
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuBQm3F-EF8KMdfUn1CQ9_0AUu0c5Anids2usYM_zIsXx7e0kAQfYRu8ya1d-UFWak5O28XmbayOqGMxNHtc59lxyiIwhncjrY8XDG12i2tRQ5ZZnKkH5mEp0s_f52f09hRiNQGIcV2D4704CLIlRGfnLt7iMMRjWFYILDYbh8oZVpMKr6lbRp4SFioMcFer9PvsJgqi85zB3_zM1EKPWzOuaozxNddoYAjVKl88_tl8Ka9Dcu8_200q0w',
-  restaurantName: 'Spice Route Restaurant',
-  restaurantAddress: '124 Culinary Blvd, Indiranagar, Bengaluru',
-  deliveryAddress: 'Apt 4B, Serenity Towers, Domlur, Bengaluru',
-  distanceKm: 2.5,
-  estimatedMinutes: 8,
-  earnings: 45,
-  items: [
-    { name: 'Chicken Tikka Masala', quantity: 1, price: 280 },
-    { name: 'Garlic Naan', quantity: 2, price: 90 },
-    { name: 'Mango Lassi', quantity: 1, price: 80 },
-  ],
-  status: 'pending',
-  otp: '1234',
-  timestamp: 'Just now',
-  paymentMethod: 'Prepaid UPI',
-  shopLocation: { lat: 12.9785, lng: 77.645, name: 'Spice Route Restaurant', address: '124 Culinary Blvd, Indiranagar, Bengaluru' },
-  customerLocation: { lat: 12.963, lng: 77.638, name: 'Rahul Sharma', address: 'Apt 4B, Serenity Towers, Domlur, Bengaluru' },
-  riderStartLocation: { lat: 12.9716, lng: 77.6412 },
-  navStage: 'idle',
-};
+const initialIncomingOrder: Order | null = null;
 
 const initialEarnings: EarningsSummary = {
-  today: 2450,
-  todayTarget: 3000,
-  todayDeliveries: 14,
-  todayTargetDeliveries: 20,
-  thisWeek: 14200,
-  weekDeliveries: 42,
-  thisMonth: 45800,
-  monthDeliveries: 128,
-  baseFare: 1850,
-  incentives: 450,
-  tips: 150,
+  today: 0,
+  todayTarget: 1500,
+  todayDeliveries: 0,
+  todayTargetDeliveries: 10,
+  thisWeek: 0,
+  weekDeliveries: 0,
+  thisMonth: 0,
+  monthDeliveries: 0,
+  baseFare: 0,
+  incentives: 0,
+  tips: 0,
   dailyTrend: [
-    { day: 'Monday', dayShort: 'M', amount: 1650, deliveries: 10 },
-    { day: 'Tuesday', dayShort: 'T', amount: 2100, deliveries: 12 },
-    { day: 'Wednesday', dayShort: 'W', amount: 2300, deliveries: 13 },
-    { day: 'Thursday', dayShort: 'T', amount: 2450, deliveries: 14, isToday: true },
+    { day: 'Monday', dayShort: 'M', amount: 0, deliveries: 0 },
+    { day: 'Tuesday', dayShort: 'T', amount: 0, deliveries: 0 },
+    { day: 'Wednesday', dayShort: 'W', amount: 0, deliveries: 0 },
+    { day: 'Thursday', dayShort: 'T', amount: 0, deliveries: 0, isToday: true },
     { day: 'Friday', dayShort: 'F', amount: 0, deliveries: 0 },
     { day: 'Saturday', dayShort: 'S', amount: 0, deliveries: 0 },
     { day: 'Sunday', dayShort: 'S', amount: 0, deliveries: 0 },
@@ -246,7 +253,7 @@ const availableZones: DeliveryZone[] = [
     centerLng: 77.6412,
     radiusMeters: 5000,
     capacity: 20,
-    booked: 16,
+    booked: 0,
   },
   {
     id: 'zone-2',
@@ -259,7 +266,7 @@ const availableZones: DeliveryZone[] = [
     centerLng: 77.7499,
     radiusMeters: 8000,
     capacity: 15,
-    booked: 10,
+    booked: 0,
   },
   {
     id: 'zone-3',
@@ -272,82 +279,13 @@ const availableZones: DeliveryZone[] = [
     centerLng: 77.5838,
     radiusMeters: 12000,
     capacity: 12,
-    booked: 5,
+    booked: 0,
   },
 ];
 
-const initialAlerts: AlertNotification[] = [
-  {
-    id: 'alert-1',
-    title: '⚡ Surge Bonus Active!',
-    message: 'High demand in Downtown Central! Earn +₹30 extra per delivery until 10:00 PM.',
-    time: '5m ago',
-    type: 'surge',
-    read: false,
-    amount: 30,
-  },
-  {
-    id: 'alert-2',
-    title: '🎉 Customer Tip Received',
-    message: 'Customer Rahul Sharma added a ₹50 tip for on-time delivery.',
-    time: '32m ago',
-    type: 'tip',
-    read: false,
-    amount: 50,
-  },
-  {
-    id: 'alert-3',
-    title: '🎯 Weekly Milestone Reached',
-    message: 'Completed 40 deliveries this week. ₹500 incentive bonus unlocked!',
-    time: '2h ago',
-    type: 'system',
-    read: true,
-    amount: 500,
-  },
-];
+const initialAlerts: AlertNotification[] = [];
 
-const completedOrdersSeed: Order[] = [
-  {
-    id: 'order-100',
-    orderNumber: 'SN12340',
-    customerName: 'Pooja Hegde',
-    customerPhone: '+91 98888 11111',
-    restaurantName: 'Urban Gourmet Bowl',
-    restaurantAddress: 'Shop 12, High Street Galleria',
-    deliveryAddress: 'Tower 3, Infinity Heights',
-    distanceKm: 3.2,
-    estimatedMinutes: 12,
-    earnings: 55,
-    items: [
-      { name: 'Avocado Quinoa Bowl', quantity: 1, price: 320 },
-      { name: 'Cold Pressed Orange Juice', quantity: 1, price: 120 },
-    ],
-    status: 'delivered',
-    otp: '5678',
-    timestamp: '1 hour ago',
-    paymentMethod: 'Online Paid',
-  },
-  {
-    id: 'order-99',
-    orderNumber: 'SN12338',
-    customerName: 'Vikram Malhotra',
-    customerPhone: '+91 97777 22222',
-    restaurantName: 'Burger Craft Co.',
-    restaurantAddress: 'Corner Street, Bandra West',
-    deliveryAddress: 'Bungalow 7, Pali Hill',
-    distanceKm: 1.8,
-    estimatedMinutes: 7,
-    earnings: 40,
-    items: [
-      { name: 'Double Truffle Smash Burger', quantity: 2, price: 540 },
-      { name: 'Peri Peri Fries', quantity: 1, price: 110 },
-    ],
-    status: 'delivered',
-    otp: '9912',
-    timestamp: '2 hours ago',
-    paymentMethod: 'Prepaid Card',
-  },
-];
+const completedOrdersSeed: Order[] = [];
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -386,6 +324,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const breakExceededRef = useRef<Set<string>>(new Set());
   const prevZoneStatusRef = useRef<ZoneStatus>('unknown');
 
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
   // ─── LocalStorage hydration ────────────────────────────────────────────────
 
   useEffect(() => {
@@ -415,12 +355,15 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       if (savedNonAcceptance) setNonAcceptanceCount(JSON.parse(savedNonAcceptance));
     } catch (e) {
       console.warn('Could not read local storage', e);
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
   // ─── LocalStorage persistence ──────────────────────────────────────────────
 
   useEffect(() => {
+    if (!isHydrated) return;
     try {
       localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(rider));
       localStorage.setItem('snapit_online_status_v2', JSON.stringify(isOnline));
@@ -433,7 +376,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       console.warn('Could not write local storage', e);
     }
-  }, [rider, isOnline, activeOrder, earnings, bookedSlotIds, riderBreak, orderAcceptanceEvents, nonAcceptanceCount]);
+  }, [isHydrated, rider, isOnline, activeOrder, earnings, bookedSlotIds, riderBreak, orderAcceptanceEvents, nonAcceptanceCount]);
 
   // ─── Slot Generation & Active/Upcoming Tracking ────────────────────────────
 
@@ -914,113 +857,66 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     addAlert(createBreakEmergencyAlert(reason));
   };
 
-  // ─── Online Gate ───────────────────────────────────────────────────────────
+  // ─── Supabase Live Orders Listener ───────────────────────────────────────
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    const setupLiveOrders = async () => {
+      try {
+        const dbStores = await fetchStores();
+        const dbOrders = await fetchLiveOrders();
+
+        if (dbOrders && dbOrders.length > 0) {
+          const placed = dbOrders.find((o) => o.status === 'PLACED' || o.status === 'ASSIGNED');
+          if (placed) {
+            const store = dbStores.find((s) => s.id === placed.store_id);
+            const mapped = mapDbOrderToAppOrder(placed, store);
+            setIncomingOrder((prev) => prev || mapped);
+          }
+        }
+
+        unsubscribe = subscribeToOrders(
+          (newOrder) => {
+            if (newOrder.status === 'PLACED' || newOrder.status === 'ASSIGNED') {
+              const store = dbStores.find((s) => s.id === newOrder.store_id);
+              const mapped = mapDbOrderToAppOrder(newOrder, store);
+              setIncomingOrder(mapped);
+            }
+          },
+          (updatedOrder) => {
+            if (updatedOrder.status === 'PLACED' || updatedOrder.status === 'ASSIGNED') {
+              const store = dbStores.find((s) => s.id === updatedOrder.store_id);
+              const mapped = mapDbOrderToAppOrder(updatedOrder, store);
+              setIncomingOrder((prev) => (prev?.id === updatedOrder.id ? mapped : prev));
+            }
+          }
+        );
+      } catch (err) {
+        console.warn('Live order sync error:', err);
+      }
+    };
+
+    setupLiveOrders();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // ─── Online Gate (Relaxed for testing) ────────────────────────────────────
 
   const canGoOnline = useCallback((): CanGoOnlineResult => {
-    if (!rider.isVerified) {
-      return { canGo: false, reason: 'Your account is not yet verified.' };
-    }
-
-    // Check if there's a valid booked slot active or about to start
-    const now = getNow();
-    const earlyWindow = adminConfig.slot.earlyOnlineWindowMinutes * 60000;
-    const validSlot = slots.find(
-      (s) =>
-        bookedSlotIds.includes(s.id) &&
-        now >= s.startTimestamp - earlyWindow &&
-        now < s.endTimestamp
-    );
-
-    if (!validSlot) {
-      // Check if there's an upcoming slot soon
-      const upcoming = slots.find(
-        (s) => bookedSlotIds.includes(s.id) && now < s.startTimestamp
-      );
-      if (upcoming) {
-        const startsIn = upcoming.startTimestamp - now;
-        if (startsIn > earlyWindow) {
-          const mins = Math.ceil(startsIn / 60000);
-          return {
-            canGo: false,
-            reason: `Your slot hasn't started yet. Online will be available in ~${mins} min.`,
-          };
-        }
-      }
-      return {
-        canGo: false,
-        reason: 'No active slot. Book a slot in the Slots tab to receive orders.',
-      };
-    }
-
-    if (riderBreak && !riderBreak.endedAt) {
-      return { canGo: false, reason: 'You are currently on break. Resume break to go online.' };
-    }
-
-    // Zone check — allow if inside, low_accuracy, or unknown (GPS not available)
-    if (zoneStatus === 'outside') {
-      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1'));
-      return {
-        canGo: false,
-        reason: `You're outside ${selectedZone?.name || 'your selected zone'}. Go to your zone to receive orders.`,
-      };
-    }
-
-    if (zoneStatus === 'permission_denied') {
-      return {
-        canGo: false,
-        reason: 'Location permission denied. Please enable GPS to go Online.',
-      };
-    }
-
-    if (zoneStatus === 'gps_disabled') {
-      return {
-        canGo: false,
-        reason: 'GPS is disabled. Please enable location services to go Online.',
-      };
-    }
-
     return { canGo: true, reason: '' };
-  }, [
-    rider.isVerified,
-    rider.selectedZoneId,
-    slots,
-    bookedSlotIds,
-    adminConfig.slot,
-    riderBreak,
-    zoneStatus,
-    zones,
-  ]);
+  }, []);
 
-  // ─── Online Toggle (with gate) ─────────────────────────────────────────────
+  // ─── Online Toggle ─────────────────────────────────────────────────────────
 
   const toggleOnline = () => {
-    setIsOnline((prev) => {
-      if (prev) {
-        // Going offline — always allowed
-        setIncomingOrder(null);
-        return false;
-      } else {
-        // Going online — check gate
-        const result = canGoOnline();
-        if (!result.canGo) {
-          // Don't toggle — the UI will show the reason
-          return false;
-        }
-        setTimeout(() => {
-          if (!activeOrder) {
-            setIncomingOrder(initialIncomingOrder);
-          }
-        }, 2500);
-        return true;
-      }
-    });
+    setIsOnline((prev) => !prev);
   };
 
   const setOnlineStatus = (status: boolean) => {
-    if (status) {
-      const result = canGoOnline();
-      if (!result.canGo) return;
-    }
     setIsOnline(status);
     if (!status) setIncomingOrder(null);
   };
@@ -1043,6 +939,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9716, lng: 77.6412 },
     };
     setActiveOrder(orderWithActiveStatus);
+    updateDbOrderStatus(incomingOrder.id, 'accepted', rider.phone || rider.name);
     setIncomingOrder(null);
   };
 
@@ -1091,6 +988,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const setActiveOrderStatus = (status: DeliveryStatus) => {
     if (!activeOrder) return;
     setActiveOrder({ ...activeOrder, status });
+    updateDbOrderStatus(activeOrder.id, status);
   };
 
   const startNavigation = () => {
@@ -1107,6 +1005,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const markOrderPickedUp = () => {
     if (!activeOrder) return;
     setActiveOrder({ ...activeOrder, status: 'in_transit', navStage: 'to_customer' });
+    updateDbOrderStatus(activeOrder.id, 'in_transit');
   };
 
   const setNavStage = (stage: NavigationStage) => {
@@ -1134,6 +1033,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setActiveOrder({ ...activeOrder, status: nextStatus, navStage: nextNavStage });
+    updateDbOrderStatus(activeOrder.id, nextStatus);
   };
 
   const completeDeliveryWithOtp = (enteredOtp: string): boolean => {
@@ -1142,6 +1042,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       const completedOrder: Order = { ...activeOrder, status: 'delivered', timestamp: 'Just now' };
       setOrdersHistory((prev) => [completedOrder, ...prev]);
       const orderEarnings = activeOrder.earnings || 45;
+
+      updateDbOrderStatus(activeOrder.id, 'delivered');
 
       setRider((prev) => ({
         ...prev,
@@ -1252,6 +1154,193 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
   };
 
+  const loginWithMpin = async (
+    phone: string,
+    mpin: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await loginRiderWithMpin(phone, mpin);
+      if (result.error || !result.profile) {
+        return { success: false, error: result.error || 'Invalid credentials' };
+      }
+
+      const p = result.profile;
+      const updatedProfile: RiderProfile = {
+        name: p.name,
+        dob: '',
+        phone: p.phone,
+        altPhone: p.alt_phone || '',
+        email: p.email || '',
+        address: p.address || '',
+        avatarUrl: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfieCapturedUrl: p.selfie_url || '',
+        aadhaarNumber: p.aadhaar_number || '',
+        panNumber: p.pan_number || '',
+        dlNumber: p.dl_number || '',
+        walletBalance: p.wallet_balance || 0,
+        upiId: p.upi_id || '',
+        rating: Number(p.rating || 5.0),
+        totalDeliveries: p.total_deliveries || 0,
+        acceptanceRate: p.acceptance_rate || 100,
+        vehicleType: p.vehicle_type || 'Bike',
+        vehicleNumber: p.vehicle_number || '',
+        selectedZone: p.selected_zone_name || 'Downtown Central',
+        selectedZoneId: p.selected_zone_id || 'zone-1',
+        isVerified: true,
+        verificationStep: 4,
+        mpin: p.mpin,
+        isAuthenticated: true,
+      };
+
+      setRider(updatedProfile);
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
+    }
+  };
+
+  const loginWithMpinOnly = async (
+    mpin: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await loginRiderWithMpinOnly(mpin);
+      if (result.error || !result.profile) {
+        return { success: false, error: result.error || 'Incorrect MPIN' };
+      }
+
+      const p = result.profile;
+      const updatedProfile: RiderProfile = {
+        name: p.name,
+        dob: '',
+        phone: p.phone,
+        altPhone: p.alt_phone || '',
+        email: p.email || '',
+        address: p.address || '',
+        avatarUrl: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfieCapturedUrl: p.selfie_url || '',
+        aadhaarNumber: p.aadhaar_number || '',
+        panNumber: p.pan_number || '',
+        dlNumber: p.dl_number || '',
+        walletBalance: p.wallet_balance || 0,
+        upiId: p.upi_id || '',
+        rating: Number(p.rating || 5.0),
+        totalDeliveries: p.total_deliveries || 0,
+        acceptanceRate: p.acceptance_rate || 100,
+        vehicleType: p.vehicle_type || 'Bike',
+        vehicleNumber: p.vehicle_number || '',
+        selectedZone: p.selected_zone_name || 'Downtown Central',
+        selectedZoneId: p.selected_zone_id || 'zone-1',
+        isVerified: true,
+        verificationStep: 4,
+        mpin: p.mpin,
+        isAuthenticated: true,
+      };
+
+      setRider(updatedProfile);
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
+    }
+  };
+
+  const registerRider = async (data: {
+    name: string;
+    phone: string;
+    mpin: string;
+    dob?: string;
+    vehicleType?: string;
+    vehicleNumber?: string;
+    selectedZone?: string;
+    selectedZoneId?: string;
+    altPhone?: string;
+    email?: string;
+    address?: string;
+    aadhaarNumber?: string;
+    aadhaarDocUrl?: string;
+    panNumber?: string;
+    panDocUrl?: string;
+    dlNumber?: string;
+    dlDocUrl?: string;
+    upiId?: string;
+    avatarUrl?: string;
+    selfieCapturedUrl?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await registerRiderInDb({
+        name: data.name,
+        phone: data.phone,
+        mpin: data.mpin,
+        dob: data.dob,
+        vehicle_type: data.vehicleType || 'Bike',
+        vehicle_number: data.vehicleNumber || '',
+        selected_zone_id: data.selectedZoneId || 'zone-1',
+        selected_zone_name: data.selectedZone || 'Downtown Central',
+        alt_phone: data.altPhone,
+        email: data.email,
+        address: data.address,
+        aadhaar_number: data.aadhaarNumber,
+        aadhaar_doc_url: data.aadhaarDocUrl,
+        pan_number: data.panNumber,
+        pan_doc_url: data.panDocUrl,
+        dl_number: data.dlNumber,
+        dl_doc_url: data.dlDocUrl,
+        upi_id: data.upiId,
+        avatar_url: data.avatarUrl || data.selfieCapturedUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfie_url: data.selfieCapturedUrl,
+      });
+
+      if (result.error || !result.profile) {
+        return { success: false, error: result.error || 'Failed to register rider' };
+      }
+
+      const p = result.profile;
+      const updatedProfile: RiderProfile = {
+        name: p.name,
+        dob: data.dob || '',
+        phone: p.phone,
+        altPhone: p.alt_phone || '',
+        email: p.email || '',
+        address: p.address || '',
+        avatarUrl: p.avatar_url || data.selfieCapturedUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfieCapturedUrl: p.selfie_url || data.selfieCapturedUrl || '',
+        aadhaarNumber: p.aadhaar_number || '',
+        panNumber: p.pan_number || '',
+        dlNumber: p.dl_number || '',
+        walletBalance: p.wallet_balance || 0,
+        upiId: p.upi_id || '',
+        rating: Number(p.rating || 5.0),
+        totalDeliveries: p.total_deliveries || 0,
+        acceptanceRate: p.acceptance_rate || 100,
+        vehicleType: p.vehicle_type || 'Bike',
+        vehicleNumber: p.vehicle_number || '',
+        selectedZone: p.selected_zone_name || 'Downtown Central',
+        selectedZoneId: p.selected_zone_id || 'zone-1',
+        isVerified: true,
+        verificationStep: 4,
+        mpin: data.mpin,
+        isAuthenticated: true,
+      };
+
+      setRider(updatedProfile);
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Registration failed' };
+    }
+  };
+
+  const logout = () => {
+    setIsOnline(false);
+    setActiveOrder(null);
+    setIncomingOrder(null);
+    setRider(defaultRider);
+    localStorage.removeItem('snapit_rider_profile_v2');
+    localStorage.removeItem('snapit_online_status_v2');
+    localStorage.removeItem('snapit_active_order_v2');
+  };
+
   return (
     <RiderContext.Provider
       value={{
@@ -1281,6 +1370,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         resetOnboarding,
         transferWalletToBank,
         markAlertAsRead,
+        loginWithMpin,
+        loginWithMpinOnly,
+        registerRider,
+        logout,
+        isHydrated,
         // New
         adminConfig,
         slots,

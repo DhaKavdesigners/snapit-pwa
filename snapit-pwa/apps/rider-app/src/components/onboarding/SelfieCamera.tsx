@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, RefreshCw, CheckCircle2, AlertCircle, Upload, Sparkles } from 'lucide-react';
 
+import { uploadFileToSupabaseStorage } from '@/services/supabaseOrderService';
+
 interface SelfieCameraProps {
   onPhotoCaptured: (photoUrl: string) => void;
   initialPhotoUrl?: string;
@@ -14,6 +16,7 @@ export const SelfieCamera: React.FC<SelfieCameraProps> = ({
 }) => {
   const [photoUrl, setPhotoUrl] = useState<string>(initialPhotoUrl);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isFlashing, setIsFlashing] = useState(false);
 
@@ -65,8 +68,8 @@ export const SelfieCamera: React.FC<SelfieCameraProps> = ({
     };
   }, []);
 
-  // Capture snapshot from video to canvas
-  const handleCapture = () => {
+  // Capture snapshot from video to canvas & upload to Supabase Storage
+  const handleCapture = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     // Trigger flash animation
@@ -87,7 +90,13 @@ export const SelfieCamera: React.FC<SelfieCameraProps> = ({
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       setPhotoUrl(dataUrl);
       stopCamera();
-      onPhotoCaptured(dataUrl);
+
+      // Upload to Supabase Storage
+      setIsUploading(true);
+      const uploadedUrl = await uploadFileToSupabaseStorage(dataUrl, 'selfies', `selfie-${Date.now()}.jpg`);
+      setIsUploading(false);
+
+      onPhotoCaptured(uploadedUrl || dataUrl);
     }
   };
 
@@ -98,25 +107,25 @@ export const SelfieCamera: React.FC<SelfieCameraProps> = ({
   };
 
   // Handle fallback file upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        if (uploadEvent.target?.result) {
-          const resultUrl = uploadEvent.target.result as string;
-          setPhotoUrl(resultUrl);
-          stopCamera();
-          onPhotoCaptured(resultUrl);
-        }
-      };
-      reader.readAsDataURL(e.target.files[0]);
+      const file = e.target.files[0];
+      const localUrl = URL.createObjectURL(file);
+      setPhotoUrl(localUrl);
+      stopCamera();
+
+      setIsUploading(true);
+      const uploadedUrl = await uploadFileToSupabaseStorage(file, 'selfies', `selfie-${Date.now()}-${file.name}`);
+      setIsUploading(false);
+
+      onPhotoCaptured(uploadedUrl || localUrl);
     }
   };
 
   // Use default verified sample selfie
-  const useSampleSelfie = () => {
+  const useSampleSelfie = async () => {
     const sample =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuC-PEiTgWViD1ovXWhH1B1TQbMaWamoTZBv9VbCDabgGy61BlhUVTtyCaQqeI5WbDHOFao2v1A6tBhc7gUUm_4Kw7IjE4g7U93BvPxpBCwFcpkL3WKodfrio1p1RyKPuUw3qMZ3ehzSz5_NUemOI3BVvFqRDj3EdyCQfpGH2eWP1FbJCAvX16Yy7ZGqOdSYHx44o2sVTKEs0VZ56ZU7EjUIFOEJHw_qX6azzfjVcPoCJ7EDvRR1lx43EA';
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400';
     setPhotoUrl(sample);
     stopCamera();
     onPhotoCaptured(sample);

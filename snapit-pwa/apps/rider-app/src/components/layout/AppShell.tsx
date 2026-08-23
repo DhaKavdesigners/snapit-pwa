@@ -4,7 +4,6 @@ import React, { ReactNode } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { TopHeader } from './TopHeader';
 import { BottomNav } from './BottomNav';
-import { TestModePanel } from '@/components/dev/TestModePanel';
 
 interface AppShellProps {
   children: ReactNode;
@@ -61,9 +60,6 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Bottom App Navigation */}
         {showNav && <BottomNav />}
-
-        {/* Developer Test Mode Panel */}
-        <TestModePanel />
       </div>
     </div>
   );

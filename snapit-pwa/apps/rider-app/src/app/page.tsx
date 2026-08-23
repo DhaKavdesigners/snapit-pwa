@@ -8,7 +8,24 @@ import { ZoneStatusBanner } from '@/components/slots/ZoneStatusBanner';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Check, Hourglass, ChevronDown, MapPin, Flame, TrendingUp, BarChart2, Clock, ChevronRight, AlertCircle } from 'lucide-react';
+import {
+  ShieldCheck,
+  Check,
+  Hourglass,
+  ChevronDown,
+  MapPin,
+  TrendingUp,
+  BarChart2,
+  Clock,
+  ChevronRight,
+  AlertCircle,
+  Package,
+  Navigation,
+  Phone,
+  X,
+  Sparkles,
+} from 'lucide-react';
+import { SlideToConfirm } from '@/components/orders/SlideToConfirm';
 
 // ─── Tiny sparkline SVG components ─────────────────────────────────
 const EarningsTrend = () => (
@@ -34,11 +51,16 @@ export default function DashboardPage() {
     isOnline,
     activeOrder,
     incomingOrder,
+    acceptIncomingOrder,
+    declineIncomingOrder,
+    advanceActiveOrderStatus,
+    markOrderPickedUp,
     triggerMockOrder,
     rider,
     simulateApproval,
     earnings,
     nonAcceptanceCount,
+    isHydrated,
   } = useRider();
   const router = useRouter();
 
@@ -49,6 +71,14 @@ export default function DashboardPage() {
     if (h < 17) return 'Good afternoon';
     return 'Good evening';
   };
+
+  // Redirect to onboarding if not registered
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (!rider.phone) {
+      router.push('/onboarding');
+    }
+  }, [isHydrated, rider.phone, router]);
 
   // Online timer
   const [onlineSeconds, setOnlineSeconds] = useState(0);
@@ -62,6 +92,88 @@ export default function DashboardPage() {
   const onlineTimeStr = onlineSeconds > 0
     ? `${onlineHours}h ${onlineMins.toString().padStart(2, '0')}m`
     : '5h 24m'; // fallback display
+
+  // Incoming order timer
+  const [countdown, setCountdown] = useState(25);
+  useEffect(() => {
+    if (!incomingOrder) {
+      setCountdown(25);
+      return;
+    }
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          declineIncomingOrder();
+          return 25;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [incomingOrder, declineIncomingOrder]);
+
+  // Active Order slider config
+  const getStatusBadgeLabel = () => {
+    if (!activeOrder) return '';
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') return 'ORDER ACCEPTED';
+    if (activeOrder.status === 'arrived_at_pickup') return 'ARRIVED AT STORE';
+    if (activeOrder.status === 'in_transit') return 'ORDER PICKED UP';
+    if (activeOrder.status === 'arrived_at_dropoff') return 'ARRIVED AT CUSTOMER';
+    if (activeOrder.status === 'delivered') return 'DELIVERED';
+    return 'ACTIVE ORDER';
+  };
+
+  const handleNextStepAction = () => {
+    if (!activeOrder) return;
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
+      advanceActiveOrderStatus();
+    } else if (activeOrder.status === 'arrived_at_pickup') {
+      markOrderPickedUp();
+    } else if (activeOrder.status === 'in_transit') {
+      advanceActiveOrderStatus();
+    } else if (activeOrder.status === 'arrived_at_dropoff') {
+      router.push('/confirm-delivery');
+    }
+  };
+
+  const getSliderConfig = () => {
+    if (!activeOrder) return { type: 'slider', label: '', success: '', hint: '' };
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
+      return {
+        type: 'slider',
+        label: 'SLIDE TO ARRIVE AT STORE',
+        success: 'Arrived at Store!',
+        hint: 'Head to restaurant for pickup',
+      };
+    }
+    if (activeOrder.status === 'arrived_at_pickup') {
+      return {
+        type: 'slider',
+        label: 'SLIDE TO CONFIRM PICKUP',
+        success: 'Order Collected!',
+        hint: 'Collect food package and proceed to customer',
+      };
+    }
+    if (activeOrder.status === 'in_transit') {
+      return {
+        type: 'slider',
+        label: 'SLIDE TO ARRIVE AT CUSTOMER',
+        success: 'Arrived at Customer!',
+        hint: 'Deliver package to customer doorstep',
+      };
+    }
+    if (activeOrder.status === 'arrived_at_dropoff') {
+      return {
+        type: 'button',
+        label: 'Verify Delivery OTP →',
+        success: '',
+        hint: 'Ask customer for delivery OTP',
+      };
+    }
+    return { type: 'slider', label: 'Slide to Update Status', success: 'Done', hint: '' };
+  };
+
+  const sliderConfig = getSliderConfig();
 
   // ── Verification gate ──────────────────────────────────────────
   if (!rider.isVerified) {
@@ -155,6 +267,259 @@ export default function DashboardPage() {
         {/* ── Live Slot Status & Booking Card (PROMINENT FIRST ELEMENT) ── */}
         <SlotStatusCard />
 
+        {/* ═════════════════════════════════════════════════════════════════
+            EXPANDED DEDICATED ORDER COCKPIT SLOT (HOME PRIMARY HUB)
+        ═════════════════════════════════════════════════════════════════ */}
+
+        {/* STATE 1: INCOMING ORDER REQUEST (Full expanded interactive card) */}
+        {incomingOrder && !activeOrder && (
+          <div className="bg-white rounded-3xl p-5 shadow-[0px_10px_35px_rgba(15,23,42,0.12)] border-2 border-emerald-500 relative overflow-hidden ring-4 ring-emerald-500/10 animate-slide-up">
+            {/* Top Animated Progress Countdown Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 overflow-hidden">
+              <div
+                className="h-full bg-emerald-600 transition-all duration-1000 ease-linear"
+                style={{ width: `${(countdown / 25) * 100}%` }}
+              />
+            </div>
+
+            {/* Header: Request Badge + Countdown + Payout */}
+            <div className="flex justify-between items-start mb-3 pt-1">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-800 font-extrabold text-[11px] px-2.5 py-0.5 rounded-full border border-emerald-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
+                    New Incoming Request
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-bold">
+                    Expires in {countdown}s
+                  </span>
+                </div>
+                <h3 className="font-black text-lg text-slate-900 tracking-tight">
+                  {incomingOrder.customerName}
+                </h3>
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 font-medium">
+                  <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+                  {incomingOrder.distanceKm} km away ({incomingOrder.estimatedMinutes} mins)
+                </p>
+              </div>
+
+              {/* Big Earnings Badge */}
+              <div className="bg-emerald-50 rounded-2xl p-2.5 text-center border border-emerald-200 min-w-[84px] shadow-sm">
+                <p className="text-[9px] uppercase font-extrabold tracking-wider text-emerald-800">
+                  Est. Payout
+                </p>
+                <p className="text-2xl font-black text-emerald-600 font-mono leading-none mt-0.5">
+                  ₹{incomingOrder.earnings}
+                </p>
+              </div>
+            </div>
+
+            {/* Restaurant & Drop location breakdown */}
+            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 space-y-2 text-xs mb-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 mt-1 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">{incomingOrder.restaurantName}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{incomingOrder.restaurantAddress}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">{incomingOrder.customerName}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{incomingOrder.deliveryAddress}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Items tags */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {incomingOrder.items.map((item, idx) => (
+                <span key={idx} className="bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold px-2 py-0.5 rounded-lg shadow-2xs">
+                  {item.quantity}x {item.name}
+                </span>
+              ))}
+            </div>
+
+            {/* Action buttons: Decline / Accept */}
+            <div className="flex gap-2.5">
+              <button
+                onClick={declineIncomingOrder}
+                className="flex-1 border border-slate-300 hover:bg-slate-100 text-slate-600 font-bold text-xs py-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all active:scale-95"
+              >
+                <X className="w-4 h-4" />
+                Decline
+              </button>
+
+              <button
+                onClick={acceptIncomingOrder}
+                className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-3 rounded-2xl shadow-lift flex items-center justify-center gap-1.5 ring-2 ring-emerald-500/20 active:scale-95 transition-all"
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+                Accept Order
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STATE 2: ACTIVE LIVE ORDER IN PROGRESS (Expanded full live card) */}
+        {activeOrder && (
+          <div className="bg-white rounded-3xl p-5 shadow-[0px_10px_35px_rgba(15,23,42,0.1)] border-2 border-emerald-500/40 relative overflow-hidden animate-fade-in">
+            {/* Top Accent Gradient */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-600 to-green-500" />
+
+            {/* Header: Status + Order Number + Earnings */}
+            <div className="flex justify-between items-start mb-3 pt-1">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    {getStatusBadgeLabel()}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-500">
+                    #{activeOrder.orderNumber}
+                  </span>
+                </div>
+                <h3 className="font-black text-base text-slate-900">
+                  {activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup'
+                    ? activeOrder.restaurantName
+                    : activeOrder.customerName}
+                </h3>
+              </div>
+
+              <div className="bg-emerald-50 rounded-2xl px-3 py-2 text-right border border-emerald-200">
+                <p className="text-xl font-black text-emerald-600 font-mono leading-none">
+                  ₹{activeOrder.earnings}
+                </p>
+                <p className="text-[9px] uppercase font-bold text-slate-400 mt-0.5">Earnings</p>
+              </div>
+            </div>
+
+            {/* Route summary box */}
+            <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 space-y-2 text-xs mb-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 mt-1 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Pickup Store</p>
+                  <p className="font-bold text-slate-900 truncate">{activeOrder.restaurantName}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{activeOrder.restaurantAddress}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5 pt-1 border-t border-slate-200/60">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Customer Dropoff</p>
+                  <p className="font-bold text-slate-900 truncate">{activeOrder.customerName}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{activeOrder.deliveryAddress}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Distance, ETA, and Call Toolbar */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-100/70 px-3 py-2 rounded-xl flex-1">
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-bold">{activeOrder.estimatedMinutes} mins</span>
+                </div>
+                <div className="w-px h-4 bg-slate-300" />
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-bold">{activeOrder.distanceKm} km</span>
+                </div>
+                <div className="w-px h-4 bg-slate-300" />
+                <span className="text-[11px] text-slate-500 truncate">{activeOrder.items.length} items</span>
+              </div>
+
+              <a
+                href={`tel:${activeOrder.customerPhone}`}
+                className="w-10 h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-emerald-700 shadow-sm hover:bg-slate-50 active:scale-95 shrink-0"
+                title="Call Customer"
+              >
+                <Phone className="w-4 h-4" />
+              </a>
+            </div>
+
+            {/* Navigation CTA button */}
+            <Link
+              href="/orders"
+              className="w-full mb-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <Navigation className="w-3.5 h-3.5 fill-current" />
+              <span>Open Full Live Navigation Map</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+
+            {/* Slide Action / Next Step Slider right on the home page */}
+            <div>
+              {sliderConfig.type === 'slider' ? (
+                <SlideToConfirm
+                  key={activeOrder.status}
+                  label={sliderConfig.label}
+                  successLabel={sliderConfig.success}
+                  onConfirm={handleNextStepAction}
+                />
+              ) : (
+                <button
+                  onClick={handleNextStepAction}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:opacity-95 text-white font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-98"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{sliderConfig.label}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STATE 3: NO CURRENT ORDER (Professional empty state with online readiness) */}
+        {!incomingOrder && !activeOrder && (
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 flex flex-col items-center text-center relative overflow-hidden animate-fade-in">
+            <div className="relative w-16 h-16 mb-3 flex items-center justify-center">
+              {isOnline ? (
+                <>
+                  <div className="absolute inset-0 bg-emerald-500/10 rounded-full animate-ping" />
+                  <div className="relative z-10 w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-200 text-emerald-600">
+                    <Package className="w-7 h-7" />
+                  </div>
+                </>
+              ) : (
+                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-400">
+                  <Package className="w-7 h-7" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+              <h3 className="font-bold text-base text-slate-900">
+                {isOnline ? 'Stationed & Ready for Orders' : 'No Current Order'}
+              </h3>
+            </div>
+
+            <p className="text-xs text-slate-500 max-w-[280px] leading-relaxed mb-4">
+              {isOnline
+                ? `You're online in ${rider.selectedZone || 'Downtown Central'}. New delivery assignments and orders will appear here automatically.`
+                : 'You are currently offline. Book your slot or go online to start receiving delivery orders.'}
+            </p>
+
+            {isOnline ? (
+              <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-300/80 font-bold text-xs px-4 py-2 rounded-full shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span>Radar Active: Waiting for store assignments...</span>
+              </div>
+            ) : (
+              <Link
+                href="/slots"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+              >
+                <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                Book or Check Slots
+              </Link>
+            )}
+          </div>
+        )}
+
         {/* ── Zone Status Banner (Geofence & Location Warning) ── */}
         <ZoneStatusBanner />
 
@@ -178,32 +543,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── High Demand Strip ─────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Flame className="w-5 h-5 text-orange-500 shrink-0" />
-            <div>
-              <p className="text-[13px] font-bold text-slate-900">
-                High demand nearby <Flame className="inline w-4 h-4 text-orange-500" />
-              </p>
-              <p className="text-[11px] text-slate-500">
-                12 orders near you in <span className="font-semibold text-green-700">{rider.selectedZone || 'Downtown Central'}</span>
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/slots"
-            className="text-[11px] font-bold text-green-700 border border-green-200 bg-green-50 px-3 py-1.5 rounded-xl flex items-center gap-0.5 shrink-0 hover:bg-green-100 transition-colors"
-          >
-            View Slots <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {/* ── Incoming Order Modal (if any) ─────────────────── */}
-        {incomingOrder && !activeOrder && <IncomingOrderModal />}
-
-        {/* ── Today's Overview 3-card grid ────────────────────── */}
-        <div>
+        {/* ── Today's Overview 3-card grid (AT THE BOTTOM) ────────────────────── */}
+        <div className="mt-2">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-[14px] font-bold text-slate-900">Today&apos;s Overview</h2>
             <Link href="/earnings" className="text-[11px] font-bold text-green-700 flex items-center gap-0.5">
@@ -255,89 +596,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* ── Available Orders ──────────────────────────────── */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-[14px] font-bold text-slate-900">Available Orders</h2>
-            <span className="text-[11px] font-bold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-              3 available
-            </span>
-          </div>
-
-          {/* Order preview card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-4 pt-4 pb-3 flex items-start gap-3">
-              {/* Restaurant image placeholder */}
-              <div className="w-14 h-14 rounded-xl bg-green-100 border border-green-200 flex items-center justify-center shrink-0 overflow-hidden">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round">
-                  <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-                  <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
-                </svg>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[13px] font-bold text-slate-900 font-mono">Order #SN12345</p>
-                    {/* Distance row */}
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <div className="text-center">
-                        <p className="text-[13px] font-black text-slate-900">1.2 km</p>
-                        <p className="text-[9px] text-slate-400 font-medium">Pickup</p>
-                      </div>
-                      <div className="w-px h-6 bg-slate-200" />
-                      <div className="text-center">
-                        <p className="text-[13px] font-black text-slate-900">3.4 km</p>
-                        <p className="text-[9px] text-slate-400 font-medium">Drop</p>
-                      </div>
-                      <div className="w-px h-6 bg-slate-200" />
-                      <div className="text-center">
-                        <p className="text-[13px] font-black text-slate-900">5 Items</p>
-                        <p className="text-[9px] text-slate-400 font-medium">Total</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Earnings */}
-                  <div className="text-right shrink-0">
-                    <p className="text-[18px] font-black text-green-600 font-mono leading-none">₹85</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">Estimated</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Pickup address strip */}
-            <div className="px-4 pb-3 flex items-center gap-1.5 text-[11px] text-slate-500">
-              <MapPin className="w-3.5 h-3.5 text-green-600 shrink-0" />
-              <span className="truncate">Pickup from Spice Route Restaurant, Indiranagar</span>
-              <span className="ml-auto text-[10px] text-slate-400 shrink-0">12 min ago</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Simulate order button (dev helper) ───────────── */}
-        {!incomingOrder && !activeOrder && isOnline && (
-          <button
-            onClick={triggerMockOrder}
-            className="text-[11px] font-bold text-primary flex items-center gap-1 bg-white/80 hover:bg-white px-3 py-1.5 rounded-full border border-primary/20 shadow-sm transition-all active:scale-95 self-start"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-            Simulate New Delivery Request
-          </button>
-        )}
-
-        {/* ── View All Orders CTA ───────────────────────────── */}
-        <Link
-          href="/orders"
-          className="w-full bg-green-700 hover:bg-green-800 text-white font-bold text-sm py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-colors active:scale-98"
-        >
-          View All Orders
-          <ChevronRight className="w-4 h-4" />
-        </Link>
 
       </div>
     </AppShell>
