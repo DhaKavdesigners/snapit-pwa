@@ -23,10 +23,8 @@ export default function ProfilePage() {
   const { rider, updateRiderProfile, logout } = useRider();
   
   // Editable fields state
-  const [altPhone, setAltPhone] = useState(rider.altPhone || '+91 98111 22334');
-  const [address, setAddress] = useState(
-    rider.address || 'Flat 302, Green Meadows, 4th Cross, Indiranagar, Bengaluru, 560038'
-  );
+  const [altPhone, setAltPhone] = useState(rider.altPhone || '');
+  const [address, setAddress] = useState(rider.address || '');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [surgeAlerts, setSurgeAlerts] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -60,15 +58,15 @@ export default function ProfilePage() {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <h2 className="font-bold text-base text-on-surface truncate">{rider.name}</h2>
+              <h2 className="font-bold text-base text-on-surface truncate">{rider.name || 'Rider'}</h2>
               <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
             </div>
             <p className="text-xs font-semibold text-amber-500 flex items-center gap-1 mt-0.5">
               <span>⭐ {rider.rating}</span>
               <span className="text-slate-300">·</span>
-              <span className="text-slate-500 font-medium">400+ trips</span>
+              <span className="text-slate-500 font-medium">{rider.totalDeliveries} trips</span>
             </p>
-            <p className="text-xs font-mono font-semibold text-secondary mt-0.5">Rider ID: #RD-89421</p>
+            <p className="text-xs font-mono font-semibold text-secondary mt-0.5">{rider.selectedZone || 'Downtown Central'}</p>
             <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
               Verified Partner
             </span>
@@ -99,7 +97,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">Date of Birth</span>
               <span className="font-mono font-bold text-on-surface flex items-center gap-1.5">
-                <span>{rider.dob || '14 May 1998'}</span>
+                <span>{rider.dob || 'Not Provided'}</span>
                 <Lock className="w-3 h-3 text-slate-400" />
               </span>
             </div>
@@ -117,7 +115,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">Aadhaar Number</span>
               <span className="font-mono font-bold text-on-surface flex items-center gap-1.5">
-                <span>XXXX-XXXX-{rider.aadhaarNumber?.slice(-4) || '8921'}</span>
+                <span>{rider.aadhaarNumber ? `XXXX-XXXX-${rider.aadhaarNumber.slice(-4)}` : 'Verified'}</span>
                 <FileCheck2 className="w-3.5 h-3.5 text-primary" />
               </span>
             </div>
@@ -126,7 +124,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">PAN Number</span>
               <span className="font-mono font-bold text-on-surface flex items-center gap-1.5">
-                <span>{rider.panNumber?.slice(0, 5) || 'ABCDE'}****{rider.panNumber?.slice(-1) || 'F'}</span>
+                <span>{rider.panNumber ? `${rider.panNumber.slice(0, 5)}****${rider.panNumber.slice(-1)}` : 'Verified'}</span>
                 <FileCheck2 className="w-3.5 h-3.5 text-primary" />
               </span>
             </div>
@@ -135,7 +133,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">Driving License</span>
               <span className="font-mono font-bold text-on-surface flex items-center gap-1.5">
-                <span>{rider.dlNumber || 'KA03-2020-0089124'}</span>
+                <span>{rider.dlNumber || 'Verified'}</span>
                 <FileCheck2 className="w-3.5 h-3.5 text-primary" />
               </span>
             </div>
@@ -144,7 +142,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-2">
               <span className="text-secondary font-medium">Registered Vehicle</span>
               <span className="font-mono font-bold text-on-surface flex items-center gap-1.5">
-                <span>{rider.vehicleNumber} ({rider.vehicleType?.split(' ')[0]})</span>
+                <span>{rider.vehicleNumber || 'Registered'} ({rider.vehicleType?.split(' ')[0] || 'Bike'})</span>
                 <Lock className="w-3 h-3 text-slate-400" />
               </span>
             </div>

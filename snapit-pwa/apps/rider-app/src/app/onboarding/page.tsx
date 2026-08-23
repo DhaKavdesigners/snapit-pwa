@@ -35,32 +35,32 @@ export default function OnboardingPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Step 1: Selfie
-  const [capturedSelfie, setCapturedSelfie] = useState<string>(rider.selfieCapturedUrl || '');
-
-  // Step 2: Personal & Contact fields
-  const [fullName, setFullName] = useState(rider.name || 'Rahul Sharma');
-  const [dob, setDob] = useState(rider.dob || '1998-05-14');
-  const [email, setEmail] = useState(rider.email || 'rahul.sharma@snapit.in');
-  const [phone, setPhone] = useState(rider.phone || '+91 98765 43210');
-  const [confirmPhone, setConfirmPhone] = useState(rider.phone || '+91 98765 43210');
-  const [altPhone, setAltPhone] = useState(rider.altPhone || '+91 98111 22334');
-  const [address, setAddress] = useState(rider.address || 'Flat 302, Green Meadows, 4th Cross, Indiranagar, Bengaluru');
+  // Step 1: Personal & Contact fields
+  const [fullName, setFullName] = useState(rider.name || '');
+  const [dob, setDob] = useState(rider.dob || '');
+  const [email, setEmail] = useState(rider.email || '');
+  const [phone, setPhone] = useState(rider.phone || '');
+  const [confirmPhone, setConfirmPhone] = useState(rider.phone || '');
+  const [altPhone, setAltPhone] = useState(rider.altPhone || '');
+  const [address, setAddress] = useState(rider.address || '');
   const [vehicleType, setVehicleType] = useState(rider.vehicleType || 'Motorcycle');
-  const [vehicleNumber, setVehicleNumber] = useState(rider.vehicleNumber || 'KA 03 EQ 8821');
+  const [vehicleNumber, setVehicleNumber] = useState(rider.vehicleNumber || '');
   const [createMpin, setCreateMpin] = useState('');
   const [confirmMpin, setConfirmMpin] = useState('');
   const [showRegMpin, setShowRegMpin] = useState(false);
   const [phoneError, setPhoneError] = useState('');
 
+  // Step 2: Selfie
+  const [capturedSelfie, setCapturedSelfie] = useState<string>(rider.selfieCapturedUrl || '');
+
   // Step 3: KYC Details & Attachments
-  const [aadhaarNumber, setAadhaarNumber] = useState(rider.aadhaarNumber || '4829-1029-8921');
+  const [aadhaarNumber, setAadhaarNumber] = useState(rider.aadhaarNumber || '');
   const [aadhaarDocUrl, setAadhaarDocUrl] = useState('');
-  const [panNumber, setPanNumber] = useState(rider.panNumber || 'ABCDE1234F');
+  const [panNumber, setPanNumber] = useState(rider.panNumber || '');
   const [panDocUrl, setPanDocUrl] = useState('');
-  const [dlNumber, setDlNumber] = useState(rider.dlNumber || 'KA03-2020-0089124');
+  const [dlNumber, setDlNumber] = useState(rider.dlNumber || '');
   const [dlDocUrl, setDlDocUrl] = useState('');
-  const [upiId, setUpiId] = useState(rider.upiId || 'rahul.k@okicici');
+  const [upiId, setUpiId] = useState(rider.upiId || '');
 
   // Step 4: Zone
   const [selectedZoneId, setSelectedZoneId] = useState(zones[0]?.id || 'zone-1');
@@ -92,6 +92,11 @@ export default function OnboardingPage() {
   // Validate personal details & phone numbers matching & MPIN
   const handlePersonalSubmit = () => {
     setPhoneError('');
+    if (!fullName.trim()) {
+      setPhoneError('Please enter your full name as per government ID.');
+      return;
+    }
+
     const cleanPhone1 = phone.replace(/[^0-9]/g, '');
     const cleanPhone2 = confirmPhone.replace(/[^0-9]/g, '');
 
@@ -127,7 +132,7 @@ export default function OnboardingPage() {
       mpin: createMpin,
     });
 
-    setStep('kyc');
+    setStep('selfie');
   };
 
   // Submit KYC
@@ -296,7 +301,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <button
-                  onClick={() => setStep('selfie')}
+                  onClick={() => setStep('personal')}
                   className="w-full py-3.5 bg-white border border-primary text-primary font-bold text-xs rounded-2xl shadow-soft hover:bg-primary/5 active:scale-98 transition-all flex items-center justify-center gap-2 mt-1"
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -313,8 +318,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* STEP 1: DEDICATED LIVE SELFIE CAMERA PAGE */}
-        {step === 'selfie' && (
+        {/* STEP 1: PERSONAL DETAILS (NAME, DOB, EMAIL, 2x PHONE, ALT PHONE, ADDRESS, VEHICLE, MPIN) */}
+        {step === 'personal' && (
           <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
             <div>
               <div className="flex justify-between items-center mb-3">
@@ -325,68 +330,16 @@ export default function OnboardingPage() {
                   <ArrowLeft className="w-4 h-4 text-on-surface" />
                 </button>
                 <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
-                  Step 1 of 4: Live Selfie
-                </span>
-              </div>
-
-              <h1 className="text-xl font-black text-on-surface">Capture Live Photo</h1>
-              <p className="text-xs text-secondary mt-0.5">
-                Take a clear front-facing selfie for rider badge and instant facial ID verification.
-              </p>
-              <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-1/4" />
-              </div>
-            </div>
-
-            {/* Dedicated Camera Viewport Component */}
-            <div className="py-4 my-auto">
-              <SelfieCamera
-                initialPhotoUrl={capturedSelfie}
-                onPhotoCaptured={(url) => {
-                  setCapturedSelfie(url);
-                  updateRiderProfile({ selfieCapturedUrl: url, avatarUrl: url });
-                }}
-              />
-            </div>
-
-            <button
-              onClick={() => {
-                if (!capturedSelfie) {
-                  // If user didn't capture, default sample photo
-                  const sample =
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuC-PEiTgWViD1ovXWhH1B1TQbMaWamoTZBv9VbCDabgGy61BlhUVTtyCaQqeI5WbDHOFao2v1A6tBhc7gUUm_4Kw7IjE4g7U93BvPxpBCwFcpkL3WKodfrio1p1RyKPuUw3qMZ3ehzSz5_NUemOI3BVvFqRDj3EdyCQfpGH2eWP1FbJCAvX16Yy7ZGqOdSYHx44o2sVTKEs0VZ56ZU7EjUIFOEJHw_qX6azzfjVcPoCJ7EDvRR1lx43EA';
-                  setCapturedSelfie(sample);
-                  updateRiderProfile({ selfieCapturedUrl: sample, avatarUrl: sample });
-                }
-                setStep('personal');
-              }}
-              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
-            >
-              <span>Proceed to Personal Details</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* STEP 2: PERSONAL DETAILS (NAME, DOB, EMAIL, 2x PHONE, ALT PHONE, ADDRESS) */}
-        {step === 'personal' && (
-          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <button
-                  onClick={() => setStep('selfie')}
-                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200"
-                >
-                  <ArrowLeft className="w-4 h-4 text-on-surface" />
-                </button>
-                <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
-                  Step 2 of 4: Personal Details
+                  Step 1 of 4: Personal Details
                 </span>
               </div>
 
               <h1 className="text-xl font-black text-on-surface">Personal Information</h1>
+              <p className="text-xs text-secondary mt-0.5">
+                Fill in your basic information and vehicle registration.
+              </p>
               <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-2/4" />
+                <div className="h-full bg-primary rounded-full w-1/4" />
               </div>
             </div>
 
@@ -563,6 +516,61 @@ export default function OnboardingPage() {
               onClick={handlePersonalSubmit}
               className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
             >
+              <span>Proceed to Live Selfie</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2: DEDICATED LIVE SELFIE CAMERA PAGE */}
+        {step === 'selfie' && (
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <button
+                  onClick={() => setStep('personal')}
+                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200"
+                >
+                  <ArrowLeft className="w-4 h-4 text-on-surface" />
+                </button>
+                <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
+                  Step 2 of 4: Live Selfie
+                </span>
+              </div>
+
+              <h1 className="text-xl font-black text-on-surface">Capture Live Photo</h1>
+              <p className="text-xs text-secondary mt-0.5">
+                Take a clear front-facing selfie for rider badge and instant facial ID verification.
+              </p>
+              <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
+                <div className="h-full bg-primary rounded-full w-2/4" />
+              </div>
+            </div>
+
+            {/* Dedicated Camera Viewport Component */}
+            <div className="py-4 my-auto">
+              <SelfieCamera
+                initialPhotoUrl={capturedSelfie}
+                onPhotoCaptured={(url) => {
+                  setCapturedSelfie(url);
+                  updateRiderProfile({ selfieCapturedUrl: url, avatarUrl: url });
+                }}
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                if (!capturedSelfie) {
+                  // If user didn't capture, default sample photo
+                  const sample =
+                    'https://lh3.googleusercontent.com/aida-public/AB6AXuC-PEiTgWViD1ovXWhH1B1TQbMaWamoTZBv9VbCDabgGy61BlhUVTtyCaQqeI5WbDHOFao2v1A6tBhc7gUUm_4Kw7IjE4g7U93BvPxpBCwFcpkL3WKodfrio1p1RyKPuUw3qMZ3ehzSz5_NUemOI3BVvFqRDj3EdyCQfpGH2eWP1FbJCAvX16Yy7ZGqOdSYHx44o2sVTKEs0VZ56ZU7EjUIFOEJHw_qX6azzfjVcPoCJ7EDvRR1lx43EA';
+                  setCapturedSelfie(sample);
+                  updateRiderProfile({ selfieCapturedUrl: sample, avatarUrl: sample });
+                }
+                setStep('kyc');
+              }}
+              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+            >
               <span>Continue to KYC Documents</span>
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -575,7 +583,7 @@ export default function OnboardingPage() {
             <div>
               <div className="flex justify-between items-center mb-3">
                 <button
-                  onClick={() => setStep('personal')}
+                  onClick={() => setStep('selfie')}
                   className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200"
                 >
                   <ArrowLeft className="w-4 h-4 text-on-surface" />
