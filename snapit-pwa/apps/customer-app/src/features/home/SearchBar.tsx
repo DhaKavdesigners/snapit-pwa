@@ -3,11 +3,12 @@ import { Search, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 const placeholders = [
-  "Search milk...",
-  "Search biryani...",
-  "Search shawarma...",
-  "Search fresh bread...",
-  "Search Maggi..."
+  "Search 'Fresh farm tomatoes' 🍅",
+  "Search 'Ambur chicken dum biryani' 🍗",
+  "Search 'Nandini fresh milk & curd' 🥛",
+  "Search 'Crispy shawarma & burgers' 🍔",
+  "Search 'Fortune oil, atta, groceries' 🛒",
+  "Search 'Chilled drinks & juices' 🧃",
 ];
 
 interface SearchBarProps {
