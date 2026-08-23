@@ -1,8 +1,9 @@
 -- ============================================================================
--- SNAPIT KGF — UNIFIED PRODUCTION SUPABASE DATABASE SCHEMA
+-- SNAPIT KGF — COMPLETE UNIFIED SUPABASE MASTER DATABASE SETUP
+-- Single Database for Customer, Merchant & Rider Applications
 -- ============================================================================
 
--- 1. DROP DRAFT TABLES
+-- 1. DROP PREVIOUS DRAFT TABLES (Clean Reset)
 DROP TABLE IF EXISTS public.order_items CASCADE;
 DROP TABLE IF EXISTS public.orders CASCADE;
 DROP TABLE IF EXISTS public.products CASCADE;
@@ -37,7 +38,7 @@ CREATE TABLE public.stores (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. CREATE MERCHANTS TABLE
+-- 4. CREATE MERCHANTS TABLE (Store Partner Logins)
 CREATE TABLE public.merchants (
     id TEXT PRIMARY KEY,
     uid TEXT UNIQUE NOT NULL,
@@ -49,7 +50,7 @@ CREATE TABLE public.merchants (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. CREATE PRODUCTS TABLE
+-- 5. CREATE PRODUCTS TABLE (Catalog & Realtime Inventory)
 CREATE TABLE public.products (
     id TEXT PRIMARY KEY,
     store_id TEXT REFERENCES public.stores(id) ON DELETE CASCADE,
@@ -66,19 +67,19 @@ CREATE TABLE public.products (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. CREATE ORDERS TABLE
+-- 6. CREATE ORDERS TABLE (Realtime Order Pipeline)
 CREATE TABLE public.orders (
     id TEXT PRIMARY KEY,
     customer_id TEXT DEFAULT 'guest_user',
     store_id TEXT REFERENCES public.stores(id) ON DELETE CASCADE,
     rider_id TEXT,
-    status TEXT NOT NULL DEFAULT 'PLACED',
+    status TEXT NOT NULL DEFAULT 'PLACED', -- PLACED, PREPARING, READY_FOR_PICKUP, OUT_FOR_DELIVERY, DELIVERED, REJECTED
     items JSONB NOT NULL,
-    estimated_total INTEGER NOT NULL,
+    estimated_total INTEGER NOT NULL, -- in paise
     delivery_address JSONB NOT NULL,
     cooking_instructions TEXT,
     idempotency_key TEXT,
-    payment_method TEXT DEFAULT 'UPI_NOW',
+    payment_method TEXT DEFAULT 'UPI_NOW', -- 100% Prepaid UPI Online
     payment_status TEXT DEFAULT 'PAID',
     recipient_name TEXT NOT NULL,
     recipient_phone TEXT NOT NULL,
@@ -88,7 +89,7 @@ CREATE TABLE public.orders (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. ENABLE REALTIME BROADCASTING
+-- 7. ENABLE REALTIME BROADCASTING ACROSS ALL TABLES
 ALTER TABLE public.stores REPLICA IDENTITY FULL;
 ALTER TABLE public.products REPLICA IDENTITY FULL;
 ALTER TABLE public.orders REPLICA IDENTITY FULL;
@@ -99,7 +100,7 @@ BEGIN;
   CREATE PUBLICATION supabase_realtime FOR TABLE public.stores, public.products, public.orders, public.profiles;
 COMMIT;
 
--- 8. INSERT INITIAL DATA (Mhetha Stores & Nandhini KGF)
+-- 8. INSERT INITIAL SEED DATA (Mhetha Stores & Nandhini KGF)
 
 -- Stores
 INSERT INTO public.stores (id, name, logo_url, category, is_online, rush_mode)
@@ -131,7 +132,7 @@ VALUES
     ('nd04', 's4', 'Nandini Fresh Paneer (200g)', 9500, 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&auto=format&fit=crop&q=80', 'Paneer & Cheese', 8, true, 35, 'AVAILABLE', 'Soft and creamy malai paneer block for cooking'),
     ('nd05', 's4', 'Nandini Pasteurized Table Butter (100g)', 5600, 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400&auto=format&fit=crop&q=80', 'Butter & Ghee', 8, true, 40, 'AVAILABLE', 'Delicious salted table butter block');
 
--- 9. OPEN ROW LEVEL SECURITY (RLS) POLICIES FOR DEVELOPMENT
+-- 9. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.stores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;

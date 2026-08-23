@@ -152,15 +152,18 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
             <button
               type="button"
               onClick={toggleRushMode}
-              title="Rush Mode adds prep time buffer for peak hours"
-              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                rushMode
-                  ? 'bg-amber-100 text-amber-900 border border-amber-300 ring-2 ring-amber-500/20'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-transparent'
+              disabled={!isOnline}
+              title={!isOnline ? 'Turn store ONLINE to activate Rush Mode' : 'Rush Mode adds prep time buffer for peak hours'}
+              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                !isOnline
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                  : rushMode
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300 ring-2 ring-amber-500/20 cursor-pointer'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-transparent cursor-pointer'
               }`}
             >
-              <Zap className={`w-3.5 h-3.5 ${rushMode ? 'fill-amber-600 text-amber-600' : 'text-slate-600'}`} />
-              <span>{rushMode ? '⚡ Rush Active' : 'Rush Mode'}</span>
+              <Zap className={`w-3.5 h-3.5 ${rushMode && isOnline ? 'fill-amber-600 text-amber-600' : 'text-slate-400'}`} />
+              <span>{rushMode && isOnline ? '⚡ Rush Active' : 'Rush Mode'}</span>
             </button>
 
 

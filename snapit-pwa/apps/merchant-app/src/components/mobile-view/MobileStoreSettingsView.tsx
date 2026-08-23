@@ -81,29 +81,37 @@ export const MobileStoreSettingsView: React.FC = () => {
         </div>
 
         {/* 2. Rush Mode Toggle */}
-        <div className="p-4 flex items-center justify-between">
+        <div className={`p-4 flex items-center justify-between transition-opacity ${
+          !isOnline ? 'opacity-50' : 'opacity-100'
+        }`}>
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-2xl ${
-              rushMode ? 'bg-amber-100 text-amber-700 animate-pulse' : 'bg-slate-100 text-slate-500'
+              rushMode && isOnline ? 'bg-amber-100 text-amber-700 animate-pulse' : 'bg-slate-100 text-slate-400'
             }`}>
               <Flame className="w-5 h-5" />
             </div>
             <div>
               <span className="text-xs font-black text-slate-900 block">Rush Mode</span>
-              <span className="text-[11px] text-slate-500">Adds +10 min prep buffer</span>
+              <span className="text-[11px] text-slate-500">
+                {isOnline ? 'Adds +10 min prep buffer' : 'Store must be ONLINE to activate'}
+              </span>
             </div>
           </div>
 
           <button
             type="button"
             onClick={toggleRushMode}
-            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer ${
-              rushMode
-                ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            disabled={!isOnline}
+            title={!isOnline ? 'Turn store ONLINE to activate Rush Mode' : 'Toggle Rush Mode'}
+            className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all active:scale-95 ${
+              !isOnline
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                : rushMode
+                ? 'bg-amber-500 text-slate-950 font-black shadow-sm cursor-pointer'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer'
             }`}
           >
-            {rushMode ? 'ACTIVE' : 'OFF'}
+            {rushMode && isOnline ? 'ACTIVE' : 'OFF'}
           </button>
         </div>
       </div>

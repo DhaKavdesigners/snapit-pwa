@@ -876,6 +876,9 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
   rushMode: false,
   toggleRushMode: async () => {
+    // Only allow toggling rush mode when store is ONLINE
+    if (!get().isOnline) return;
+
     const nextRush = !get().rushMode;
     const storeId = get().activeStore.id;
 
