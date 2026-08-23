@@ -24,14 +24,55 @@ export const mockFoodStores: Store[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXPLORE CATEGORIES CONFIGURATION (Refined with Images)
+// EXPLORE CATEGORIES CONFIGURATION (Vibrant & Professional with High-Res Images)
 // ─────────────────────────────────────────────────────────────────────────────
 export const exploreShoppingCategories = [
   {
+    id: 'cat_vegetables',
+    title: 'Farm Fresh Vegetables',
+    subtitle: 'Harvested Daily from Local Farms',
+    emoji: '🥬',
+    tag: '🌱 Farm Fresh',
+    gradient: 'from-emerald-950/85 via-emerald-900/40 to-transparent',
+    borderGlow: 'border-emerald-300/40 hover:border-emerald-400',
+    badgeBg: 'bg-emerald-500/25 border-emerald-400/40 text-emerald-200',
+    imageUrl: '/images/cat_exp_head/Vegetables.jpg',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
+    subCategories: [
+      { id: 'sc_veg_all', name: 'Fresh Vegetables' },
+      { id: 'sc_leafy', name: 'Leafy Greens' },
+      { id: 'sc_cooking_veg', name: 'Daily Cooking Veggies' },
+      { id: 'sc_onion_potato', name: 'Potatoes & Onions' }
+    ]
+  },
+  {
+    id: 'cat_fruits',
+    title: 'Fresh Fruits & Organics',
+    subtitle: 'Sweet, Seasonal & Nutritious Picks',
+    emoji: '🍎',
+    tag: '🍇 100% Natural',
+    gradient: 'from-rose-950/85 via-rose-900/40 to-transparent',
+    borderGlow: 'border-rose-300/40 hover:border-rose-400',
+    badgeBg: 'bg-rose-500/25 border-rose-400/40 text-rose-200',
+    imageUrl: '/images/cat_exp_head/fruits.jpg',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=600&auto=format&fit=crop&q=80',
+    subCategories: [
+      { id: 'sc_fruits_all', name: 'Fresh Fruits' },
+      { id: 'sc_seasonal', name: 'Seasonal Fruits' },
+      { id: 'sc_cut_fruits', name: 'Cut Fruits & Salads' }
+    ]
+  },
+  {
     id: 'cat_groceries',
-    title: '🛒 Grocery',
-    imageUrl: '/images/categories/grocery.jpg',
-    fallbackImageUrl: 'https://picsum.photos/seed/1aess7/600/400',
+    title: 'Daily Groceries & Staples',
+    subtitle: 'Atta, Rice, Oils & Kitchen Essentials',
+    emoji: '🛒',
+    tag: '⚡ 10 Min Delivery',
+    gradient: 'from-amber-950/85 via-amber-900/40 to-transparent',
+    borderGlow: 'border-amber-300/40 hover:border-amber-400',
+    badgeBg: 'bg-amber-500/25 border-amber-400/40 text-amber-200',
+    imageUrl: '/images/cat_exp_head/grocery-products.jpg',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=600&auto=format&fit=crop&q=80',
     subCategories: [
       { id: 'sc_essentials', name: 'Everyday Essentials' },
       { id: 'sc_cooking', name: 'Cooking Essentials' },
@@ -40,9 +81,15 @@ export const exploreShoppingCategories = [
   },
   {
     id: 'cat_dairy',
-    title: '🥛 Dairy & Chilled',
-    imageUrl: '/images/categories/dairy.jpg',
-    fallbackImageUrl: 'https://picsum.photos/seed/7or2pn/600/400',
+    title: 'Fresh Dairy & Breakfast',
+    subtitle: 'Milk, Curd, Paneer, Butter & Ghee',
+    emoji: '🥛',
+    tag: '🧊 Pure & Chilled',
+    gradient: 'from-sky-950/85 via-sky-900/40 to-transparent',
+    borderGlow: 'border-sky-300/40 hover:border-sky-400',
+    badgeBg: 'bg-sky-500/25 border-sky-400/40 text-sky-200',
+    imageUrl: '/images/cat_exp_head/dairy_products.webp',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?w=600&auto=format&fit=crop&q=80',
     subCategories: [
       { id: 'sc_milk', name: 'Milk & Curd' },
       { id: 'sc_butter', name: 'Butter, Ghee & Cream' },
@@ -50,10 +97,33 @@ export const exploreShoppingCategories = [
     ]
   },
   {
+    id: 'cat_juices',
+    title: 'Cold Drinks & Juices',
+    subtitle: 'Fruit Juices, Sodas & Refreshments',
+    emoji: '🧃',
+    tag: '🍹 Instant Refreshment',
+    gradient: 'from-orange-950/85 via-orange-900/40 to-transparent',
+    borderGlow: 'border-orange-300/40 hover:border-orange-400',
+    badgeBg: 'bg-orange-500/25 border-orange-400/40 text-orange-200',
+    imageUrl: '/images/cat_exp_head/fruits_juices.jpg',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=600&auto=format&fit=crop&q=80',
+    subCategories: [
+      { id: 'sc_juices_all', name: 'Fresh Fruit Juices' },
+      { id: 'sc_sodas', name: 'Cold Drinks & Sodas' },
+      { id: 'sc_snacks', name: 'Snacks & Beverages' }
+    ]
+  },
+  {
     id: 'cat_home_care',
-    title: '🧴 Personal & Home Care',
-    imageUrl: '/images/categories/homecare.jpg',
-    fallbackImageUrl: 'https://picsum.photos/seed/ey4xfh/600/400',
+    title: 'Personal & Home Care',
+    subtitle: 'Skin Care, Hygiene & Cleaning Needs',
+    emoji: '🧴',
+    tag: '✨ Everyday Care',
+    gradient: 'from-purple-950/85 via-purple-900/40 to-transparent',
+    borderGlow: 'border-purple-300/40 hover:border-purple-400',
+    badgeBg: 'bg-purple-500/25 border-purple-400/40 text-purple-200',
+    imageUrl: '/images/cat_exp_head/personaol_care_products.webp',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
     subCategories: [
       { id: 'sc_personal', name: 'Personal Care' },
       { id: 'sc_home', name: 'Home Essentials' }
@@ -64,27 +134,45 @@ export const exploreShoppingCategories = [
 export const exploreFoodCategories = [
   {
     id: 'cat_biryani',
-    title: '🍚 Biryani Specialties',
+    title: 'Hyderabadi & Ambur Biryani',
+    subtitle: 'Authentic Dum Biryani, Kushka & Starters',
+    emoji: '🍚',
+    tag: '🔥 Best in KGF',
+    gradient: 'from-amber-950/85 via-amber-900/40 to-transparent',
+    borderGlow: 'border-amber-300/40 hover:border-amber-400',
+    badgeBg: 'bg-amber-500/25 border-amber-400/40 text-amber-200',
     imageUrl: '/images/categories/biryani.jpg',
-    fallbackImageUrl: 'https://picsum.photos/seed/mon6/600/400',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80',
     subCategories: [
       { id: 'fc_biryani', name: 'Biryani Specialties' }
     ]
   },
   {
     id: 'cat_fastfood',
-    title: '🍔 Fast Food & Rolls',
+    title: 'Crispy Fast Food & Rolls',
+    subtitle: 'Fried Chicken, Burgers & Shawarma',
+    emoji: '🍔',
+    tag: '⚡ Hot & Fresh',
+    gradient: 'from-red-950/85 via-red-900/40 to-transparent',
+    borderGlow: 'border-red-300/40 hover:border-red-400',
+    badgeBg: 'bg-red-500/25 border-red-400/40 text-red-200',
     imageUrl: '/images/categories/fastfood.jpg',
-    fallbackImageUrl: 'https://picsum.photos/seed/37hmk/600/400',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=600&auto=format&fit=crop&q=80',
     subCategories: [
       { id: 'fc_fastfood', name: 'Fast Food & Rolls' }
     ]
   },
   {
     id: 'cat_bakery',
-    title: '🥐 Bakery & Sweets',
+    title: 'Fresh Breads & Bakery',
+    subtitle: 'Puffs, Breads, Cakes & Pastries',
+    emoji: '🥐',
+    tag: '🍰 Oven Fresh',
+    gradient: 'from-amber-950/85 via-yellow-900/40 to-transparent',
+    borderGlow: 'border-yellow-300/40 hover:border-yellow-400',
+    badgeBg: 'bg-yellow-500/25 border-yellow-400/40 text-yellow-200',
     imageUrl: '/images/categories/bakery.jpg',
-    fallbackImageUrl: 'https://picsum.photos/seed/duyi3d/600/400',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80',
     subCategories: [
       { id: 'fc_puffs', name: 'Puffs & Savories' },
       { id: 'fc_breads', name: 'Breads & Cakes' }
@@ -154,10 +242,22 @@ const nandhiniProducts: Product[] = [
   { id: 'nd05', name: 'Nandini Butter',            price: 6500,  storeId: 's4', storeName: 'Nandhini KGF', category: 'grocery', subCategory: 'Butter, Ghee & Cream', description: '100 g • Salted white butter',                  deliveryEtaMinutes: 8,  inStock: true, imageUrl: '/images/products/butter.jpg',                fallbackImageUrl: 'https://picsum.photos/seed/lcvu6j/400/400' },
   { id: 'nd06', name: 'Vanilla Ice Cream Tub',     price: 18000, storeId: 's4', storeName: 'Nandhini KGF', category: 'grocery', subCategory: 'Ice Cream',            description: '1 L • Classic rich vanilla ice cream',         deliveryEtaMinutes: 8,  inStock: true, imageUrl: '/images/products/vanilla-icecream.jpg',      fallbackImageUrl: 'https://picsum.photos/seed/950wb/400/400' },
   { id: 'nd07', name: 'Chocolate Cone Ice Cream',  price: 4500,  storeId: 's4', storeName: 'Nandhini KGF', category: 'grocery', subCategory: 'Ice Cream',            description: '120 ml • Crispy cone with chocolate chip',     deliveryEtaMinutes: 8,  inStock: true, imageUrl: '/images/products/choco-cone.jpg',          fallbackImageUrl: 'https://picsum.photos/seed/sed9jb/400/400' },
-  { id: 'nd08', name: 'Amul Fresh Cream',          price: 6500,  storeId: 's4', storeName: 'Nandhini KGF', category: 'grocery', subCategory: 'Butter, Ghee & Cream', description: '250 ml • Thick cooking cream',                 deliveryEtaMinutes: 8,  inStock: true, imageUrl: '/images/products/fresh-cream.jpg',           fallbackImageUrl: 'https://picsum.photos/seed/tvs936/400/400' },
+];
+
+// FARM FRESH PRODUCE (Vegetables & Fruits)
+const farmFreshProduce: Product[] = [
+  { id: 'vg01', name: 'Fresh Farm Red Tomatoes (1kg)', price: 3000,  storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Vegetables', description: '1 kg • Ripe juicy country farm tomatoes', deliveryEtaMinutes: 10, inStock: true, stockCount: 15, imageUrl: '/images/cat_exp_head/Vegetables.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400' },
+  { id: 'vg02', name: 'Farm Fresh Red Onions (1kg)',   price: 3500,  storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Vegetables', description: '1 kg • Medium size crisp farm onions', deliveryEtaMinutes: 10, inStock: true, stockCount: 20, imageUrl: '/images/cat_exp_head/Vegetables.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400' },
+  { id: 'vg03', name: 'Fresh Green Palak / Spinach',   price: 2000,  storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Vegetables', description: '1 Bunch (250g) • Clean washed green spinach', deliveryEtaMinutes: 10, inStock: true, stockCount: 8, imageUrl: '/images/cat_exp_head/Vegetables.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400' },
+  { id: 'vg04', name: 'Fresh Shimla Green Capsicum',   price: 4000,  storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Vegetables', description: '500 g • Crunchy green bell peppers', deliveryEtaMinutes: 10, inStock: true, stockCount: 12, imageUrl: '/images/cat_exp_head/Vegetables.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=400' },
+  { id: 'fr01', name: 'Crispy Royal Gala Apples (4 Pcs)', price: 12000, storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Fruits', description: '4 Pieces (~600g) • Sweet & crunchy imported apples', deliveryEtaMinutes: 10, inStock: true, stockCount: 6, imageUrl: '/images/cat_exp_head/fruits.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400' },
+  { id: 'fr02', name: 'Fresh Robusta Bananas (1kg)',   price: 5000,  storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Fruits', description: '1 kg (6-8 Pcs) • Naturally ripened sweet bananas', deliveryEtaMinutes: 10, inStock: true, stockCount: 14, imageUrl: '/images/cat_exp_head/fruits.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400' },
+  { id: 'fr03', name: 'Nagpur Sweet Oranges (1kg)',    price: 9000,  storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Fruits', description: '1 kg • Juicy Vitamin C rich oranges', deliveryEtaMinutes: 10, inStock: true, stockCount: 9, imageUrl: '/images/cat_exp_head/fruits.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1547514701-42782101795e?w=400' },
+  { id: 'fr04', name: 'Fresh Green Seedless Grapes',   price: 8000,  storeId: 's1', storeName: 'Mhetha Stores', category: 'grocery', subCategory: 'Fresh Fruits', description: '500 g Box • Sweet and crisp fresh table grapes', deliveryEtaMinutes: 10, inStock: true, stockCount: 7, imageUrl: '/images/cat_exp_head/fruits.jpg', fallbackImageUrl: 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=400' },
 ];
 
 export const mockShoppingProducts: Product[] = [
+  ...farmFreshProduce,
   ...mhethaProducts,
   ...vishalProducts,
   ...rrBazarProducts,
