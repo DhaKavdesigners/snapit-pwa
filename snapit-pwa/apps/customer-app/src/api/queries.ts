@@ -84,6 +84,8 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
       const isFood = p.category?.toUpperCase().includes('FOOD') || p.category?.toUpperCase().includes('BIRYANI');
       const store = storeMap.get(p.store_id);
       const isStoreOpen = store !== undefined ? store.isOpen : true;
+      const stockCount = p.stock_count !== undefined && p.stock_count !== null ? Number(p.stock_count) : 99;
+      const isAvailableInStock = p.in_stock !== false && p.availability !== 'OUT OF STOCK' && stockCount > 0;
 
       mappedDbProducts.push({
         id: p.id,
@@ -95,7 +97,8 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
         category: isFood ? 'food' : 'grocery',
         subCategory: p.category,
         deliveryEtaMinutes: p.delivery_eta_minutes || 10,
-        inStock: p.in_stock !== false && p.availability !== 'OUT OF STOCK',
+        inStock: isAvailableInStock,
+        stockCount: stockCount,
         description: p.description,
         storeName: store?.name || (p.store_id === 's1' ? 'Mhetha Stores' : p.store_id === 's4' ? 'Nandhini KGF' : 'Local Store'),
         storeIsOpen: isStoreOpen,
@@ -117,6 +120,7 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
           ...mock,
           storeName: store?.name || mock.storeName,
           storeIsOpen: store !== undefined ? store.isOpen : true,
+          stockCount: mock.stockCount ?? 20,
         };
       });
 

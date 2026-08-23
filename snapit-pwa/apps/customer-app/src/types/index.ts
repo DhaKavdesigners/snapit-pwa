@@ -9,6 +9,7 @@ export interface Product {
   subCategory?: string;
   deliveryEtaMinutes: number;
   inStock: boolean;
+  stockCount?: number;
   description?: string;
   storeName?: string;
   storeIsOpen?: boolean;

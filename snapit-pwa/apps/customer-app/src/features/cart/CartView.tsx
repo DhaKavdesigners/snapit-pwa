@@ -87,6 +87,10 @@ export const CartView: React.FC = () => {
         <div className="bg-white rounded-3xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-emerald-100/60 mb-6 flex flex-col gap-3.5">
           {cartItemsWithDetails.map((item) => {
             const isItemStoreClosed = item.product?.storeIsOpen === false;
+            const stock = item.product!.stockCount !== undefined ? item.product!.stockCount : 99;
+            const isLowStock = stock > 0 && stock <= 3;
+            const isMaxReached = item.quantity >= stock;
+            const isExceedingStock = item.quantity > stock;
 
             return (
               <motion.div 
@@ -95,8 +99,12 @@ export const CartView: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className={`flex gap-3.5 items-center p-2 rounded-2xl border transition-all ${
-                  isItemStoreClosed ? 'bg-red-50/50 border-red-200 opacity-80' : 'bg-gray-50/50 border-gray-100/80'
+                className={`flex gap-3.5 items-center p-2.5 rounded-2xl border transition-all ${
+                  isItemStoreClosed 
+                    ? 'bg-red-50/50 border-red-200 opacity-80' 
+                    : isExceedingStock
+                      ? 'bg-amber-50/60 border-amber-300'
+                      : 'bg-gray-50/50 border-gray-100/80'
                 }`}
               >
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-white border border-gray-100 shrink-0">
@@ -117,11 +125,20 @@ export const CartView: React.FC = () => {
                     <span className={`text-[9px] font-bold uppercase tracking-wider ${isItemStoreClosed ? 'text-red-600' : 'text-emerald-700'}`}>
                       {item.product!.storeName || 'SnapIt Store'}
                     </span>
-                    {isItemStoreClosed && (
+                    {isItemStoreClosed ? (
                       <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase">Offline</span>
-                    )}
+                    ) : isLowStock ? (
+                      <span className="bg-amber-100 text-amber-800 text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase">Only {stock} left!</span>
+                    ) : null}
                   </div>
                   <h4 className="font-bold text-xs text-gray-900 truncate">{item.product!.name}</h4>
+                  
+                  {isExceedingStock && (
+                    <p className="text-[9.5px] font-bold text-amber-700 mt-0.5">
+                      ⚠️ Max stock is {stock} items
+                    </p>
+                  )}
+
                   <div className="font-mono font-black text-xs text-gray-900 mt-1">
                     {formatCurrency(item.product!.price * item.quantity)}
                   </div>
@@ -130,18 +147,25 @@ export const CartView: React.FC = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="flex items-center bg-white border border-emerald-200/80 rounded-xl h-8 overflow-hidden shadow-xs">
                     <button 
-                      onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                      onClick={() => updateQuantity(item.productId, item.quantity - 1, stock)}
                       className="w-7 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
                     >
                       <Minus className="h-3 w-3" />
                     </button>
                     <span className="font-mono font-black text-xs w-4 text-center text-gray-900">{item.quantity}</span>
                     <button 
-                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                      disabled={isItemStoreClosed}
+                      onClick={() => {
+                        if (!isMaxReached && !isItemStoreClosed) {
+                          updateQuantity(item.productId, item.quantity + 1, stock);
+                        }
+                      }}
+                      disabled={isItemStoreClosed || isMaxReached}
                       className={`w-7 h-8 flex items-center justify-center transition-colors ${
-                        isItemStoreClosed ? 'text-gray-300 cursor-not-allowed' : 'text-brand hover:bg-emerald-50 active:bg-emerald-100'
+                        isItemStoreClosed || isMaxReached 
+                          ? 'text-gray-300 cursor-not-allowed bg-gray-50' 
+                          : 'text-brand hover:bg-emerald-50 active:bg-emerald-100'
                       }`}
+                      title={isMaxReached ? `Only ${stock} available in stock` : undefined}
                     >
                       <Plus className="h-3 w-3" />
                     </button>
