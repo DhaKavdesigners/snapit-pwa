@@ -468,8 +468,11 @@ export const ProfileView: React.FC = () => {
         <div>
           <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-1.5 block">Address Details <span className="text-red-500">*</span></label>
           <div className="space-y-2">
-            <input type="text" name="addressLine1" value={formData.addressLine1} onChange={handleInputChange} placeholder="Line 1: House No, Building Name" className="w-full px-4 py-3.5 bg-gray-50/50 rounded-xl border border-gray-200 focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/10 outline-none transition-all font-medium text-sm" />
-            <input type="text" name="addressLine2" value={formData.addressLine2} onChange={handleInputChange} placeholder="Line 2: Area / Street" className="w-full px-4 py-3.5 bg-gray-50/50 rounded-xl border border-gray-200 focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/10 outline-none transition-all font-medium text-sm" />
+            <input type="text" name="addressLine1" value={formData.addressLine1} onChange={handleInputChange} placeholder="House / Flat / Street Name" className="w-full px-4 py-3.5 bg-gray-50/50 rounded-xl border border-gray-200 focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/10 outline-none transition-all font-medium text-sm" />
+            <div>
+              <label className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1 block">Area / Locality <span className="text-red-500">*</span></label>
+              <input type="text" name="addressLine2" value={formData.addressLine2} onChange={handleInputChange} placeholder="Area (e.g. Bowrilalpet, Robertsonpet)" className="w-full px-4 py-3.5 bg-gray-50/50 rounded-xl border border-gray-200 focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/10 outline-none transition-all font-medium text-sm" />
+            </div>
           </div>
         </div>
 
