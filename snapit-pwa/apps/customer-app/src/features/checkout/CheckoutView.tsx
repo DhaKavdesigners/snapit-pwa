@@ -87,15 +87,17 @@ export const CheckoutView: React.FC = () => {
     };
 
     const itemsJson = cartItemsWithDetails.map(item => ({
+      productId: item.productId,
       product_id: item.productId,
-      name: item.product!.name,
+      name: item.product?.name || 'Product Item',
       quantity: item.quantity,
-      price_paise: item.product!.price
+      price: item.product?.price || 0,
+      price_paise: item.product?.price || 0,
     }));
 
     try {
       // 1. Insert Order into Supabase
-      await supabase
+      const { data: insertedOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
           id: displayId,
@@ -109,9 +111,16 @@ export const CheckoutView: React.FC = () => {
           payment_status: 'PAID',
           recipient_name: finalRecipientName,
           recipient_phone: finalRecipientPhone
-        });
+        })
+        .select();
+
+      if (orderError) {
+        console.error("Supabase Order Insert Error:", orderError);
+      } else {
+        console.info("Order successfully placed in Supabase:", insertedOrder);
+      }
     } catch (err) {
-      console.warn("Order synced with fallback:", err);
+      console.error("Order sync exception:", err);
     } finally {
       // 2. Persist last order details for the celebratory success screen
       saveLastOrder({

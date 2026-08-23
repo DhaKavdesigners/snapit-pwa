@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   Clock,
-  MapPin,
-  User,
   Check,
   ChefHat,
   Bike,
   AlertCircle,
-  CreditCard,
-  Banknote,
   MessageSquare,
   Sparkles,
   Timer,
   AlertTriangle,
+  ShoppingBag,
+  User,
 } from 'lucide-react';
 import type { Order } from '../../types/snapit-types';
 import { formatCurrency, formatOrderTime } from '../../utils/formatters';
@@ -29,9 +27,6 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
     setPrepModalOrderId,
     setRejectModalOrderId,
     markOrderPrepared,
-    markRiderAssigned,
-    markOutForDelivery,
-    markDelivered,
     handoverToRider,
     prepTimers,
   } = useMerchantStore();
@@ -39,19 +34,32 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [nowMs, setNowMs] = useState(Date.now());
 
-  const toggleItemCheck = (productId: string) => {
-    setCheckedItems((prev) => ({ ...prev, [productId]: !prev[productId] }));
+  const toggleItemCheck = (key: string) => {
+    setCheckedItems((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Find product details
-  const getProductInfo = (productId: string) => {
-    return (
-      products.find((p) => p.id === productId) || {
-        id: productId,
-        name: 'Item ' + productId,
-        price: 0,
-      }
-    );
+  // Helper to reliably resolve item name, quantity, and price
+  const resolveItem = (rawItem: any, idx: number) => {
+    const prodId = rawItem.productId || rawItem.product_id || rawItem.id || '';
+    const match = products.find((p) => p.id === prodId);
+
+    const name =
+      rawItem.name ||
+      rawItem.product_name ||
+      rawItem.title ||
+      match?.name ||
+      (prodId ? `Product #${prodId}` : `Pack Item ${idx + 1}`);
+
+    const quantity = Number(rawItem.quantity || rawItem.qty || rawItem.count || 1);
+    const pricePaise = Number(rawItem.price_paise ?? rawItem.price ?? rawItem.unitPricePaise ?? match?.price ?? 0);
+
+    return {
+      key: prodId || `item-${idx}`,
+      name,
+      quantity,
+      unitPricePaise: pricePaise,
+      totalPricePaise: pricePaise * quantity,
+    };
   };
 
   const isPlaced = order.status === 'PLACED' || order.status === 'PENDING';
@@ -73,12 +81,6 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
     return () => clearInterval(interval);
   }, [isPreparing, prepInfo]);
 
-  // Compute countdown and thresholds as specified:
-  // 5 min -> warning at <= 1:30 min (90s)
-  // 10 min -> warning at <= 2:00 min (120s)
-  // 15 min -> warning at <= 3:00 min (180s)
-  // > 15 min -> warning at <= 4:00 min (240s)
-  // 0:00 -> loud overdue alarm (10s sound / 20s gap)!
   let timerDisplay = null;
   if (isPreparing && prepInfo) {
     const prepMinutes = prepInfo.prepMinutes || 10;
@@ -111,7 +113,7 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
     };
   }
 
-  // Per-order sound triggering effect (never kills other orders' overdue sounds)
+  // Per-order sound triggering effect
   useEffect(() => {
     if (!isPreparing || !prepInfo || !timerDisplay) {
       counterAudio.unregisterOverdueOrder(order.id);
@@ -128,12 +130,15 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
     }
   }, [isPreparing, prepInfo, timerDisplay?.isOverdue, timerDisplay?.isWarning, order.id]);
 
-  // Clean up audio on unmount or status transition
   useEffect(() => {
     return () => {
       counterAudio.unregisterOverdueOrder(order.id);
     };
   }, [order.id]);
+
+  const totalQuantity = Array.isArray(order.items)
+    ? order.items.reduce((acc, curr: any) => acc + Number(curr.quantity || curr.qty || 1), 0)
+    : 0;
 
   // Helper for status badge
   const getStatusBadge = () => {
@@ -164,8 +169,8 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
       }
       return (
         <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 flex items-center gap-1.5">
-          <ChefHat className="w-3.5 h-3.5" />
-          PREPARING
+          <ShoppingBag className="w-3.5 h-3.5" />
+          PACKING
         </span>
       );
     }
@@ -208,15 +213,15 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
           : 'border-slate-200'
       }`}
     >
-      {/* 1. Card Top Bar: ORDER NUMBER + CUSTOMER NAME + Time & Status */}
+      {/* 1. Card Top Bar: ORDER NUMBER & CUSTOMER NAME & Status Badge */}
       <div className="p-4 sm:p-5 bg-slate-50/80 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-xl sm:text-2xl font-black text-slate-950 font-mono tracking-tight">
               {order.id}
             </span>
-            <span className="text-sm sm:text-base font-extrabold text-slate-900 bg-slate-200/90 px-3 py-1 rounded-xl flex items-center gap-1.5 border border-slate-300/60 shadow-2xs">
-              <User className="w-4 h-4 text-emerald-700 stroke-[2.5]" />
+            <span className="text-xs font-bold text-slate-900 bg-slate-200/90 px-2.5 py-1 rounded-xl flex items-center gap-1 border border-slate-300/60 shadow-2xs">
+              <User className="w-3.5 h-3.5 text-emerald-700 stroke-[2.5]" />
               <span>{order.recipientName || 'Customer'}</span>
             </span>
           </div>
@@ -258,22 +263,18 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
                     {timerDisplay.isOverdue
                       ? '🚨 TIME OVERDUE — DISPATCH IMMEDIATELY!'
                       : timerDisplay.isWarning
-                      ? '⚠️ PREP DEADLINE APPROACHING — WRAP UP!'
-                      : `Kitchen Prep Timer (${timerDisplay.prepMinutes} Min Target)`}
+                      ? '⚠️ PACKING DEADLINE APPROACHING — WRAP UP!'
+                      : `Order Packing Timer (${timerDisplay.prepMinutes} Min Target)`}
                   </span>
-                  <span className={`text-[10px] font-semibold block ${
-                    timerDisplay.isOverdue
-                      ? 'text-rose-100'
-                      : timerDisplay.isWarning
-                      ? 'text-amber-800'
-                      : 'text-slate-600'
-                  }`}>
-                    {timerDisplay.isOverdue
-                      ? '10s alarm bursts active (20s gap) until marked ready for pickup.'
-                      : timerDisplay.isWarning
-                      ? 'Less than warning threshold remaining. Finish packing.'
-                      : 'Live countdown to dispatch deadline.'}
-                  </span>
+                  {(timerDisplay.isOverdue || timerDisplay.isWarning) && (
+                    <span className={`text-[10px] font-semibold block ${
+                      timerDisplay.isOverdue ? 'text-rose-100' : 'text-amber-800'
+                    }`}>
+                      {timerDisplay.isOverdue
+                        ? 'Alarm active until marked ready for pickup.'
+                        : 'Less than warning threshold remaining. Finish packing.'}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -316,29 +317,29 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
             <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
               <span className="font-bold uppercase tracking-wider text-[10px] text-amber-700 block">
-                Customer Note:
+                Customer Preparation Note:
               </span>
               <span className="font-semibold">{order.cookingInstructions}</span>
             </div>
           </div>
         )}
 
-        {/* 4. High Readability Item List (Readable from 3ft away) */}
+        {/* 4. High Readability Item Packing List */}
         <div className="space-y-2">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex justify-between items-center">
-            <span>Items to Pack ({order.items.reduce((acc, curr) => acc + curr.quantity, 0)})</span>
-            <span className="text-[10px] text-slate-600">Tap item to check off</span>
+            <span>Items to Pack ({totalQuantity})</span>
+            <span className="text-[10px] text-slate-500">Tap item to check off</span>
           </div>
 
           <div className="divide-y divide-slate-100 bg-slate-50/50 rounded-xl p-2 sm:p-3 border border-slate-100">
-            {order.items.map((item, idx) => {
-              const prod = getProductInfo(item.productId);
-              const isChecked = Boolean(checkedItems[item.productId]);
+            {Array.isArray(order.items) && order.items.map((rawItem, idx) => {
+              const item = resolveItem(rawItem, idx);
+              const isChecked = Boolean(checkedItems[item.key]);
 
               return (
                 <div
-                  key={`${item.productId}-${idx}`}
-                  onClick={() => toggleItemCheck(item.productId)}
+                  key={`${item.key}-${idx}`}
+                  onClick={() => toggleItemCheck(item.key)}
                   className={`py-2.5 px-2 flex items-center justify-between gap-3 cursor-pointer rounded-lg transition-colors ${
                     isChecked ? 'bg-emerald-50/60 opacity-60' : 'hover:bg-slate-100/70'
                   }`}
@@ -355,20 +356,19 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
                     </div>
 
                     <div className="min-w-0">
-                      {/* Bold 3-feet quantity & item name */}
                       <span className="text-base sm:text-lg font-black text-slate-900 leading-snug">
                         <span className="text-emerald-700 font-extrabold mr-1.5">
                           {item.quantity} ×
                         </span>
                         <span className={isChecked ? 'line-through text-slate-500' : ''}>
-                          {prod.name}
+                          {item.name}
                         </span>
                       </span>
                     </div>
                   </div>
 
                   <span className="text-xs font-bold text-slate-600 font-mono flex-shrink-0">
-                    {formatCurrency(prod.price * item.quantity)}
+                    {formatCurrency(item.totalPricePaise)}
                   </span>
                 </div>
               );
@@ -376,44 +376,7 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
           </div>
         </div>
 
-        {/* 5. Customer & Delivery Info + Billing */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100 text-xs">
-          {/* Customer & Address */}
-          <div className="space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-            <div className="flex items-center gap-1.5 font-bold text-slate-800">
-              <User className="w-3.5 h-3.5 text-slate-600" />
-              <span>{order.recipientName || 'Customer'}</span>
-              {order.recipientPhone && (
-                <span className="text-slate-600 font-mono text-[11px]">
-                  ({order.recipientPhone})
-                </span>
-              )}
-            </div>
-            <div className="flex items-start gap-1.5 text-slate-600">
-              <MapPin className="w-3.5 h-3.5 text-slate-600 flex-shrink-0 mt-0.5" />
-              <span className="truncate">{order.deliveryAddress.line1}, KGF</span>
-            </div>
-          </div>
-
-          {/* Billing & Payment */}
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-600 uppercase">Billing Total:</span>
-              <span className="text-base font-black text-emerald-700 font-sans">
-                {formatCurrency(order.estimatedTotal)}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800">
-                <CreditCard className="w-3 h-3 text-emerald-600" />
-                <span>PAID ONLINE (UPI)</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 6. Action Buttons (Large 48-56px Touch Targets) */}
+        {/* 5. Kitchen Action Buttons */}
         <div className="pt-2">
           {isPlaced && (
             <div className="grid grid-cols-3 gap-2.5">
@@ -431,8 +394,8 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
                 onClick={() => setPrepModalOrderId(order.id)}
                 className="col-span-2 h-12 sm:h-14 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm sm:text-base tracking-wide shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <ChefHat className="w-5 h-5" />
-                <span>Accept Order</span>
+                <ShoppingBag className="w-5 h-5" />
+                <span>Accept & Pack</span>
               </button>
             </div>
           )}
@@ -444,50 +407,30 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
               className="w-full h-12 sm:h-14 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Check className="w-5 h-5 stroke-[3]" />
-              <span>Mark Ready for Pickup</span>
+              <span>Mark Packed & Ready</span>
             </button>
           )}
 
           {isReady && (
-            <div className="flex flex-col gap-2">
-              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center text-xs font-bold text-emerald-800 flex items-center justify-center gap-2">
+            <div className="space-y-2">
+              <div className="p-3 rounded-xl bg-emerald-50 text-center text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5">
                 <Bike className="w-4 h-4 text-emerald-600 animate-pulse" />
-                <span>Rider Suresh Assigned &bull; At Counter for Pickup</span>
+                <span>Rider Suresh Approaching Counter</span>
               </div>
               <button
                 type="button"
                 onClick={() => handoverToRider(order.id)}
-                className="w-full h-12 sm:h-14 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-extrabold text-sm sm:text-base tracking-wide shadow-lg shadow-purple-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full h-12 sm:h-14 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-purple-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Bike className="w-5 h-5" />
                 <span>Handover to Delivery Rider</span>
               </button>
             </div>
           )}
-
-          {isRiderAssigned && (
-            <button
-              type="button"
-              onClick={() => handoverToRider(order.id)}
-              className="w-full h-12 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Bike className="w-4 h-4" />
-              <span>Handover Package to Rider</span>
-            </button>
-          )}
-
-          {isOutForDelivery && (
-            <button
-              type="button"
-              onClick={() => handoverToRider(order.id)}
-              className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Check className="w-4 h-4" />
-              <span>Complete & Move to History</span>
-            </button>
-          )}
         </div>
       </div>
     </div>
   );
 };
+
+export default LiveOrderCard;

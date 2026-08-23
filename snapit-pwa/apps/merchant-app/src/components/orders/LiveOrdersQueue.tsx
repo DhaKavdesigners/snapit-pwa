@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  ChefHat,
+  ShoppingBag,
   BellRing,
   Sparkles,
   Inbox,
@@ -64,7 +64,7 @@ export const LiveOrdersQueue: React.FC = () => {
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
-            Real-time kitchen order progression
+            Real-time order progression
           </p>
         </div>
 
@@ -111,7 +111,7 @@ export const LiveOrdersQueue: React.FC = () => {
           </span>
         </button>
 
-        {/* Preparing Count */}
+        {/* Packing Count */}
         <button
           type="button"
           onClick={() => setOrderFilter(orderFilter === 'PREPARING' ? 'ALL' : 'PREPARING')}
@@ -123,8 +123,8 @@ export const LiveOrdersQueue: React.FC = () => {
               : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <ChefHat className="w-3.5 h-3.5 text-blue-600" />
-          <span>Preparing</span>
+          <ShoppingBag className="w-3.5 h-3.5 text-blue-600" />
+          <span>Packing</span>
           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
             preparingCount > 0 ? 'bg-blue-200 text-blue-950' : 'bg-slate-200 text-slate-700'
           }`}>

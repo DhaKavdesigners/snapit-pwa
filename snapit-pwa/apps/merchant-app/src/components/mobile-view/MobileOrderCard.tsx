@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Clock,
-  MapPin,
-  User,
   Check,
   ChefHat,
   Bike,
   AlertCircle,
-  CreditCard,
-  Banknote,
   MessageSquare,
-  Sparkles,
   Timer,
-  AlertTriangle,
+  ShoppingBag,
+  User,
+  Clock,
 } from 'lucide-react';
 import type { Order } from '../../types/snapit-types';
 import { formatCurrency, formatOrderTime } from '../../utils/formatters';
@@ -36,18 +32,32 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [nowMs, setNowMs] = useState(Date.now());
 
-  const toggleItemCheck = (productId: string) => {
-    setCheckedItems((prev) => ({ ...prev, [productId]: !prev[productId] }));
+  const toggleItemCheck = (key: string) => {
+    setCheckedItems((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const getProductInfo = (productId: string) => {
-    return (
-      products.find((p) => p.id === productId) || {
-        id: productId,
-        name: 'Item ' + productId,
-        price: 0,
-      }
-    );
+  // Helper to reliably resolve item name, quantity, and price
+  const resolveItem = (rawItem: any, idx: number) => {
+    const prodId = rawItem.productId || rawItem.product_id || rawItem.id || '';
+    const match = products.find((p) => p.id === prodId);
+
+    const name =
+      rawItem.name ||
+      rawItem.product_name ||
+      rawItem.title ||
+      match?.name ||
+      (prodId ? `Product #${prodId}` : `Pack Item ${idx + 1}`);
+
+    const quantity = Number(rawItem.quantity || rawItem.qty || rawItem.count || 1);
+    const pricePaise = Number(rawItem.price_paise ?? rawItem.price ?? rawItem.unitPricePaise ?? match?.price ?? 0);
+
+    return {
+      key: prodId || `item-${idx}`,
+      name,
+      quantity,
+      unitPricePaise: pricePaise,
+      totalPricePaise: pricePaise * quantity,
+    };
   };
 
   const isPlaced = order.status === 'PLACED' || order.status === 'PENDING';
@@ -121,6 +131,10 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
     };
   }, [order.id]);
 
+  const totalQuantity = Array.isArray(order.items)
+    ? order.items.reduce((acc, curr: any) => acc + Number(curr.quantity || curr.qty || 1), 0)
+    : 0;
+
   return (
     <div
       className={`rounded-2xl bg-white border transition-all shadow-xs overflow-hidden ${
@@ -137,22 +151,26 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
           : 'border-slate-200'
       }`}
     >
-      {/* 1. Header: Order ID, Customer Name, Status Badge */}
+      {/* 1. Header: Order ID & Customer Name & Time & Status Badge */}
       <div className="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-lg font-black text-slate-950 font-mono tracking-tight">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          <span className="text-base font-black text-slate-950 font-mono tracking-tight">
             {order.id}
           </span>
-          <span className="text-xs font-bold text-slate-900 bg-slate-200 px-2 py-0.5 rounded-md truncate max-w-[130px] flex items-center gap-1">
-            <User className="w-3 h-3 text-emerald-700" />
+          <span className="text-xs font-bold text-slate-900 bg-slate-200/90 px-2.5 py-0.5 rounded-md truncate max-w-[130px] flex items-center gap-1 border border-slate-300/60">
+            <User className="w-3 h-3 text-emerald-700 stroke-[2.5]" />
             <span className="truncate">{order.recipientName || 'Customer'}</span>
+          </span>
+          <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+            <Clock className="w-3 h-3 text-slate-400" />
+            <span>{formatOrderTime(order.createdAt)}</span>
           </span>
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {isPlaced && (
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-500 text-slate-950 animate-pulse">
-              NEW
+              NEW ORDER
             </span>
           )}
           {isPreparing && (
@@ -161,7 +179,7 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
                 ? 'bg-rose-600 text-white animate-pulse'
                 : 'bg-blue-100 text-blue-800'
             }`}>
-              {timerDisplay?.isOverdue ? 'OVERDUE' : 'PREPARING'}
+              {timerDisplay?.isOverdue ? 'OVERDUE' : 'PACKING'}
             </span>
           )}
           {isReady && (
@@ -173,7 +191,7 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
       </div>
 
       <div className="p-3.5 space-y-3">
-        {/* 2. Visual Preparation Countdown Timer Banner */}
+        {/* 2. Visual Packing Countdown Timer Banner */}
         {isPreparing && timerDisplay && (
           <div
             className={`p-2.5 rounded-xl border ${
@@ -190,7 +208,7 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
                   timerDisplay.isOverdue ? 'animate-pulse' : 'text-blue-600'
                 }`} />
                 <span className="font-extrabold text-[11px] uppercase tracking-wider">
-                  {timerDisplay.isOverdue ? 'Overdue!' : `${timerDisplay.prepMinutes}m Target`}
+                  {timerDisplay.isOverdue ? 'Packing Overdue!' : `Packing Target: ${timerDisplay.prepMinutes}m`}
                 </span>
               </div>
 
@@ -212,7 +230,7 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
           </div>
         )}
 
-        {/* 3. Customer Note if available */}
+        {/* 3. Customer Order Instructions Note if available */}
         {order.cookingInstructions && (
           <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-1.5">
             <MessageSquare className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -220,22 +238,22 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
           </div>
         )}
 
-        {/* 4. Items Checklist */}
+        {/* 4. Items Packing Checklist */}
         <div className="space-y-1.5">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex justify-between">
-            <span>Items to Pack ({order.items.reduce((acc, curr) => acc + curr.quantity, 0)})</span>
+            <span>Items to Pack ({totalQuantity})</span>
             <span>Tap to check</span>
           </div>
 
           <div className="divide-y divide-slate-100 bg-slate-50 rounded-xl p-2 border border-slate-100">
-            {order.items.map((item, idx) => {
-              const prod = getProductInfo(item.productId);
-              const isChecked = Boolean(checkedItems[item.productId]);
+            {Array.isArray(order.items) && order.items.map((rawItem, idx) => {
+              const item = resolveItem(rawItem, idx);
+              const isChecked = Boolean(checkedItems[item.key]);
 
               return (
                 <div
-                  key={`${item.productId}-${idx}`}
-                  onClick={() => toggleItemCheck(item.productId)}
+                  key={`${item.key}-${idx}`}
+                  onClick={() => toggleItemCheck(item.key)}
                   className={`py-2 px-1.5 flex items-center justify-between gap-2 cursor-pointer rounded-lg transition-colors ${
                     isChecked ? 'bg-emerald-50/60 opacity-60' : ''
                   }`}
@@ -252,17 +270,17 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
                     </div>
 
                     <span className="text-sm font-bold text-slate-900 truncate">
-                      <span className="text-emerald-700 font-extrabold mr-1">
+                      <span className="text-emerald-700 font-extrabold mr-1.5">
                         {item.quantity}×
                       </span>
                       <span className={isChecked ? 'line-through text-slate-400' : ''}>
-                        {prod.name}
+                        {item.name}
                       </span>
                     </span>
                   </div>
 
                   <span className="text-xs font-bold text-slate-600 font-mono flex-shrink-0">
-                    {formatCurrency(prod.price * item.quantity)}
+                    {formatCurrency(item.totalPricePaise)}
                   </span>
                 </div>
               );
@@ -270,31 +288,14 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
           </div>
         </div>
 
-        {/* 5. Address & Total */}
-        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
-          <div className="flex items-center gap-1 text-slate-600 truncate max-w-[55%]">
-            <MapPin className="w-3 h-3 flex-shrink-0 text-slate-500" />
-            <span className="truncate">{order.deliveryAddress.line1}</span>
-          </div>
-
-          <div className="text-right flex items-center gap-1.5 flex-shrink-0">
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-800">
-              UPI PAID
-            </span>
-            <span className="font-black text-sm text-emerald-700 font-sans">
-              {formatCurrency(order.estimatedTotal)}
-            </span>
-          </div>
-        </div>
-
-        {/* 6. Action Buttons (52px Touch Targets) */}
+        {/* 5. Store Counter Action Buttons */}
         <div className="pt-1">
           {isPlaced && (
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setRejectModalOrderId(order.id)}
-                className="col-span-1 h-12 rounded-xl border border-rose-200 bg-rose-50 active:scale-95 text-rose-700 font-bold text-xs flex items-center justify-center gap-1"
+                className="col-span-1 h-12 rounded-xl border border-rose-200 bg-rose-50 active:scale-95 text-rose-700 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
               >
                 <AlertCircle className="w-4 h-4" />
                 <span>Reject</span>
@@ -303,10 +304,10 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
               <button
                 type="button"
                 onClick={() => setPrepModalOrderId(order.id)}
-                className="col-span-2 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5"
+                className="col-span-2 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <ChefHat className="w-4 h-4" />
-                <span>Accept Order</span>
+                <ShoppingBag className="w-4 h-4" />
+                <span>Accept & Pack</span>
               </button>
             </div>
           )}
@@ -315,10 +316,10 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
             <button
               type="button"
               onClick={() => markOrderPrepared(order.id)}
-              className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5"
+              className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Check className="w-4 h-4 stroke-[3]" />
-              <span>Mark Ready for Pickup</span>
+              <span>Mark Packed & Ready</span>
             </button>
           )}
 
@@ -343,3 +344,5 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
     </div>
   );
 };
+
+export default MobileOrderCard;

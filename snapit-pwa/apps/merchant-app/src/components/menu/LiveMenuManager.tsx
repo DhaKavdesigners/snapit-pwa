@@ -28,11 +28,20 @@ export const LiveMenuManager: React.FC = () => {
 
   // Dynamically compute category filters based on current store products
   const productCategories = Array.from(new Set(products.map((p) => p.category))).filter(Boolean);
-  const categories = ['ALL', ...productCategories];
+  const outOfStockCount = products.filter(
+    (p) => p.stockCount === 0 || p.availability === 'OUT OF STOCK' || !p.inStock
+  ).length;
 
   const filteredProducts = products.filter((prod) => {
-    const matchesCategory =
-      selectedCategory === 'ALL' || prod.category.toLowerCase() === selectedCategory.toLowerCase();
+    let matchesCategory = false;
+    if (selectedCategory === 'ALL') {
+      matchesCategory = true;
+    } else if (selectedCategory === 'OUT_OF_STOCK') {
+      matchesCategory = prod.stockCount === 0 || prod.availability === 'OUT OF STOCK' || !prod.inStock;
+    } else {
+      matchesCategory = prod.category.toLowerCase() === selectedCategory.toLowerCase();
+    }
+
     const matchesSearch =
       prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (prod.description && prod.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -101,7 +110,45 @@ export const LiveMenuManager: React.FC = () => {
 
         {/* Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
-          {categories.map((cat) => (
+          {/* ALL Tab */}
+          <button
+            type="button"
+            onClick={() => setSelectedCategory('ALL')}
+            className={`px-3 py-1 rounded-xl font-bold uppercase text-[11px] transition-all flex-shrink-0 cursor-pointer ${
+              selectedCategory === 'ALL'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            ALL ({products.length})
+          </button>
+
+          {/* OUT OF STOCK Tab */}
+          <button
+            type="button"
+            onClick={() => setSelectedCategory('OUT_OF_STOCK')}
+            className={`px-3 py-1 rounded-xl font-bold uppercase text-[11px] transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+              selectedCategory === 'OUT_OF_STOCK'
+                ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-600/30'
+                : outOfStockCount > 0
+                ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <span>OUT OF STOCK</span>
+            {outOfStockCount > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-extrabold ${
+                  selectedCategory === 'OUT_OF_STOCK' ? 'bg-white text-rose-700' : 'bg-rose-600 text-white'
+                }`}
+              >
+                {outOfStockCount}
+              </span>
+            )}
+          </button>
+
+          {/* Dynamic Category Tabs */}
+          {productCategories.map((cat) => (
             <button
               key={cat}
               type="button"

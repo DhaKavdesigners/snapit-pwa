@@ -22,7 +22,7 @@ export const MobileLiveOrdersView: React.FC = () => {
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-            Real-time kitchen order processing
+            Real-time order progression
           </p>
         </div>
 

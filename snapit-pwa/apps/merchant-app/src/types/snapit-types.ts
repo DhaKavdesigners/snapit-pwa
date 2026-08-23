@@ -30,6 +30,7 @@ export interface Store {
   rating: number;       // 0.0 – 5.0
   category: ProductCategory;
   isOpen: boolean;
+  address?: string;
 }
 
 // ─── Cart ────────────────────────────────────────────────────────────────────

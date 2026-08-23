@@ -33,13 +33,11 @@ export const formatEta = (minutes: number): string => {
  */
 export const formatOrderTime = (isoString: string): string => {
   try {
-    return new Date(isoString).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
+    return new Date(isoString).toLocaleTimeString('en-IN', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-    });
+    }).toLowerCase();
   } catch {
     return isoString;
   }
@@ -56,7 +54,7 @@ export const getOrderStatusDisplay = (
     PLACED: { label: 'New Order', colorClass: 'text-amber-900 bg-amber-100' },
     PAID: { label: 'Payment Confirmed', colorClass: 'text-blue-800 bg-blue-100' },
     ACCEPTED: { label: 'Accepted', colorClass: 'text-emerald-800 bg-emerald-100' },
-    PREPARING: { label: 'Preparing', colorClass: 'text-blue-800 bg-blue-100' },
+    PREPARING: { label: 'Packing', colorClass: 'text-blue-800 bg-blue-100' },
     READY: { label: 'Ready for Pickup', colorClass: 'text-emerald-800 bg-emerald-100' },
     READY_FOR_PICKUP: { label: 'Ready for Pickup', colorClass: 'text-emerald-800 bg-emerald-100' },
     RIDER_ASSIGNED: { label: 'Rider Assigned', colorClass: 'text-purple-800 bg-purple-100' },

@@ -43,7 +43,11 @@ export const AddEditProductModal: React.FC = () => {
       ? ['Milk & Curd', 'Butter & Ghee', 'Paneer & Cheese', 'Ice Creams & Sweets', 'Dairy Essentials']
       : ['Noodles & Snacks', 'Edible Oils', 'Rice & Grains', 'Atta & Flours', 'Spices & Masala', 'Tea & Coffee', 'Soaps & Detergents', 'Daily Essentials'];
 
+  const editingProductId = editingProduct?.id;
+
   useEffect(() => {
+    if (!isOpen) return;
+
     if (editingProduct) {
       setName(editingProduct.name);
       setCategory(editingProduct.category);
@@ -65,7 +69,7 @@ export const AddEditProductModal: React.FC = () => {
       setDeliveryEta(15);
       setIsAddingNewCategory(false);
     }
-  }, [editingProduct, activeStore, isOpen]);
+  }, [editingProductId, isOpen]);
 
   if (!isOpen) return null;
 

@@ -31,6 +31,7 @@ CREATE TABLE public.stores (
     name TEXT NOT NULL,
     logo_url TEXT,
     category TEXT NOT NULL,
+    store_address TEXT,
     is_online BOOLEAN NOT NULL DEFAULT false,
     rush_mode BOOLEAN NOT NULL DEFAULT false,
     rating NUMERIC(2,1) DEFAULT 4.8,
@@ -103,10 +104,10 @@ COMMIT;
 -- 8. INSERT INITIAL SEED DATA (Mhetha Stores & Nandhini KGF)
 
 -- Stores
-INSERT INTO public.stores (id, name, logo_url, category, is_online, rush_mode)
+INSERT INTO public.stores (id, name, logo_url, category, store_address, is_online, rush_mode)
 VALUES 
-    ('s1', 'Mhetha Stores', 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300&auto=format&fit=crop&q=80', 'GROCERY', true, false),
-    ('s4', 'Nandhini KGF', 'https://images.unsplash.com/photo-1527153857715-3908f2ae5e81?w=300&auto=format&fit=crop&q=80', 'DAIRY', true, false);
+    ('s1', 'Mhetha Stores', 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300&auto=format&fit=crop&q=80', 'GROCERY', 'Robertsonpet, KGF', false, false),
+    ('s4', 'Nandhini KGF', 'https://images.unsplash.com/photo-1527153857715-3908f2ae5e81?w=300&auto=format&fit=crop&q=80', 'DAIRY', 'Geetha Road, KGF', false, false);
 
 -- Merchant Logins
 INSERT INTO public.merchants (id, uid, password, store_id, name, phone, role)

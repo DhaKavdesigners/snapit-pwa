@@ -136,8 +136,8 @@ export const App: React.FC = () => {
                     <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse flex-shrink-0" />
                   )}
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono block truncate">
-                  KGF Dark Store Counter
+                <span className="text-[10px] text-slate-400 font-medium block truncate">
+                  {activeStore.address || 'Robertsonpet, KGF'}
                 </span>
               </div>
             </div>

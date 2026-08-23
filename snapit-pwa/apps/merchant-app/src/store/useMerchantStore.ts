@@ -94,8 +94,9 @@ interface MerchantState {
   setDeletingProductId: (id: string | null) => void;
 }
 
-// Global active realtime channel reference
+// Global active realtime channel and polling references
 let realtimeChannel: any = null;
+let pollInterval: any = null;
 
 export const useMerchantStore = create<MerchantState>((set, get) => ({
   // Auth state — Default starts on login screen
@@ -108,6 +109,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     rating: 4.8,
     category: 'grocery',
     isOpen: false, // Initially OFFLINE
+    address: 'Robertsonpet, KGF',
   },
 
   // ── 1. STRICT SUPABASE DATABASE AUTHENTICATION ──────────────────────────
@@ -162,6 +164,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
     const storeName = m.store_name || storeData?.name || m.name;
     const storeCategory = m.store_category || storeData?.category || 'grocery';
+    const storeAddress = storeData?.store_address || storeData?.address || (m.store_id === 's4' ? 'Geetha Road, KGF' : 'Robertsonpet, KGF');
     const isStoreOnline = storeData?.is_online ?? false;
     const isRushMode = storeData?.rush_mode ?? false;
 
@@ -182,6 +185,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       rating: storeData?.rating || 4.8,
       category: storeCategory,
       isOpen: isStoreOnline,
+      address: storeAddress,
     };
 
     set({
@@ -201,6 +205,10 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
   logout: async () => {
     const storeId = get().activeStore.id;
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
     if (realtimeChannel) {
       supabase.removeChannel(realtimeChannel);
       realtimeChannel = null;
@@ -265,38 +273,52 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       if (storeInfo) {
         const online = storeInfo.is_online ?? false;
         const rush = storeInfo.rush_mode ?? false;
-        set((state) => ({
-          isOnline: online,
-          rushMode: rush,
-          activeStore: {
-            ...state.activeStore,
-            name: storeInfo.name || state.activeStore.name,
-            isOpen: online,
-          },
-        }));
+        const storeAddr = storeInfo.store_address || storeInfo.address || (storeId === 's4' ? 'Geetha Road, KGF' : 'Robertsonpet, KGF');
+        const currentStore = get().activeStore;
+
+        if (
+          get().isOnline !== online ||
+          get().rushMode !== rush ||
+          currentStore.isOpen !== online ||
+          currentStore.address !== storeAddr ||
+          currentStore.name !== (storeInfo.name || currentStore.name)
+        ) {
+          set((state) => ({
+            isOnline: online,
+            rushMode: rush,
+            activeStore: {
+              ...state.activeStore,
+              name: storeInfo.name || state.activeStore.name,
+              isOpen: online,
+              address: storeAddr,
+            },
+          }));
+        }
       }
 
-      // 2. Fetch live products from DB
-      const { data: dbProducts, error: prodError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('store_id', storeId);
+      // 2. Fetch live products from DB (skip if user is actively in the edit modal)
+      if (!get().editingProduct && !get().isAddProductOpen) {
+        const { data: dbProducts, error: prodError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('store_id', storeId);
 
-      if (!prodError && dbProducts && dbProducts.length > 0) {
-        const formattedProds: ProductInventoryItem[] = dbProducts.map((p) => ({
-          id: p.id,
-          storeId: p.store_id,
-          name: p.name,
-          price: p.price,
-          imageUrl: p.image_url || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300',
-          category: p.category || 'General',
-          deliveryEtaMinutes: p.delivery_eta_minutes || 10,
-          inStock: p.in_stock ?? true,
-          stockCount: p.stock_count ?? 100,
-          availability: (p.in_stock ?? true) ? 'AVAILABLE' : 'OUT OF STOCK',
-          description: p.description,
-        }));
-        set({ products: formattedProds });
+        if (!prodError && dbProducts && dbProducts.length > 0) {
+          const formattedProds: ProductInventoryItem[] = dbProducts.map((p) => ({
+            id: p.id,
+            storeId: p.store_id,
+            name: p.name,
+            price: p.price,
+            imageUrl: p.image_url || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300',
+            category: p.category || 'General',
+            deliveryEtaMinutes: p.delivery_eta_minutes || 10,
+            inStock: p.in_stock ?? true,
+            stockCount: p.stock_count ?? 100,
+            availability: (p.in_stock ?? true) ? 'AVAILABLE' : 'OUT OF STOCK',
+            description: p.description,
+          }));
+          set({ products: formattedProds });
+        }
       }
 
       // 3. Fetch live active orders from DB
@@ -430,6 +452,16 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         }
       )
       .subscribe();
+
+    // 3. Fallback High-Reliability Poller (Syncs every 2.5s)
+    if (pollInterval) {
+      clearInterval(pollInterval);
+    }
+    pollInterval = setInterval(() => {
+      if (get().isAuthenticated) {
+        get().fetchStoreDataFromSupabase(storeId);
+      }
+    }, 2500);
   },
 
   // ── 3. LIVE ORDER LIFECYCLE ───────────────────────────────────────────────
@@ -441,6 +473,9 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
   acceptOrder: async (orderId: string, prepMinutes: number) => {
     counterAudio.playActionChime();
+
+    // Find the target order to inspect items
+    const targetOrder = get().orders.find((o) => o.id === orderId);
 
     // Check if any other placed orders remain before stopping alarm
     const remainingPlaced = get().orders.filter((o) => o.id !== orderId && o.status === 'PLACED');
@@ -465,6 +500,72 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       },
       prepModalOrderId: null,
     }));
+
+    // Deduct stock in real time for each ordered product
+    if (targetOrder && Array.isArray(targetOrder.items) && targetOrder.items.length > 0) {
+      const currentProducts = [...get().products];
+      const updatedProductsMap = new Map<
+        string,
+        { newStock: number; inStock: boolean; availability: 'AVAILABLE' | 'OUT OF STOCK' | 'UNLISTED' }
+      >();
+
+      for (const rawItem of targetOrder.items as any[]) {
+        const pId = rawItem.productId || rawItem.product_id || rawItem.id;
+        const pName = (rawItem.name || rawItem.product_name || rawItem.title || '').trim().toLowerCase();
+        const qty = Number(rawItem.quantity || rawItem.qty || 1);
+
+        const prod = currentProducts.find(
+          (p) => (pId && p.id === pId) || (pName && p.name.trim().toLowerCase() === pName)
+        );
+
+        if (prod) {
+          const currentCount = prod.stockCount ?? 10;
+          const newStock = Math.max(0, currentCount - qty);
+          const inStock = newStock > 0;
+          const availability = inStock ? ('AVAILABLE' as const) : ('OUT OF STOCK' as const);
+
+          updatedProductsMap.set(prod.id, { newStock, inStock, availability });
+        }
+      }
+
+      // 1. Update local store products state immediately
+      if (updatedProductsMap.size > 0) {
+        set((state) => ({
+          products: state.products.map((p) => {
+            const upd = updatedProductsMap.get(p.id);
+            if (upd) {
+              return {
+                ...p,
+                stockCount: upd.newStock,
+                inStock: upd.inStock,
+                availability: upd.availability,
+              };
+            }
+            return p;
+          }),
+        }));
+
+        // 2. Persist updated stock in Supabase database
+        if (isSupabaseConfigured) {
+          for (const [prodId, upd] of updatedProductsMap.entries()) {
+            try {
+              await supabase
+                .from('products')
+                .update({
+                  stock_count: upd.newStock,
+                  in_stock: upd.inStock,
+                  availability: upd.availability,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', prodId);
+              console.info(`📦 [Inventory] Deducted stock for product ${prodId}. New stock: ${upd.newStock}`);
+            } catch (err) {
+              console.warn(`Error updating stock for ${prodId}:`, err);
+            }
+          }
+        }
+      }
+    }
 
     if (isSupabaseConfigured) {
       await supabase
@@ -795,8 +896,6 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       await supabase.from('products').insert({
         id: newId,
         store_id: storeId,
-        store_name: storeName,
-        store_category: storeCategory,
         name: newProduct.name,
         price: newProduct.price,
         image_url: newProduct.imageUrl,

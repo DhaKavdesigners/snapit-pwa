@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChefHat, Clock, X, Check } from 'lucide-react';
+import { ShoppingBag, Clock, X, Check } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 
 export const PrepTimeModal: React.FC = () => {
@@ -30,10 +30,10 @@ export const PrepTimeModal: React.FC = () => {
         {/* Modal Title */}
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 rounded-2xl bg-emerald-100 text-emerald-700">
-            <ChefHat className="w-6 h-6" />
+            <ShoppingBag className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-950">Accept & Set Prep Time</h3>
+            <h3 className="text-lg font-bold text-slate-950">Accept & Set Packing Time</h3>
             <p className="text-xs text-slate-600 font-mono">
               Order {currentOrder?.id || prepModalOrderId}
             </p>
@@ -41,7 +41,7 @@ export const PrepTimeModal: React.FC = () => {
         </div>
 
         <p className="text-xs text-slate-600 mb-5">
-          Choose estimated kitchen preparation time. This coordinates the rider dispatch ETA so the rider arrives exactly when the bag is ready.
+          Choose estimated store packing time. This coordinates the rider dispatch ETA so the rider arrives exactly when the bag is packed.
         </p>
 
         {/* 1-Tap Time Selector Chips */}
@@ -78,10 +78,12 @@ export const PrepTimeModal: React.FC = () => {
             className="flex-2 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <Check className="w-4 h-4 stroke-[3]" />
-            <span>Confirm & Start ({selectedMinutes} mins)</span>
+            <span>Confirm & Start Packing</span>
           </button>
         </div>
       </div>
     </div>
   );
 };
+
+export default PrepTimeModal;
