@@ -25,10 +25,11 @@ import {
 import { useRouter } from 'next/navigation';
 
 export default function OnboardingPage() {
-  const { rider, zones, updateRiderProfile, simulateApproval, registerRider, loginWithMpinOnly } = useRider();
+  const { rider, zones, updateRiderProfile, simulateApproval, registerRider, loginWithMpin, loginWithMpinOnly } = useRider();
   const [step, setStep] = useState<'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'status'>('splash');
   
-  // Login form state (MPIN ONLY)
+  // Login form state
+  const [loginPhone, setLoginPhone] = useState('');
   const [loginMpin, setLoginMpin] = useState('');
   const [showLoginMpin, setShowLoginMpin] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -67,7 +68,7 @@ export default function OnboardingPage() {
 
   const router = useRouter();
 
-  // Handle Login with MPIN ONLY
+  // Handle Login with Phone & MPIN
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -78,11 +79,16 @@ export default function OnboardingPage() {
     }
 
     setIsLoggingIn(true);
-    const result = await loginWithMpinOnly(loginMpin);
+    let result;
+    if (loginPhone.trim()) {
+      result = await loginWithMpin(loginPhone, loginMpin);
+    } else {
+      result = await loginWithMpinOnly(loginMpin);
+    }
     setIsLoggingIn(false);
 
     if (!result.success) {
-      setLoginError(result.error || 'Incorrect MPIN. Please try again.');
+      setLoginError(result.error || 'Incorrect MPIN or mobile number. Please try again.');
       return;
     }
 
@@ -240,13 +246,29 @@ export default function OnboardingPage() {
                 Start delivering in your city today
               </p>
 
-              {/* Login Form (MPIN ONLY) */}
-              <form onSubmit={handleLoginSubmit} className="w-full bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 space-y-4 text-left mb-3">
+              {/* Login Form */}
+              <form onSubmit={handleLoginSubmit} className="w-full bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 space-y-3.5 text-left mb-3">
+                {/* Registered Phone */}
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-1">
+                    <Phone className="w-3.5 h-3.5 text-primary" />
+                    <span>Registered Mobile Number</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={loginPhone}
+                    onChange={(e) => setLoginPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 outline-none focus:border-primary focus:bg-white"
+                  />
+                </div>
+
+                {/* MPIN */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5 text-primary" />
-                      <span>Enter 4-Digit Login MPIN</span>
+                      <span>4-Digit Login MPIN</span>
                     </label>
                     <button
                       type="button"
@@ -263,7 +285,7 @@ export default function OnboardingPage() {
                       onChange={(e) => setLoginMpin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                       placeholder="••••"
                       maxLength={4}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center text-lg font-mono tracking-widest font-bold text-slate-900 outline-none focus:border-primary focus:bg-white shadow-inner"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center text-base font-mono tracking-widest font-bold text-slate-900 outline-none focus:border-primary focus:bg-white shadow-inner"
                     />
                     <button
                       type="button"
