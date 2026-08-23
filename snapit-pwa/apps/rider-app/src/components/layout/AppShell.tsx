@@ -62,8 +62,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* Bottom App Navigation */}
         {showNav && <BottomNav />}
 
-        {/* Developer Test Mode Panel (Dev Mode Only) */}
-        {process.env.NODE_ENV === 'development' && <TestModePanel />}
+        {/* Developer Test Mode Panel */}
+        <TestModePanel />
       </div>
     </div>
   );

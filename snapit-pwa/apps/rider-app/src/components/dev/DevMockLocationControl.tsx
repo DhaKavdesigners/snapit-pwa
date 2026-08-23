@@ -21,11 +21,6 @@ import {
 } from 'lucide-react';
 
 export const DevMockLocationControl: React.FC = () => {
-  // Production guard: render nothing if not in development mode
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
-
   const {
     rider,
     zones,

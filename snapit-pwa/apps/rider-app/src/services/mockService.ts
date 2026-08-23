@@ -35,7 +35,7 @@ let mockLocationConfig: MockLocationConfig = {
 
 // ─── LocalStorage Hydration ───────────────────────────────────────────────────
 
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+if (typeof window !== 'undefined') {
   try {
     const savedMode = localStorage.getItem('snapit_dev_test_mode_v1');
     if (savedMode === 'tester' || savedMode === 'driver') {
@@ -57,7 +57,6 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
 // ─── Test App Mode API ─────────────────────────────────────────────────────────
 
 export function setTestMode(mode: TestAppMode): void {
-  if (process.env.NODE_ENV !== 'development') return;
   currentTestMode = mode;
   if (mode === 'driver') {
     resetMockEnvironment();
@@ -70,15 +69,12 @@ export function setTestMode(mode: TestAppMode): void {
 }
 
 export function getTestMode(): TestAppMode {
-  if (process.env.NODE_ENV !== 'development') return 'driver';
   return currentTestMode;
 }
 
 // ─── Time Mock API ─────────────────────────────────────────────────────────────
 
 export function setMockTimeConfig(config: Partial<MockTimeConfig>): void {
-  if (process.env.NODE_ENV !== 'development') return;
-
   mockTimeConfig = {
     ...mockTimeConfig,
     ...config,
@@ -95,10 +91,9 @@ export function getMockTimeConfig(): MockTimeConfig {
   return mockTimeConfig;
 }
 
-/** Returns the current timestamp in ms (simulated if Mock Time is active in Dev Mode) */
+/** Returns the current timestamp in ms (simulated if Mock Time is active) */
 export function getNow(): number {
   if (
-    process.env.NODE_ENV === 'development' &&
     currentTestMode === 'tester' &&
     mockTimeConfig.enabled &&
     mockTimeConfig.mockTimestamp !== null
@@ -108,10 +103,9 @@ export function getNow(): number {
   return Date.now();
 }
 
-/** Returns the current Date object (simulated if Mock Time is active in Dev Mode) */
+/** Returns the current Date object (simulated if Mock Time is active) */
 export function getNowDate(): Date {
   if (
-    process.env.NODE_ENV === 'development' &&
     currentTestMode === 'tester' &&
     mockTimeConfig.enabled &&
     mockTimeConfig.mockTimestamp !== null
@@ -124,8 +118,6 @@ export function getNowDate(): Date {
 // ─── Location Mock API ─────────────────────────────────────────────────────────
 
 export function setMockLocationConfig(config: Partial<MockLocationConfig>): void {
-  if (process.env.NODE_ENV !== 'development') return;
-
   mockLocationConfig = {
     ...mockLocationConfig,
     ...config,

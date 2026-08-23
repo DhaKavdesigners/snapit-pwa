@@ -38,7 +38,6 @@ let activeWatchZone: DeliveryZone | null = null;
 let activeWatchCallback: ((result: ZoneCheckResult) => void) | null = null;
 
 export function setMockLocationConfig(config: MockLocationConfig): void {
-  if (process.env.NODE_ENV !== 'development') return;
   mockLocationConfig = config;
 
   if (activeWatchZone && activeWatchCallback) {
@@ -100,7 +99,6 @@ export function checkZoneStatus(
 ): Promise<ZoneCheckResult> {
   return new Promise((resolve) => {
     if (
-      process.env.NODE_ENV === 'development' &&
       getTestMode() === 'tester' &&
       mockLocationConfig.enabled &&
       mockLocationConfig.coords
@@ -177,7 +175,6 @@ export function startWatchingZone(
   activeWatchCallback = onUpdate;
 
   if (
-    process.env.NODE_ENV === 'development' &&
     getTestMode() === 'tester' &&
     mockLocationConfig.enabled &&
     mockLocationConfig.coords
