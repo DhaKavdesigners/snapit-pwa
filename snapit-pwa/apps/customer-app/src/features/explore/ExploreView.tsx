@@ -53,27 +53,49 @@ export const ExploreView: React.FC = () => {
   // --- RENDER VIEWS ---
 
   if (exploreState === 'category' && selectedCategory) {
-    const filteredProducts = allProducts?.filter(p => p.subCategory === activeSubCategory) || [];
+    const filteredProducts = allProducts?.filter(p => {
+      if (!activeSubCategory) return true;
+      if (p.subCategory === activeSubCategory) return true;
+      if (p.subCategory?.toLowerCase().includes(activeSubCategory.toLowerCase())) return true;
+      if (activeSubCategory === 'Fresh Vegetables' && (p.name.includes('Tomato') || p.name.includes('Onion') || p.name.includes('Palak') || p.name.includes('Capsicum') || p.subCategory?.includes('Veg'))) return true;
+      if (activeSubCategory === 'Fresh Fruits' && (p.name.includes('Apple') || p.name.includes('Banana') || p.name.includes('Orange') || p.name.includes('Grapes') || p.subCategory?.includes('Fruit'))) return true;
+      if (activeSubCategory === 'Fresh Fruit Juices' && (p.name.includes('Juice') || p.name.includes('Frooti') || p.subCategory?.includes('Juice'))) return true;
+      return false;
+    }) || [];
     
     return (
       <div className="flex flex-col h-full bg-slate-50 min-h-screen">
         <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-20">
-          <div className="p-4 flex items-center gap-3">
-            <button onClick={goBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95">
-              <ArrowLeft className="w-5 h-5 text-gray-700" />
-            </button>
-            <h2 className="font-bold text-lg text-gray-900">{selectedCategory.title}</h2>
+          <div className="p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={goBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors active:scale-95 shrink-0">
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <div className="min-w-0">
+                <h2 className="font-black text-lg text-gray-900 leading-tight flex items-center gap-1.5 truncate">
+                  <span>{selectedCategory.emoji}</span>
+                  <span>{selectedCategory.title}</span>
+                </h2>
+                {selectedCategory.subtitle && (
+                  <p className="text-[11px] text-gray-500 font-medium truncate">{selectedCategory.subtitle}</p>
+                )}
+              </div>
+            </div>
+            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full shrink-0">
+              {filteredProducts.length} Items
+            </span>
           </div>
+
           {/* Subcategory Pills */}
           <div className="flex overflow-x-auto hide-scrollbar gap-2 px-4 pb-3">
             {selectedCategory.subCategories.map((sub: any) => (
               <button
                 key={sub.id}
                 onClick={() => setActiveSubCategory(sub.name)}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-colors border ${
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-black transition-all border ${
                   activeSubCategory === sub.name
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-emerald-600 to-brand text-white border-transparent shadow-md shadow-emerald-500/20'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 active:scale-95'
                 }`}
               >
                 {sub.name}
@@ -92,10 +114,14 @@ export const ExploreView: React.FC = () => {
               {filteredProducts.length > 0 ? (
                 filteredProducts.map(product => <ProductCard key={product.id} product={product} fullWidth />)
               ) : (
-                <div className="col-span-3 text-center py-10 text-gray-500">
-                  <div className="text-4xl mb-2">🤷‍♂️</div>
-                  <h3 className="font-bold text-gray-900 mb-1">No products found</h3>
-                  <p className="text-sm">We are adding items to {activeSubCategory} soon!</p>
+                <div className="col-span-3 text-center py-12 px-6 bg-white rounded-3xl border border-gray-100 shadow-xs">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mb-3 shadow-xs">
+                    {selectedCategory.emoji || '📦'}
+                  </div>
+                  <h3 className="font-black text-gray-900 text-base mb-1">{activeSubCategory}</h3>
+                  <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">
+                    Fresh stock arriving soon directly from local KGF vendors &amp; farms. Check back daily at 7:00 AM!
+                  </p>
                 </div>
               )}
             </div>
@@ -206,15 +232,16 @@ export const ExploreView: React.FC = () => {
         
         {/* CATEGORIES TAB */}
         {activeTab === 'categories' && (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3.5">
             {categories.map((category) => (
               <motion.div 
                 key={category.id} 
-                whileHover={{ scale: 1.02, y: -2, boxShadow: '0px 12px 24px rgba(5, 150, 105, 0.15)' }}
+                whileTap={{ scale: 0.97 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 onClick={() => handleCategoryClick(category)}
-                className="relative h-40 rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer group"
+                className="relative h-36 md:h-40 rounded-3xl overflow-hidden shadow-sm border border-gray-100/90 cursor-pointer group active:scale-[0.98] transition-all bg-white"
               >
+                {/* 100% Original, Clean & Natural Image */}
                 <img 
                   src={category.imageUrl} 
                   alt={category.title}
@@ -224,18 +251,18 @@ export const ExploreView: React.FC = () => {
                       target.src = category.fallbackImageUrl;
                     }
                   }}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-black text-white text-2xl tracking-tight">{category.title}</h3>
-                    <div className="bg-white/20 backdrop-blur-md rounded-full p-1 text-white">
-                      <ChevronRight className="w-5 h-5" />
-                    </div>
+
+                {/* Gentle bottom-only gradient for high text legibility without hiding photo */}
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-end justify-between p-4 z-10">
+                  <h3 className="font-black text-white text-lg tracking-tight drop-shadow-md">
+                    {category.title}
+                  </h3>
+
+                  <div className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white group-hover:bg-white group-hover:text-gray-900 group-hover:scale-110 transition-all shadow-sm shrink-0">
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <p className="text-white/80 text-sm font-medium mt-1">
-                    {category.subCategories.length} Categories
-                  </p>
                 </div>
               </motion.div>
             ))}
