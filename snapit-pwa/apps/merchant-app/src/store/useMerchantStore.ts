@@ -65,12 +65,12 @@ interface MerchantState {
   addProduct: (product: Omit<ProductInventoryItem, 'id' | 'storeId'>) => Promise<void>;
   removeProduct: (productId: string) => Promise<void>;
 
-  // Operational Toggles
+  // Operational Toggles (Synced with Supabase stores table)
   isOnline: boolean;
   toggleStoreStatus: () => Promise<void>;
   setStoreStatus: (online: boolean) => Promise<void>;
   rushMode: boolean;
-  toggleRushMode: () => void;
+  toggleRushMode: () => Promise<void>;
   isMuted: boolean;
   toggleMute: () => void;
   gstPercent: number;
@@ -163,6 +163,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     const storeName = m.store_name || storeData?.name || m.name;
     const storeCategory = m.store_category || storeData?.category || 'grocery';
     const isStoreOnline = storeData?.is_online ?? false;
+    const isRushMode = storeData?.rush_mode ?? false;
 
     const merchantUserObj: MerchantUser = {
       uid: m.uid,
@@ -188,6 +189,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       merchantUser: merchantUserObj,
       activeStore: activeStoreObj,
       isOnline: isStoreOnline,
+      rushMode: isRushMode,
     });
 
     // 4. Fetch live products & orders, then start Realtime listener
@@ -205,12 +207,16 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     }
     counterAudio.stopPendingOrderAlarm();
 
-    // Update store is_online to false in Supabase
+    // Update store is_online to false and rush_mode to false in Supabase
     if (isSupabaseConfigured && storeId) {
       try {
         await supabase
           .from('stores')
-          .update({ is_online: false, updated_at: new Date().toISOString() })
+          .update({
+            is_online: false,
+            rush_mode: false,
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', storeId);
       } catch (err) {
         console.warn('Error updating store offline on logout:', err);
@@ -221,6 +227,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       isAuthenticated: false,
       merchantUser: null,
       isOnline: false,
+      rushMode: false,
       activeStore: { ...state.activeStore, isOpen: false },
       isAlarmPlaying: false,
       orders: [],
@@ -248,7 +255,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     if (!isSupabaseConfigured) return;
 
     try {
-      // 1. Fetch live store online status from DB
+      // 1. Fetch live store online and rush_mode status from DB
       const { data: storeInfo } = await supabase
         .from('stores')
         .select('*')
@@ -257,8 +264,10 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
       if (storeInfo) {
         const online = storeInfo.is_online ?? false;
+        const rush = storeInfo.rush_mode ?? false;
         set((state) => ({
           isOnline: online,
+          rushMode: rush,
           activeStore: {
             ...state.activeStore,
             name: storeInfo.name || state.activeStore.name,
@@ -342,7 +351,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
     realtimeChannel = supabase
       .channel(`merchant-counter-${storeId}`)
-      // Listen to Orders table events
+      // 1. Listen to Orders table events
       .on(
         'postgres_changes',
         {
@@ -397,7 +406,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
           }
         }
       )
-      // Listen to Stores table changes in Realtime for is_online status
+      // 2. Listen to Stores table changes in Realtime for is_online & rush_mode
       .on(
         'postgres_changes',
         {
@@ -408,10 +417,13 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         },
         (payload) => {
           console.info('⚡ [Realtime Store Status Event]:', payload);
-          if (payload.new && typeof payload.new.is_online === 'boolean') {
-            const online = payload.new.is_online;
+          if (payload.new) {
+            const online = typeof payload.new.is_online === 'boolean' ? payload.new.is_online : get().isOnline;
+            const rush = typeof payload.new.rush_mode === 'boolean' ? payload.new.rush_mode : get().rushMode;
+
             set((state) => ({
               isOnline: online,
+              rushMode: rush,
               activeStore: { ...state.activeStore, isOpen: online },
             }));
           }
@@ -815,9 +827,12 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
   toggleStoreStatus: async () => {
     const nextStatus = !get().isOnline;
     const storeId = get().activeStore.id;
+    // When turning store offline, also turn rush mode off
+    const nextRush = nextStatus ? get().rushMode : false;
 
     set((state) => ({
       isOnline: nextStatus,
+      rushMode: nextRush,
       activeStore: { ...state.activeStore, isOpen: nextStatus },
     }));
 
@@ -828,31 +843,58 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     if (isSupabaseConfigured && storeId) {
       await supabase
         .from('stores')
-        .update({ is_online: nextStatus, updated_at: new Date().toISOString() })
+        .update({
+          is_online: nextStatus,
+          rush_mode: nextRush,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', storeId);
     }
   },
 
   setStoreStatus: async (online: boolean) => {
     const storeId = get().activeStore.id;
+    const nextRush = online ? get().rushMode : false;
+
     set((state) => ({
       isOnline: online,
+      rushMode: nextRush,
       activeStore: { ...state.activeStore, isOpen: online },
     }));
 
     if (isSupabaseConfigured && storeId) {
       await supabase
         .from('stores')
-        .update({ is_online: online, updated_at: new Date().toISOString() })
+        .update({
+          is_online: online,
+          rush_mode: nextRush,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', storeId);
     }
   },
 
   rushMode: false,
-  toggleRushMode: () => {
-    const next = !get().rushMode;
-    set({ rushMode: next });
+  toggleRushMode: async () => {
+    const nextRush = !get().rushMode;
+    const storeId = get().activeStore.id;
+
+    set({ rushMode: nextRush });
     counterAudio.playActionChime();
+
+    if (isSupabaseConfigured && storeId) {
+      try {
+        await supabase
+          .from('stores')
+          .update({
+            rush_mode: nextRush,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', storeId);
+      } catch (err) {
+        console.warn('Error updating rush mode in Supabase:', err);
+      }
+    }
   },
 
   isMuted: false,

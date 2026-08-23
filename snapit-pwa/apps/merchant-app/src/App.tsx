@@ -59,6 +59,48 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // ── Automatic Store Offline & Rush Reset on Tab Close / Exit ─────────────
+  useEffect(() => {
+    if (!isAuthenticated || !activeStore?.id) return;
+
+    const handleTabExit = () => {
+      const storeId = activeStore.id;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey || !storeId) return;
+
+      try {
+        // Guaranteed background network request during tab closing / navigation
+        fetch(`${supabaseUrl}/rest/v1/stores?id=eq.${storeId}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            is_online: false,
+            rush_mode: false,
+            updated_at: new Date().toISOString(),
+          }),
+          keepalive: true,
+        });
+      } catch (err) {
+        console.warn('Auto offline on tab close error:', err);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleTabExit);
+    window.addEventListener('pagehide', handleTabExit);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleTabExit);
+      window.removeEventListener('pagehide', handleTabExit);
+    };
+  }, [isAuthenticated, activeStore?.id]);
+
   // If not logged in, render secure Login Screen
   if (!isAuthenticated) {
     return <LoginScreen />;
