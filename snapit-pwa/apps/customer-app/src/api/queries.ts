@@ -72,7 +72,7 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
       supabase.from('products').select('*')
     ]);
 
-    const storeMap = new Map(storesResult.map(s => [s.id, s.name]));
+    const storeMap = new Map(storesResult.map(s => [s.id, s]));
     const dbProducts = productsResult.data || [];
 
     // 1. Map all real database products
@@ -82,6 +82,9 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
     for (const p of dbProducts) {
       dbStoreIdsWithProducts.add(p.store_id);
       const isFood = p.category?.toUpperCase().includes('FOOD') || p.category?.toUpperCase().includes('BIRYANI');
+      const store = storeMap.get(p.store_id);
+      const isStoreOpen = store !== undefined ? store.isOpen : true;
+
       mappedDbProducts.push({
         id: p.id,
         name: p.name,
@@ -94,7 +97,8 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
         deliveryEtaMinutes: p.delivery_eta_minutes || 10,
         inStock: p.in_stock !== false && p.availability !== 'OUT OF STOCK',
         description: p.description,
-        storeName: storeMap.get(p.store_id) || (p.store_id === 's1' ? 'Mhetha Stores' : p.store_id === 's4' ? 'Nandhini KGF' : 'Local Store')
+        storeName: store?.name || (p.store_id === 's1' ? 'Mhetha Stores' : p.store_id === 's4' ? 'Nandhini KGF' : 'Local Store'),
+        storeIsOpen: isStoreOpen,
       });
     }
 
@@ -107,10 +111,14 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
     // 2. Remove dummy products for any store that has real database products
     const filteredDummyProducts = baseProducts
       .filter(mock => !dbStoreIdsWithProducts.has(mock.storeId))
-      .map(mock => ({
-        ...mock,
-        storeName: storeMap.get(mock.storeId) || mock.storeName
-      }));
+      .map(mock => {
+        const store = storeMap.get(mock.storeId);
+        return {
+          ...mock,
+          storeName: store?.name || mock.storeName,
+          storeIsOpen: store !== undefined ? store.isOpen : true,
+        };
+      });
 
     // 3. Filter DB products by context if requested
     const filteredDbProducts = mappedDbProducts.filter(live => !context || live.category === context);
@@ -134,8 +142,9 @@ export const useStores = (context: 'shopping' | 'food') => {
   return useQuery({
     queryKey: ['stores', context],
     queryFn: () => fetchLiveStores(context),
-    staleTime: 5000,
-    refetchInterval: 10000,
+    staleTime: 0,
+    refetchInterval: 2500,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -143,8 +152,9 @@ export const useAllStores = () => {
   return useQuery({
     queryKey: ['stores', 'all'],
     queryFn: () => fetchLiveStores(),
-    staleTime: 5000,
-    refetchInterval: 10000,
+    staleTime: 0,
+    refetchInterval: 2500,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -152,8 +162,9 @@ export const useProducts = (context: 'shopping' | 'food', category?: string) => 
   return useQuery({
     queryKey: ['products', context, category],
     queryFn: () => fetchLiveProducts(context, category),
-    staleTime: 5000,
-    refetchInterval: 10000,
+    staleTime: 0,
+    refetchInterval: 2500,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -161,8 +172,9 @@ export const useAllProducts = () => {
   return useQuery({
     queryKey: ['products', 'all'],
     queryFn: () => fetchLiveProducts(),
-    staleTime: 5000,
-    refetchInterval: 10000,
+    staleTime: 0,
+    refetchInterval: 2500,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -173,8 +185,9 @@ export const useTrending = (context: 'shopping' | 'food') => {
       const all = await fetchLiveProducts(context);
       return all.slice(0, 6);
     },
-    staleTime: 5000,
-    refetchInterval: 10000,
+    staleTime: 0,
+    refetchInterval: 2500,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -183,10 +196,11 @@ export const useTodaysPicks = () => {
     queryKey: ['todaysPicks'],
     queryFn: async (): Promise<Product[]> => {
       const liveShopping = await fetchLiveProducts('shopping');
-      return liveShopping.filter(p => p.inStock).slice(0, 5);
+      return liveShopping.filter(p => p.inStock && p.storeIsOpen !== false).slice(0, 5);
     },
-    staleTime: 5000,
-    refetchInterval: 10000,
+    staleTime: 0,
+    refetchInterval: 2500,
+    refetchOnWindowFocus: true,
   });
 };
 

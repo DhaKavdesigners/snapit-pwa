@@ -20,6 +20,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
   const quantity = cartItem?.quantity || 0;
   const [imgSrc, setImgSrc] = useState(product.imageUrl);
 
+  const isStoreClosed = product.storeIsOpen === false;
+  const isOutOfStock = !product.inStock;
+  const isAvailable = !isStoreClosed && !isOutOfStock;
+
   const handleImgError = () => {
     if (product.fallbackImageUrl && imgSrc !== product.fallbackImageUrl) {
       setImgSrc(product.fallbackImageUrl);
@@ -28,10 +32,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -4, boxShadow: '0px 12px 24px rgba(5, 150, 105, 0.2)' }}
+      whileHover={isAvailable ? { scale: 1.02, y: -4, boxShadow: '0px 12px 24px rgba(5, 150, 105, 0.2)' } : undefined}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-      className={`flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${
+      className={`flex flex-col rounded-2xl shadow-sm border overflow-hidden transition-all relative ${
         fullWidth ? 'w-full' : 'min-w-[110px] max-w-[130px] snap-start shrink-0'
+      } ${
+        !isAvailable 
+          ? 'bg-slate-50/95 border-gray-200 opacity-70 grayscale-[70%]' 
+          : 'bg-white border-gray-100'
       }`}
     >
       {/* Image area */}
@@ -40,13 +48,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
           src={imgSrc}
           alt={product.name}
           onError={handleImgError}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover ${!isAvailable ? 'contrast-90 brightness-95' : ''}`}
         />
 
-        {/* ETA Badge */}
-        <div className="absolute bottom-1.5 left-1.5 bg-white/90 backdrop-blur-sm text-[9px] px-1.5 py-0.5 rounded-full font-bold text-gray-600 shadow-sm">
-          {product.deliveryEtaMinutes} min
-        </div>
+        {/* Store Offline / Unavailable Overlay Badge */}
+        {isStoreClosed ? (
+          <div className="absolute top-1.5 left-1.5 bg-red-600/95 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm backdrop-blur-xs">
+            Store Offline
+          </div>
+        ) : isOutOfStock ? (
+          <div className="absolute top-1.5 left-1.5 bg-gray-800/90 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-sm backdrop-blur-xs">
+            Out of Stock
+          </div>
+        ) : (
+          /* ETA Badge */
+          <div className="absolute bottom-1.5 left-1.5 bg-white/90 backdrop-blur-sm text-[9px] px-1.5 py-0.5 rounded-full font-bold text-gray-600 shadow-sm">
+            {product.deliveryEtaMinutes} min
+          </div>
+        )}
 
         {/* Favourite Heart */}
         <button
@@ -55,7 +74,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
             toggleFavorite(product.id);
           }}
           aria-label={isFavorite(product.id) ? `Remove ${product.name} from favourites` : `Add ${product.name} to favourites`}
-          className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm active:scale-90 transition-transform"
+          className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm active:scale-90 transition-transform z-10"
         >
           <Heart
             className={`h-3.5 w-3.5 transition-colors ${
@@ -68,24 +87,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
       {/* Info area */}
       <div className="flex flex-col flex-1 p-2 gap-0.5">
         {product.storeName && (
-          <span className="text-[9px] font-bold text-brand uppercase tracking-wide truncate">
+          <span className={`text-[9px] font-bold uppercase tracking-wide truncate ${isStoreClosed ? 'text-gray-400' : 'text-brand'}`}>
             {product.storeName}
           </span>
         )}
 
-        <h4 className="font-medium text-xs leading-tight text-gray-900 line-clamp-2 min-h-[32px]">
+        <h4 className={`font-medium text-xs leading-tight line-clamp-2 min-h-[32px] ${!isAvailable ? 'text-gray-600' : 'text-gray-900'}`}>
           {product.name}
         </h4>
 
         {product.description && (
-          <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5">{product.description}</p>
+          <p className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{product.description}</p>
         )}
 
         {/* Price + Add/Qty */}
         <div className="mt-auto pt-2 flex items-center justify-between">
-          <span className="font-bold text-xs text-gray-900">{formatCurrency(product.price)}</span>
+          <span className={`font-bold text-xs ${!isAvailable ? 'text-gray-500' : 'text-gray-900'}`}>
+            {formatCurrency(product.price)}
+          </span>
 
-          {quantity > 0 ? (
+          {!isAvailable ? (
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider select-none ${
+              isStoreClosed ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-gray-100 text-gray-500 border border-gray-200'
+            }`}>
+              {isStoreClosed ? 'Offline' : 'Unavailable'}
+            </span>
+          ) : quantity > 0 ? (
             <div className="flex items-center bg-brand text-white rounded-full h-7 overflow-hidden shadow-[0_4px_12px_rgba(4,107,53,0.3)]">
               <button
                 onClick={() => updateQuantity(product.id, quantity - 1)}
