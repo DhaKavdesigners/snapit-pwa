@@ -24,18 +24,12 @@ export const mockFoodStores: Store[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXPLORE CATEGORIES CONFIGURATION (Vibrant & Professional with High-Res Images)
+// EXPLORE CATEGORIES CONFIGURATION (Clean & Original Images)
 // ─────────────────────────────────────────────────────────────────────────────
 export const exploreShoppingCategories = [
   {
     id: 'cat_vegetables',
-    title: 'Farm Fresh Vegetables',
-    subtitle: 'Harvested Daily from Local Farms',
-    emoji: '🥬',
-    tag: '🌱 Farm Fresh',
-    gradient: 'from-emerald-950/85 via-emerald-900/40 to-transparent',
-    borderGlow: 'border-emerald-300/40 hover:border-emerald-400',
-    badgeBg: 'bg-emerald-500/25 border-emerald-400/40 text-emerald-200',
+    title: 'Fresh Vegetables',
     imageUrl: '/images/cat_exp_head/Vegetables.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -47,13 +41,7 @@ export const exploreShoppingCategories = [
   },
   {
     id: 'cat_fruits',
-    title: 'Fresh Fruits & Organics',
-    subtitle: 'Sweet, Seasonal & Nutritious Picks',
-    emoji: '🍎',
-    tag: '🍇 100% Natural',
-    gradient: 'from-rose-950/85 via-rose-900/40 to-transparent',
-    borderGlow: 'border-rose-300/40 hover:border-rose-400',
-    badgeBg: 'bg-rose-500/25 border-rose-400/40 text-rose-200',
+    title: 'Sweet Fruits',
     imageUrl: '/images/cat_exp_head/fruits.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -64,13 +52,7 @@ export const exploreShoppingCategories = [
   },
   {
     id: 'cat_groceries',
-    title: 'Daily Groceries & Staples',
-    subtitle: 'Atta, Rice, Oils & Kitchen Essentials',
-    emoji: '🛒',
-    tag: '⚡ 10 Min Delivery',
-    gradient: 'from-amber-950/85 via-amber-900/40 to-transparent',
-    borderGlow: 'border-amber-300/40 hover:border-amber-400',
-    badgeBg: 'bg-amber-500/25 border-amber-400/40 text-amber-200',
+    title: 'Groceries',
     imageUrl: '/images/cat_exp_head/grocery-products.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -81,13 +63,7 @@ export const exploreShoppingCategories = [
   },
   {
     id: 'cat_dairy',
-    title: 'Fresh Dairy & Breakfast',
-    subtitle: 'Milk, Curd, Paneer, Butter & Ghee',
-    emoji: '🥛',
-    tag: '🧊 Pure & Chilled',
-    gradient: 'from-sky-950/85 via-sky-900/40 to-transparent',
-    borderGlow: 'border-sky-300/40 hover:border-sky-400',
-    badgeBg: 'bg-sky-500/25 border-sky-400/40 text-sky-200',
+    title: 'Dairy & Milk',
     imageUrl: '/images/cat_exp_head/dairy_products.webp',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -99,12 +75,6 @@ export const exploreShoppingCategories = [
   {
     id: 'cat_juices',
     title: 'Cold Drinks & Juices',
-    subtitle: 'Fruit Juices, Sodas & Refreshments',
-    emoji: '🧃',
-    tag: '🍹 Instant Refreshment',
-    gradient: 'from-orange-950/85 via-orange-900/40 to-transparent',
-    borderGlow: 'border-orange-300/40 hover:border-orange-400',
-    badgeBg: 'bg-orange-500/25 border-orange-400/40 text-orange-200',
     imageUrl: '/images/cat_exp_head/fruits_juices.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -115,13 +85,7 @@ export const exploreShoppingCategories = [
   },
   {
     id: 'cat_home_care',
-    title: 'Personal & Home Care',
-    subtitle: 'Skin Care, Hygiene & Cleaning Needs',
-    emoji: '🧴',
-    tag: '✨ Everyday Care',
-    gradient: 'from-purple-950/85 via-purple-900/40 to-transparent',
-    borderGlow: 'border-purple-300/40 hover:border-purple-400',
-    badgeBg: 'bg-purple-500/25 border-purple-400/40 text-purple-200',
+    title: 'Personal Care',
     imageUrl: '/images/cat_exp_head/personaol_care_products.webp',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -134,13 +98,7 @@ export const exploreShoppingCategories = [
 export const exploreFoodCategories = [
   {
     id: 'cat_biryani',
-    title: 'Hyderabadi & Ambur Biryani',
-    subtitle: 'Authentic Dum Biryani, Kushka & Starters',
-    emoji: '🍚',
-    tag: '🔥 Best in KGF',
-    gradient: 'from-amber-950/85 via-amber-900/40 to-transparent',
-    borderGlow: 'border-amber-300/40 hover:border-amber-400',
-    badgeBg: 'bg-amber-500/25 border-amber-400/40 text-amber-200',
+    title: 'Biryani',
     imageUrl: '/images/categories/biryani.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -149,13 +107,7 @@ export const exploreFoodCategories = [
   },
   {
     id: 'cat_fastfood',
-    title: 'Crispy Fast Food & Rolls',
-    subtitle: 'Fried Chicken, Burgers & Shawarma',
-    emoji: '🍔',
-    tag: '⚡ Hot & Fresh',
-    gradient: 'from-red-950/85 via-red-900/40 to-transparent',
-    borderGlow: 'border-red-300/40 hover:border-red-400',
-    badgeBg: 'bg-red-500/25 border-red-400/40 text-red-200',
+    title: 'Fast Food',
     imageUrl: '/images/categories/fastfood.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -164,13 +116,7 @@ export const exploreFoodCategories = [
   },
   {
     id: 'cat_bakery',
-    title: 'Fresh Breads & Bakery',
-    subtitle: 'Puffs, Breads, Cakes & Pastries',
-    emoji: '🥐',
-    tag: '🍰 Oven Fresh',
-    gradient: 'from-amber-950/85 via-yellow-900/40 to-transparent',
-    borderGlow: 'border-yellow-300/40 hover:border-yellow-400',
-    badgeBg: 'bg-yellow-500/25 border-yellow-400/40 text-yellow-200',
+    title: 'Bakery & Sweets',
     imageUrl: '/images/categories/bakery.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80',
     subCategories: [

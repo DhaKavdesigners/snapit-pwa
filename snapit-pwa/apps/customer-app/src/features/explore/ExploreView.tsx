@@ -232,19 +232,16 @@ export const ExploreView: React.FC = () => {
         
         {/* CATEGORIES TAB */}
         {activeTab === 'categories' && (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3.5">
             {categories.map((category) => (
               <motion.div 
                 key={category.id} 
-                whileHover={{ scale: 1.02, y: -3 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 onClick={() => handleCategoryClick(category)}
-                className={`relative h-44 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.08)] border cursor-pointer group transition-all ${
-                  category.borderGlow || 'border-gray-100 hover:border-emerald-300'
-                }`}
+                className="relative h-36 md:h-40 rounded-3xl overflow-hidden shadow-sm border border-gray-100/90 cursor-pointer group active:scale-[0.98] transition-all bg-white"
               >
-                {/* High Quality Category Image with Smooth Zoom */}
+                {/* 100% Original, Clean & Natural Image */}
                 <img 
                   src={category.imageUrl} 
                   alt={category.title}
@@ -254,54 +251,17 @@ export const ExploreView: React.FC = () => {
                       target.src = category.fallbackImageUrl;
                     }
                   }}
-                  className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-108 transition-transform duration-700 ease-out"
+                  className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
                 />
 
-                {/* Vibrant Gradient Scrim */}
-                <div className={`absolute inset-0 bg-gradient-to-t ${category.gradient || 'from-black/85 via-black/40 to-transparent'} flex flex-col justify-between p-4 z-10`} />
+                {/* Gentle bottom-only gradient for high text legibility without hiding photo */}
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-end justify-between p-4 z-10">
+                  <h3 className="font-black text-white text-lg tracking-tight drop-shadow-md">
+                    {category.title}
+                  </h3>
 
-                {/* Top Badge: Dynamic tag + Right Arrow */}
-                <div className="relative z-20 flex items-center justify-between">
-                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border backdrop-blur-md shadow-xs flex items-center gap-1.5 ${
-                    category.badgeBg || 'bg-white/20 border-white/30 text-white'
-                  }`}>
-                    <span>{category.tag || '✨ 10 Min Delivery'}</span>
-                  </span>
-
-                  <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white group-hover:bg-white group-hover:text-gray-900 group-hover:scale-110 transition-all shadow-sm">
+                  <div className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white group-hover:bg-white group-hover:text-gray-900 group-hover:scale-110 transition-all shadow-sm shrink-0">
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-
-                {/* Bottom Content: Title, Subtitle, and Subcategory Chips */}
-                <div className="relative z-20 mt-auto">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xl">{category.emoji}</span>
-                    <h3 className="font-black text-white text-xl tracking-tight leading-tight group-hover:text-emerald-200 transition-colors drop-shadow-sm">
-                      {category.title}
-                    </h3>
-                  </div>
-                  {category.subtitle && (
-                    <p className="text-white/80 text-xs font-medium line-clamp-1 mb-2">
-                      {category.subtitle}
-                    </p>
-                  )}
-
-                  {/* Quick Subcategory Pills */}
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {category.subCategories.slice(0, 3).map((sub: any) => (
-                      <span 
-                        key={sub.id}
-                        className="text-[9.5px] font-bold text-white/90 bg-black/35 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/20"
-                      >
-                        {sub.name}
-                      </span>
-                    ))}
-                    {category.subCategories.length > 3 && (
-                      <span className="text-[9.5px] font-black text-amber-300 bg-black/35 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-white/20">
-                        +{category.subCategories.length - 3} more
-                      </span>
-                    )}
                   </div>
                 </div>
               </motion.div>
