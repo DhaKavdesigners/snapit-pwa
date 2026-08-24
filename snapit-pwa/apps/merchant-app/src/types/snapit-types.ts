@@ -51,8 +51,9 @@ export type OrderStatus =
   | 'READY'             // Ready for pickup (legacy alias)
   | 'READY_FOR_PICKUP'  // Triggers rider dispatch chime
   | 'RIDER_ASSIGNED'    // A specific rider has been assigned
-  | 'PICKED_UP'         // Rider has collected from store
-  | 'OUT_FOR_DELIVERY'  // Rider en-route to customer doorstep
+  | 'OUT_OF_SHOP'       // Merchant handed order to rider, waiting for rider ack
+  | 'PICKED_UP'         // Alias for OUT_FOR_DELIVERY
+  | 'OUT_FOR_DELIVERY'  // Rider confirmed receipt, en-route to customer
   | 'DELIVERED'         // Order delivered — requires 4-digit PIN handshake
   | 'CANCELLED';        // Order cancelled
 

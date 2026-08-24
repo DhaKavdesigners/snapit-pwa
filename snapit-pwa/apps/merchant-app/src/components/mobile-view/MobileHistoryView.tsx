@@ -10,6 +10,8 @@ import {
   Receipt,
   ShoppingBag,
   TrendingUp,
+  Check,
+  Bike,
 } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 import { formatCurrency, formatOrderTime } from '../../utils/formatters';
@@ -20,7 +22,7 @@ interface MobileHistoryViewProps {
 }
 
 export const MobileHistoryView: React.FC<MobileHistoryViewProps> = ({ onOpenSettlement }) => {
-  const { orders, historicalGroups, products } = useMerchantStore();
+  const { orders, historicalGroups, products, markDelivered } = useMerchantStore();
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({
     'Today (Live Activity)': true,
   });
@@ -302,6 +304,11 @@ export const MobileHistoryView: React.FC<MobileHistoryViewProps> = ({ onOpenSett
                                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                     {formatCurrency(orderItemsTotal)}
                                   </span>
+                                ) : order.status === 'OUT_FOR_DELIVERY' || order.status === 'PICKED_UP' ? (
+                                  <span className="text-blue-700 flex items-center gap-1 text-[11px] font-black">
+                                    <Bike className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+                                    <span>ON WAY &bull; {formatCurrency(orderItemsTotal)}</span>
+                                  </span>
                                 ) : (
                                   <span className="text-rose-600 flex items-center gap-1 text-xs">
                                     <XCircle className="w-3.5 h-3.5 text-rose-500" />
@@ -320,7 +327,7 @@ export const MobileHistoryView: React.FC<MobileHistoryViewProps> = ({ onOpenSett
 
                             {/* 📦 Expanded Order Details: ONLY Products, Quantity & Product Price */}
                             {isOrderExpanded && (
-                              <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1.5 text-xs animate-in fade-in duration-150">
+                              <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-2 text-xs animate-in fade-in duration-150">
                                 <div className="divide-y divide-slate-100 rounded-xl bg-slate-50 border border-slate-100 p-2">
                                   {order.items.map((it: any, idx: number) => {
                                     const p = getProductInfo(it);

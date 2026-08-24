@@ -6,9 +6,10 @@ import { MobileOrderCard } from './MobileOrderCard';
 export const MobileLiveOrdersView: React.FC = () => {
   const { orders, isOnline, toggleStoreStatus } = useMerchantStore();
 
-  const placedCount = orders.filter((o) => o.status === 'PLACED').length;
-  const preparingCount = orders.filter((o) => o.status === 'PREPARING').length;
-  const readyCount = orders.filter((o) => o.status === 'READY_FOR_PICKUP').length;
+  const placedCount = orders.filter((o) => o.status === 'PLACED' || o.status === 'PENDING').length;
+  const preparingCount = orders.filter((o) => o.status === 'PREPARING' || o.status === 'ACCEPTED').length;
+  const readyCount = orders.filter((o) => o.status === 'READY_FOR_PICKUP' || o.status === 'READY').length;
+  const outOfShopCount = orders.filter((o) => o.status === 'OUT_OF_SHOP').length;
 
   return (
     <div className="space-y-4">
@@ -52,6 +53,11 @@ export const MobileLiveOrdersView: React.FC = () => {
         }`}>
           Ready: {readyCount}
         </span>
+        {outOfShopCount > 0 && (
+          <span className="px-2.5 py-1 rounded-xl font-extrabold text-[11px] flex-shrink-0 bg-amber-100 text-amber-950 border border-amber-300 animate-pulse">
+            Handed Over: {outOfShopCount}
+          </span>
+        )}
       </div>
 
       {/* Orders Feed */}

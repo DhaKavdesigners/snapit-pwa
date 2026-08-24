@@ -32,8 +32,8 @@ interface MerchantState {
   // Realtime Active Orders Pipeline
   orders: Order[];
   isAlarmPlaying: boolean;
-  orderFilter: 'ALL' | 'PLACED' | 'PREPARING' | 'READY_FOR_PICKUP';
-  setOrderFilter: (filter: 'ALL' | 'PLACED' | 'PREPARING' | 'READY_FOR_PICKUP') => void;
+  orderFilter: 'ALL' | 'PLACED' | 'PREPARING' | 'READY_FOR_PICKUP' | 'OUT_OF_SHOP';
+  setOrderFilter: (filter: 'ALL' | 'PLACED' | 'PREPARING' | 'READY_FOR_PICKUP' | 'OUT_OF_SHOP') => void;
   prepTimers: Record<string, { prepMinutes: number; acceptedAt: number }>;
 
   // Order Lifecycle Transitions
@@ -44,7 +44,8 @@ interface MerchantState {
   markRiderAssigned: (orderId: string, riderId?: string) => void;
   markOutForDelivery: (orderId: string) => void;
   handoverToRider: (orderId: string, riderName?: string) => Promise<void>;
-  markDelivered: (orderId: string) => void;
+  confirmRiderPickup: (orderId: string) => Promise<void>;
+  markDelivered: (orderId: string) => Promise<void>;
 
   // Real-time Supabase Listeners
   initRealtimeSubscriptions: (storeId: string) => void;
@@ -164,7 +165,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
     const storeName = m.store_name || storeData?.name || m.name;
     const storeCategory = m.store_category || storeData?.category || 'grocery';
-    const storeAddress = storeData?.store_address || storeData?.address || (m.store_id === 's4' ? 'Geetha Road, KGF' : 'Robertsonpet, KGF');
+    const storeAddress = storeData?.store_address || storeData?.address || 'KGF Dark Store Region';
     const isStoreOnline = storeData?.is_online ?? false;
     const isRushMode = storeData?.rush_mode ?? false;
 
@@ -273,7 +274,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       if (storeInfo) {
         const online = storeInfo.is_online ?? false;
         const rush = storeInfo.rush_mode ?? false;
-        const storeAddr = storeInfo.store_address || storeInfo.address || (storeId === 's4' ? 'Geetha Road, KGF' : 'Robertsonpet, KGF');
+        const storeAddr = storeInfo.store_address || storeInfo.address || 'KGF Dark Store Region';
         const currentStore = get().activeStore;
 
         if (
@@ -321,12 +322,12 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         }
       }
 
-      // 3. Fetch live active orders from DB
+      // 3. Fetch live active orders from DB (Active until OUT_OF_SHOP is acknowledged by rider)
       const { data: dbOrders, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('store_id', storeId)
-        .in('status', ['PLACED', 'PREPARING', 'READY_FOR_PICKUP', 'RIDER_ASSIGNED', 'OUT_FOR_DELIVERY'])
+        .in('status', ['PENDING', 'PLACED', 'PAID', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'RIDER_ASSIGNED', 'OUT_OF_SHOP'])
         .order('created_at', { ascending: false });
 
       if (!orderError && dbOrders) {
@@ -358,12 +359,12 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         }
       }
 
-      // 4. Fetch completed / archived / settled orders from DB for this store
+      // 4. Fetch completed / archived / settled orders from DB for this store (Rider in transit or delivered)
       const { data: dbCompletedOrders } = await supabase
         .from('orders')
         .select('*')
         .eq('store_id', storeId)
-        .in('status', ['DELIVERED', 'REJECTED', 'CANCELLED'])
+        .in('status', ['OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED', 'REJECTED', 'CANCELLED'])
         .order('created_at', { ascending: false });
 
       if (dbCompletedOrders) {
@@ -503,12 +504,48 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
             set((state) => {
-              // If marked delivered or rejected by another process, remove from live queue
-              if (updated.status === 'DELIVERED' || updated.status === 'REJECTED') {
-                return {
-                  orders: state.orders.filter((o) => o.id !== updated.id),
-                };
+              // If status becomes OUT_FOR_DELIVERY, DELIVERED, REJECTED, or CANCELLED,
+              // the merchant counter task is officially complete -> remove from live orders and move to history!
+              if (
+                updated.status === 'OUT_FOR_DELIVERY' ||
+                updated.status === 'PICKED_UP' ||
+                updated.status === 'DELIVERED' ||
+                updated.status === 'REJECTED' ||
+                updated.status === 'CANCELLED'
+              ) {
+                const target = state.orders.find((o) => o.id === updated.id);
+                const remaining = state.orders.filter((o) => o.id !== updated.id);
+
+                if (target) {
+                  const completedOrder: Order = {
+                    ...target,
+                    status: updated.status,
+                    updatedAt: updated.updated_at || new Date().toISOString(),
+                  };
+
+                  counterAudio.playReadyDispatchChime();
+
+                  return {
+                    orders: remaining,
+                    historicalGroups: state.historicalGroups.map((group, idx) => {
+                      if (idx === 0) {
+                        const isDeliveredOrTransit = updated.status === 'OUT_FOR_DELIVERY' || updated.status === 'DELIVERED' || updated.status === 'PICKED_UP';
+                        return {
+                          ...group,
+                          orderCount: isDeliveredOrTransit ? group.orderCount + 1 : group.orderCount,
+                          collectedPaise: isDeliveredOrTransit ? group.collectedPaise + completedOrder.estimatedTotal : group.collectedPaise,
+                          rejectedCount: !isDeliveredOrTransit ? (group.rejectedCount || 0) + 1 : group.rejectedCount,
+                          orders: [completedOrder, ...group.orders.filter((o) => o.id !== completedOrder.id)],
+                        };
+                      }
+                      return group;
+                    }),
+                  };
+                }
+                return { orders: remaining };
               }
+
+              // Otherwise (e.g. status changed to OUT_OF_SHOP), keep live and update state
               return {
                 orders: state.orders.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)),
               };
@@ -777,16 +814,42 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
   handoverToRider: async (orderId: string, _riderName = 'Suresh (SnapIt Rider)') => {
     counterAudio.unregisterOverdueOrder(orderId);
+    counterAudio.playActionChime();
+
+    // Set status to OUT_OF_SHOP (order remains in Live Orders queue awaiting rider confirmation)
+    set((state) => ({
+      orders: state.orders.map((ord) =>
+        ord.id === orderId
+          ? {
+              ...ord,
+              status: 'OUT_OF_SHOP' as const,
+              updatedAt: new Date().toISOString(),
+            }
+          : ord
+      ),
+    }));
+
+    if (isSupabaseConfigured) {
+      await supabase
+        .from('orders')
+        .update({
+          status: 'OUT_OF_SHOP',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+    }
+  },
+
+  confirmRiderPickup: async (orderId: string) => {
     counterAudio.playReadyDispatchChime();
 
     const targetOrder = get().orders.find((o) => o.id === orderId);
     const remainingLiveOrders = get().orders.filter((o) => o.id !== orderId);
 
     if (targetOrder) {
-      const deliveredOrder: Order = {
+      const outForDeliveryOrder: Order = {
         ...targetOrder,
-        status: 'DELIVERED',
-        deliveryVerified: true,
+        status: 'OUT_FOR_DELIVERY',
         updatedAt: new Date().toISOString(),
       };
 
@@ -797,8 +860,8 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
             return {
               ...group,
               orderCount: group.orderCount + 1,
-              collectedPaise: group.collectedPaise + deliveredOrder.estimatedTotal,
-              orders: [deliveredOrder, ...group.orders],
+              collectedPaise: group.collectedPaise + outForDeliveryOrder.estimatedTotal,
+              orders: [outForDeliveryOrder, ...group.orders.filter((o) => o.id !== outForDeliveryOrder.id)],
             };
           }
           return group;
@@ -810,15 +873,38 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       await supabase
         .from('orders')
         .update({
-          status: 'DELIVERED',
+          status: 'OUT_FOR_DELIVERY',
           updated_at: new Date().toISOString(),
         })
         .eq('id', orderId);
     }
   },
 
-  markDelivered: (orderId: string) => {
-    get().handoverToRider(orderId);
+  markDelivered: async (orderId: string) => {
+    counterAudio.playReadyDispatchChime();
+
+    set((state) => ({
+      orders: state.orders.filter((o) => o.id !== orderId),
+      historicalGroups: state.historicalGroups.map((group) => ({
+        ...group,
+        orders: group.orders.map((o) =>
+          o.id === orderId
+            ? { ...o, status: 'DELIVERED' as const, deliveryVerified: true, updatedAt: new Date().toISOString() }
+            : o
+        ),
+      })),
+    }));
+
+    if (isSupabaseConfigured) {
+      await supabase
+        .from('orders')
+        .update({
+          status: 'DELIVERED',
+          delivery_verified: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+    }
   },
 
   // ── 4. CATALOG & INVENTORY (SYNCED WITH SUPABASE) ─────────────────────────

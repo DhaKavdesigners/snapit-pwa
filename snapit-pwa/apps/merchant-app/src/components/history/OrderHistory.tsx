@@ -9,13 +9,15 @@ import {
   MapPin,
   ChevronDown,
   ChevronUp,
+  Check,
+  Bike,
 } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 import { formatCurrency, formatOrderTime } from '../../utils/formatters';
 import type { Order } from '../../types/snapit-types';
 
 export const OrderHistory: React.FC = () => {
-  const { historicalGroups, products } = useMerchantStore();
+  const { historicalGroups, products, markDelivered } = useMerchantStore();
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({
     'Today (Live Activity)': true,
   });
@@ -156,6 +158,11 @@ export const OrderHistory: React.FC = () => {
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-800">
                                   <XCircle className="w-3 h-3" />
                                   REJECTED
+                                </span>
+                              ) : order.status === 'OUT_FOR_DELIVERY' || order.status === 'PICKED_UP' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800">
+                                  <Bike className="w-3 h-3 text-blue-600 animate-pulse" />
+                                  OUT FOR DELIVERY
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800">

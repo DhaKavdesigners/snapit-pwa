@@ -586,7 +586,7 @@ export const ProfileView: React.FC = () => {
 
     // Active vs Past Orders
     const activeOrders = orders.filter(o => 
-      ['PLACED', 'PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'READY_FOR_PICKUP', 'HANDED_OVER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.status)
+      ['PLACED', 'PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'READY_FOR_PICKUP', 'OUT_OF_SHOP', 'HANDED_OVER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.status)
     );
     const pastOrders = orders.filter(o => 
       ['DELIVERED', 'REJECTED', 'CANCELLED'].includes(o.status)
@@ -625,26 +625,57 @@ export const ProfileView: React.FC = () => {
             step1Label: 'Placed ✓',
             step2Label: 'Packing Now ⏳',
             step3Label: 'Handover',
-            progress: 60,
+            progress: 50,
             icon: ChefHat,
             iconColor: 'text-amber-600',
             isHandedOver: false
           };
         case 'READY':
         case 'READY_FOR_PICKUP':
+          return {
+            stepIndex: 2,
+            title: 'Items Packed & Ready for Pickup 📦',
+            subtitle: 'Store finished packing. Rider is arriving at the counter.',
+            badgeText: 'Packed & Ready',
+            badgeClass: 'bg-blue-100 text-blue-900 border-blue-300',
+            dotClass: 'bg-blue-600 animate-pulse',
+            step1Label: 'Placed ✓',
+            step2Label: 'Packed ✓',
+            step3Label: 'Pickup ⏳',
+            progress: 75,
+            icon: Package,
+            iconColor: 'text-blue-600',
+            isHandedOver: false
+          };
+        case 'OUT_OF_SHOP':
         case 'HANDED_OVER':
+          return {
+            stepIndex: 2,
+            title: 'Store Handed Package to Rider 🤝',
+            subtitle: 'Merchant handed over order. Rider is confirming custody on device.',
+            badgeText: 'Handed Over (Confirming)',
+            badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
+            dotClass: 'bg-amber-600 animate-bounce',
+            step1Label: 'Placed ✓',
+            step2Label: 'Packed ✓',
+            step3Label: 'Confirming 🤝',
+            progress: 85,
+            icon: Bike,
+            iconColor: 'text-amber-600',
+            isHandedOver: true
+          };
         case 'PICKED_UP':
         case 'OUT_FOR_DELIVERY':
           return {
             stepIndex: 2,
-            title: 'Store Handover to Rider Complete! 🛵',
-            subtitle: 'Store has packed items and handed package to rider. Delivery in progress!',
-            badgeText: 'Handed Over to Rider',
+            title: 'Rider is Rushing to Your Door! 🛵',
+            subtitle: 'Rider confirmed package custody and is en-route to your location.',
+            badgeText: 'Out for Delivery',
             badgeClass: 'bg-blue-100 text-blue-900 border-blue-300',
             dotClass: 'bg-blue-600 animate-bounce',
             step1Label: 'Placed ✓',
             step2Label: 'Packed ✓',
-            step3Label: 'Handed Over 🛵',
+            step3Label: 'On the Way 🛵',
             progress: 95,
             icon: Bike,
             iconColor: 'text-blue-600',

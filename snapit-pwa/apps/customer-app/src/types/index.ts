@@ -32,7 +32,19 @@ export interface CartItem {
 
 export interface Order {
   id: string;
-  status: 'PENDING' | 'PAID' | 'ACCEPTED' | 'READY' | 'PICKED_UP' | 'DELIVERED' | 'CANCELLED';
+  status:
+    | 'PENDING'
+    | 'PLACED'
+    | 'PAID'
+    | 'ACCEPTED'
+    | 'PREPARING'
+    | 'READY'
+    | 'READY_FOR_PICKUP'
+    | 'OUT_OF_SHOP'
+    | 'PICKED_UP'
+    | 'OUT_FOR_DELIVERY'
+    | 'DELIVERED'
+    | 'CANCELLED';
   items: CartItem[];
   estimatedTotal: number; // Stored in Paise
   createdAt: string;

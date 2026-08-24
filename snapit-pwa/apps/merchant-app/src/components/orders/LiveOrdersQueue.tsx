@@ -23,13 +23,15 @@ export const LiveOrdersQueue: React.FC = () => {
   const placedCount = orders.filter((o) => o.status === 'PLACED' || o.status === 'PENDING').length;
   const preparingCount = orders.filter((o) => o.status === 'PREPARING' || o.status === 'ACCEPTED').length;
   const readyCount = orders.filter((o) => o.status === 'READY_FOR_PICKUP' || o.status === 'READY').length;
+  const outOfShopCount = orders.filter((o) => o.status === 'OUT_OF_SHOP').length;
 
-  // Natural priority sorting: Placed (top priority) -> Preparing -> Ready for Pickup
+  // Natural priority sorting: Placed (top priority) -> Preparing -> Ready for Pickup -> Out of shop
   const priorityScore = (order: Order) => {
     if (order.status === 'PLACED' || order.status === 'PENDING') return 1;
     if (order.status === 'PREPARING' || order.status === 'ACCEPTED') return 2;
     if (order.status === 'READY_FOR_PICKUP' || order.status === 'READY') return 3;
-    return 4;
+    if (order.status === 'OUT_OF_SHOP') return 4;
+    return 5;
   };
 
   const sortedOrders = [...orders].sort((a, b) => {
@@ -45,6 +47,7 @@ export const LiveOrdersQueue: React.FC = () => {
     if (orderFilter === 'PLACED') return order.status === 'PLACED' || order.status === 'PENDING';
     if (orderFilter === 'PREPARING') return order.status === 'PREPARING' || order.status === 'ACCEPTED';
     if (orderFilter === 'READY_FOR_PICKUP') return order.status === 'READY_FOR_PICKUP' || order.status === 'READY';
+    if (orderFilter === 'OUT_OF_SHOP') return order.status === 'OUT_OF_SHOP';
     return true;
   });
 
@@ -152,6 +155,25 @@ export const LiveOrdersQueue: React.FC = () => {
             {readyCount}
           </span>
         </button>
+
+        {/* Handed Over / Out of Shop Count */}
+        {outOfShopCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setOrderFilter(orderFilter === 'OUT_OF_SHOP' ? 'ALL' : 'OUT_OF_SHOP')}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+              orderFilter === 'OUT_OF_SHOP'
+                ? 'bg-amber-500 text-slate-950 shadow-xs ring-2 ring-amber-500/30'
+                : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
+            <span>Handed Over</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-amber-200 text-amber-950">
+              {outOfShopCount}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* 3. Orders List (In-Place Flow) */}
