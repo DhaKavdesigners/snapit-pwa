@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { IncomingOrderModal } from '@/components/dashboard/IncomingOrderModal';
 import { SlotStatusCard } from '@/components/slots/SlotStatusCard';
 import { ZoneStatusBanner } from '@/components/slots/ZoneStatusBanner';
+import { ZoneSelectionModal } from '@/components/slots/ZoneSelectionModal';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -63,6 +64,8 @@ export default function DashboardPage() {
     isHydrated,
   } = useRider();
   const router = useRouter();
+
+  const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
 
   // Greeting by time of day
   const getGreeting = () => {
@@ -254,14 +257,17 @@ export default function DashboardPage() {
           </div>
 
           {/* Zone pill */}
-          <Link href="/slots" className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm text-xs font-semibold text-slate-700 shrink-0 active:scale-95">
+          <button
+            onClick={() => setIsZoneModalOpen(true)}
+            className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm text-xs font-semibold text-slate-700 shrink-0 active:scale-95 hover:border-slate-300 transition-all text-left"
+          >
             <MapPin className="w-3.5 h-3.5 text-green-600" />
             <div className="text-left">
               <p className="text-[9px] text-slate-400 leading-none">Your Zone</p>
-              <p className="text-[11px] font-bold text-slate-800">{rider.selectedZone || 'Downtown Central'}</p>
+              <p className="text-[11px] font-bold text-slate-800">{rider.selectedZone || 'Robertsonpet'}</p>
             </div>
             <ChevronDown className="w-3 h-3 text-slate-400" />
-          </Link>
+          </button>
         </div>
 
         {/* ── Live Slot Status & Booking Card (PROMINENT FIRST ELEMENT) ── */}
@@ -499,7 +505,7 @@ export default function DashboardPage() {
 
             <p className="text-xs text-slate-500 max-w-[280px] leading-relaxed mb-4">
               {isOnline
-                ? `You're online in ${rider.selectedZone || 'Downtown Central'}. New delivery assignments and orders will appear here automatically.`
+                ? `You're online in ${rider.selectedZone || 'Robertsonpet'}. New delivery assignments and orders will appear here automatically.`
                 : 'You are currently offline. Book your slot or go online to start receiving delivery orders.'}
             </p>
 
@@ -596,6 +602,12 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Zone Selection & Locked Modal ──────────────────── */}
+        <ZoneSelectionModal
+          isOpen={isZoneModalOpen}
+          onClose={() => setIsZoneModalOpen(false)}
+        />
 
       </div>
     </AppShell>

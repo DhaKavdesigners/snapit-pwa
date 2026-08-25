@@ -209,7 +209,7 @@ const defaultRider: RiderProfile = {
   acceptanceRate: 100,
   vehicleType: 'Bike',
   vehicleNumber: '',
-  selectedZone: 'Downtown Central',
+  selectedZone: 'Robertsonpet',
   selectedZoneId: 'zone-1',
   isVerified: true,
   verificationStep: 4,
@@ -244,41 +244,54 @@ const initialEarnings: EarningsSummary = {
 const availableZones: DeliveryZone[] = [
   {
     id: 'zone-1',
-    name: 'Downtown Central',
+    name: 'Robertsonpet',
     radius: '5km radius',
     demand: 'HIGH',
     estDailyEarnings: '₹800 - ₹1,200/day',
     activeRiders: 18,
-    centerLat: 12.9716,
-    centerLng: 77.6412,
+    centerLat: 12.9602,
+    centerLng: 78.2711,
     radiusMeters: 5000,
     capacity: 20,
     booked: 0,
   },
   {
     id: 'zone-2',
-    name: 'North Tech Park',
-    radius: '8km radius',
+    name: 'Andersonpet',
+    radius: '6km radius',
     demand: 'HIGH',
-    estDailyEarnings: '₹600 - ₹900/day',
+    estDailyEarnings: '₹600 - ₹950/day',
     activeRiders: 12,
-    centerLat: 12.9698,
-    centerLng: 77.7499,
-    radiusMeters: 8000,
+    centerLat: 12.9358,
+    centerLng: 78.2678,
+    radiusMeters: 6000,
     capacity: 15,
     booked: 0,
   },
   {
     id: 'zone-3',
-    name: 'South Suburbs',
-    radius: '12km radius',
+    name: 'BEML',
+    radius: '5km radius',
     demand: 'NORMAL',
-    estDailyEarnings: '₹500 - ₹800/day',
-    activeRiders: 8,
-    centerLat: 12.9289,
-    centerLng: 77.5838,
-    radiusMeters: 12000,
+    estDailyEarnings: '₹550 - ₹850/day',
+    activeRiders: 10,
+    centerLat: 12.9815,
+    centerLng: 78.2589,
+    radiusMeters: 5000,
     capacity: 12,
+    booked: 0,
+  },
+  {
+    id: 'zone-4',
+    name: 'Bangarpet',
+    radius: '8km radius',
+    demand: 'HIGH',
+    estDailyEarnings: '₹700 - ₹1,100/day',
+    activeRiders: 14,
+    centerLat: 12.9984,
+    centerLng: 78.1963,
+    radiusMeters: 8000,
+    capacity: 18,
     booked: 0,
   },
 ];
@@ -380,13 +393,17 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Slot Generation & Active/Upcoming Tracking ────────────────────────────
 
-  const refreshSlots = useCallback(() => {
-    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+  const refreshSlots = useCallback((customBookedIds?: string[], customZoneId?: string, customZoneName?: string) => {
+    const currentBooked = customBookedIds !== undefined ? customBookedIds : bookedSlotIds;
+    const targetZoneId = customZoneId || rider.selectedZoneId || 'zone-1';
+    const selectedZone = zones.find((z) => z.id === targetZoneId) || zones[0];
+    const targetZoneName = customZoneName || selectedZone.name;
+
     const generated = generateDailySlots(
       adminConfig.slot,
-      bookedSlotIds,
+      currentBooked,
       selectedZone.id,
-      selectedZone.name
+      targetZoneName
     );
     setSlots(generated);
 
@@ -396,7 +413,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     // Active slot: currently within start–end window (including early window)
     const active = generated.find(
       (s) =>
-        bookedSlotIds.includes(s.id) &&
+        currentBooked.includes(s.id) &&
         now >= s.startTimestamp - earlyWindow &&
         now < s.endTimestamp
     ) || null;
@@ -405,7 +422,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     // Upcoming slot: next booked slot that hasn't started early window yet
     const upcoming = generated.find(
       (s) =>
-        bookedSlotIds.includes(s.id) &&
+        currentBooked.includes(s.id) &&
         now < s.startTimestamp - earlyWindow
     ) || null;
     setUpcomingSlot(upcoming);
@@ -734,21 +751,41 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Slot Methods ──────────────────────────────────────────────────────────
 
   const bookSlot = (slotId: string, zoneId: string, zoneName: string) => {
-    setBookedSlotIds((prev) => {
-      if (prev.includes(slotId)) return prev;
-      const updated = [...prev, slotId];
+    const nextBooked = bookedSlotIds.includes(slotId) ? bookedSlotIds : [...bookedSlotIds, slotId];
+    setBookedSlotIds(nextBooked);
+    try {
+      localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(nextBooked));
+    } catch (e) {}
+
+    setRider((prev) => {
+      const updated = {
+        ...prev,
+        selectedZone: zoneName,
+        selectedZoneId: zoneId,
+      };
+      try {
+        localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updated));
+      } catch (e) {}
       return updated;
     });
+
+    // Synchronous immediate refresh to avoid race conditions/delayed state updates
+    refreshSlots(nextBooked, zoneId, zoneName);
+
     const slot = slots.find((s) => s.id === slotId);
     if (slot) {
       addAlert(createSlotBookedAlert({ ...slot, zoneId, zoneName }));
     }
-    setTimeout(refreshSlots, 100);
   };
 
   const cancelSlot = (slotId: string) => {
     const slot = slots.find((s) => s.id === slotId);
-    setBookedSlotIds((prev) => prev.filter((id) => id !== slotId));
+    const nextBooked = bookedSlotIds.filter((id) => id !== slotId);
+    setBookedSlotIds(nextBooked);
+    try {
+      localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(nextBooked));
+    } catch (e) {}
+
     if (slot) {
       addAlert(createSlotCancelledAlert(slot));
     }
@@ -756,21 +793,22 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     if (activeSlot?.id === slotId && !activeOrder) {
       setIsOnline(false);
     }
-    setTimeout(refreshSlots, 100);
+    refreshSlots(nextBooked);
   };
 
   const extendSlot = (currentSlotId: string, nextSlotId: string) => {
     const nextSlot = slots.find((s) => s.id === nextSlotId);
     if (!nextSlot) return;
-    // Book the next slot (it becomes continuous with current)
-    setBookedSlotIds((prev) => {
-      if (prev.includes(nextSlotId)) return prev;
-      return [...prev, nextSlotId];
-    });
+    const nextBooked = bookedSlotIds.includes(nextSlotId) ? bookedSlotIds : [...bookedSlotIds, nextSlotId];
+    setBookedSlotIds(nextBooked);
+    try {
+      localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(nextBooked));
+    } catch (e) {}
+
     if (nextSlot) {
       addAlert(createSlotExtendedAlert(nextSlot.endTimestamp));
     }
-    setTimeout(refreshSlots, 100);
+    refreshSlots(nextBooked);
   };
 
   const addSlotToWaitlist = (slotId: string) => {
@@ -1184,7 +1222,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         acceptanceRate: p.acceptance_rate || 100,
         vehicleType: p.vehicle_type || 'Bike',
         vehicleNumber: p.vehicle_number || '',
-        selectedZone: p.selected_zone_name || 'Downtown Central',
+        selectedZone: p.selected_zone_name || 'Robertsonpet',
         selectedZoneId: p.selected_zone_id || 'zone-1',
         isVerified: true,
         verificationStep: 4,
@@ -1229,7 +1267,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         acceptanceRate: p.acceptance_rate || 100,
         vehicleType: p.vehicle_type || 'Bike',
         vehicleNumber: p.vehicle_number || '',
-        selectedZone: p.selected_zone_name || 'Downtown Central',
+        selectedZone: p.selected_zone_name || 'Robertsonpet',
         selectedZoneId: p.selected_zone_id || 'zone-1',
         isVerified: true,
         verificationStep: 4,
@@ -1276,7 +1314,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         vehicle_type: data.vehicleType || 'Bike',
         vehicle_number: data.vehicleNumber || '',
         selected_zone_id: data.selectedZoneId || 'zone-1',
-        selected_zone_name: data.selectedZone || 'Downtown Central',
+        selected_zone_name: data.selectedZone || 'Robertsonpet',
         alt_phone: data.altPhone,
         email: data.email,
         address: data.address,
@@ -1315,7 +1353,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         acceptanceRate: p.acceptance_rate || 100,
         vehicleType: p.vehicle_type || 'Bike',
         vehicleNumber: p.vehicle_number || '',
-        selectedZone: p.selected_zone_name || 'Downtown Central',
+        selectedZone: p.selected_zone_name || 'Robertsonpet',
         selectedZoneId: p.selected_zone_id || 'zone-1',
         isVerified: true,
         verificationStep: 4,

@@ -159,7 +159,7 @@ export default function OnboardingPage() {
       vehicleType,
       vehicleNumber: vehicleNumber.toUpperCase(),
       selectedZoneId: matchedZone?.id || 'zone-1',
-      selectedZone: matchedZone?.name || 'Downtown Central',
+      selectedZone: matchedZone?.name || 'Robertsonpet',
       altPhone,
       email,
       address,

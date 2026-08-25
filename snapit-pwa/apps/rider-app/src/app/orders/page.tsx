@@ -9,7 +9,7 @@ import { Phone, Check, Package, Clock, AlertCircle, ShieldCheck, ChevronRight } 
 import { useRouter } from 'next/navigation';
 
 export default function OrdersPage() {
-  const { activeOrder, ordersHistory, advanceActiveOrderStatus, triggerMockOrder, markOrderPickedUp, nonAcceptanceCount } = useRider();
+  const { rider, activeOrder, ordersHistory, advanceActiveOrderStatus, triggerMockOrder, markOrderPickedUp, nonAcceptanceCount } = useRider();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'cancelled'>('active');
   const [isFullScreenNav, setIsFullScreenNav] = useState<boolean>(false);
   const router = useRouter();
@@ -332,7 +332,7 @@ export default function OrdersPage() {
                 <div>
                   <h3 className="font-bold text-base text-on-surface">No Active Deliveries</h3>
                   <p className="text-xs text-secondary max-w-[240px] mt-1">
-                    You&apos;re online in Downtown Central. New orders will appear here automatically.
+                    You&apos;re online in {rider.selectedZone || 'Robertsonpet'}. New orders will appear here automatically.
                   </p>
                 </div>
                 <button

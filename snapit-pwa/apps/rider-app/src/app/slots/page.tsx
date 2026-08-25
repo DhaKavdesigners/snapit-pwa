@@ -21,7 +21,9 @@ import {
   TrendingUp,
   PackageCheck,
   ListX,
+  ChevronDown,
 } from 'lucide-react';
+import { ZoneSelectionModal } from '@/components/slots/ZoneSelectionModal';
 import {
   formatTimeAMPM,
   formatRemainingTime,
@@ -33,49 +35,26 @@ import {
 import { getNow } from '@/services/mockService';
 import { RiderSlot, DemandLevel, SlotStatus } from '@/types';
 
-// ─── Demand Badge ─────────────────────────────────────────────────────────────
+// ─── Status Badge (AVAILABLE / BOOKED ONLY) ───────────────────────────────────
 
-const DemandBadge: React.FC<{ level: DemandLevel }> = ({ level }) => {
-  const config = {
-    LOW: { cls: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Low Demand' },
-    MEDIUM: { cls: 'bg-blue-50 text-blue-600 border-blue-200', label: 'Medium Demand' },
-    HIGH: { cls: 'bg-orange-50 text-orange-600 border-orange-200', label: '🔥 High Demand' },
-    VERY_HIGH: { cls: 'bg-red-50 text-red-600 border-red-200', label: '🔥 Very High Demand' },
-  }[level];
-
+const SlotStatusBadge: React.FC<{ isBooked: boolean }> = ({ isBooked }) => {
   return (
-    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${config.cls}`}>
-      {config.label}
+    <span
+      className={`text-[10px] font-black tracking-wider px-2.5 py-1 rounded-full border shrink-0 ${
+        isBooked
+          ? 'bg-blue-50 text-blue-700 border-blue-200'
+          : 'bg-green-50 text-green-700 border-green-200'
+      }`}
+    >
+      {isBooked ? 'BOOKED' : 'AVAILABLE'}
     </span>
   );
 };
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-
-const SlotStatusBadge: React.FC<{ status: SlotStatus }> = ({ status }) => {
-  const config: Record<SlotStatus, { cls: string; label: string }> = {
-    available: { cls: 'bg-green-100 text-green-700 border-green-300', label: 'AVAILABLE' },
-    booked: { cls: 'bg-blue-100 text-blue-700 border-blue-300', label: 'BOOKED' },
-    active: { cls: 'bg-primary/10 text-primary border-primary/30 animate-pulse', label: 'ACTIVE' },
-    completed: { cls: 'bg-slate-100 text-slate-500 border-slate-200', label: 'COMPLETED' },
-    cancelled: { cls: 'bg-red-100 text-red-600 border-red-200', label: 'CANCELLED' },
-    missed: { cls: 'bg-amber-100 text-amber-600 border-amber-300', label: 'MISSED' },
-    full: { cls: 'bg-red-100 text-red-600 border-red-200', label: 'FULL' },
-    waitlisted: { cls: 'bg-purple-100 text-purple-600 border-purple-200', label: 'WAITLISTED' },
-    booking_closed: { cls: 'bg-slate-100 text-slate-400 border-slate-200', label: 'CLOSED' },
-  };
-  const { cls, label } = config[status] || config.available;
-  return (
-    <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-0.5 rounded-full border ${cls}`}>
-      {label}
-    </span>
-  );
-};
-
-// ─── Current Slot Card ────────────────────────────────────────────────────────
+// ─── Current Slot Card (Clean, Professional, Online/Offline Only) ──────────────
 
 const CurrentSlotCard: React.FC<{ slot: RiderSlot }> = ({ slot }) => {
-  const { isOnline, riderBreak, startBreak, endBreak, extendSlot, slots, adminConfig } = useRider();
+  const { isOnline, extendSlot, slots, adminConfig } = useRider();
   const [now, setNow] = useState(getNow());
 
   useEffect(() => {
@@ -87,53 +66,67 @@ const CurrentSlotCard: React.FC<{ slot: RiderSlot }> = ({ slot }) => {
   const totalMs = slot.endTimestamp - slot.startTimestamp;
   const elapsed = now - slot.startTimestamp;
   const progressPct = Math.min(100, Math.floor((elapsed / totalMs) * 100));
-  const isBreakActive = riderBreak && !riderBreak.endedAt;
   const nextSlot = findNextSlot(slot, slots);
   const endingSoon = remainingMs > 0 && remainingMs <= 10 * 60000;
-
-  const breakElapsedMs = riderBreak ? now - riderBreak.startedAt : 0;
-  const breakAllowedMs = adminConfig.break.allowedBreakMinutes * 60000;
-  const breakRemainingMs = Math.max(0, breakAllowedMs - breakElapsedMs);
 
   return (
     <div className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${endingSoon ? 'border-amber-300' : 'border-slate-200'}`}>
       {/* Header bar */}
-      <div className={`px-4 py-3 flex items-center justify-between ${endingSoon ? 'bg-amber-50' : 'bg-primary/5'}`}>
+      <div className={`px-4 py-2.5 flex items-center justify-between ${endingSoon ? 'bg-amber-50' : 'bg-slate-50 border-b border-slate-100'}`}>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${slot.status === 'active' ? 'bg-primary animate-pulse' : 'bg-blue-500'}`} />
+          <div className="w-2 h-2 rounded-full bg-blue-500" />
           <span className="text-[11px] font-extrabold tracking-wider text-slate-600 uppercase">
-            {slot.status === 'active' ? 'Current Slot' : 'Upcoming Slot'}
+            Current Slot
           </span>
         </div>
-        {endingSoon && (
+        {endingSoon ? (
           <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
             ⚠️ Ending Soon
           </span>
+        ) : (
+          <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-0.5 rounded-full font-bold text-[10px]">
+            <CheckCircle2 className="w-3 h-3 text-blue-600" />
+            <span>BOOKED</span>
+          </div>
         )}
       </div>
 
-      {/* Slot time */}
-      <div className="px-4 pt-3 pb-2">
-        <div className="flex items-end justify-between">
+      {/* Main Content Area */}
+      <div className="p-4 space-y-3">
+        {/* Time, Zone & Online Status Row */}
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[22px] font-black text-slate-900 font-mono leading-none">
-              {formatTimeAMPM(slot.startTimestamp)}
+            <p className="text-[20px] font-black text-slate-900 font-mono leading-none">
+              {formatTimeAMPM(slot.startTimestamp)} – {formatTimeAMPM(slot.endTimestamp)}
             </p>
-            <p className="text-[13px] font-bold text-slate-500 mt-0.5">
-              – {formatTimeAMPM(slot.endTimestamp)}
-            </p>
+            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-600">
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+              <span className="font-semibold">{slot.zoneName}</span>
+            </div>
           </div>
-          <SlotStatusBadge status={slot.status} />
+
+          {/* Online / Offline Status Badge */}
+          <div className="shrink-0 text-right">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Online Status</span>
+            <span className={`inline-flex items-center gap-1.5 font-bold text-xs px-3 py-1 rounded-xl border ${
+              isOnline
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-slate-100 text-slate-600 border-slate-200'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span>{isOnline ? 'Yes' : 'No'}</span>
+            </span>
+          </div>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress Bar */}
         {slot.status === 'active' && (
-          <div className="mt-3">
+          <div className="pt-1">
             <div className="flex justify-between text-[10px] text-slate-400 mb-1">
               <span>Remaining: {formatRemainingTime(remainingMs)}</span>
               <span>{progressPct}% elapsed</span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-all duration-1000"
                 style={{ width: `${progressPct}%` }}
@@ -142,158 +135,63 @@ const CurrentSlotCard: React.FC<{ slot: RiderSlot }> = ({ slot }) => {
           </div>
         )}
 
-        {/* Zone */}
-        <div className="flex items-center gap-1.5 mt-3 text-[12px] text-slate-600">
-          <MapPin className="w-3.5 h-3.5 text-primary" />
-          <span className="font-semibold">{slot.zoneName}</span>
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="px-4 pb-3 grid grid-cols-3 gap-2 text-center">
-        <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-          <p className="text-[10px] text-slate-400 font-semibold">Online</p>
-          <p className="text-[13px] font-black text-slate-800 font-mono">
-            {isOnline ? '🟢 Yes' : '⚫ No'}
-          </p>
-        </div>
-        <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-          <p className="text-[10px] text-slate-400 font-semibold">Break</p>
-          <p className="text-[13px] font-black text-slate-800 font-mono">
-            {riderBreak?.endedAt
-              ? `${Math.ceil((riderBreak.actualDurationMs || 0) / 60000)}m used`
-              : isBreakActive
-              ? formatCountdown(breakRemainingMs)
-              : `0/${adminConfig.break.allowedBreakMinutes}m`}
-          </p>
-        </div>
-        <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-          <p className="text-[10px] text-slate-400 font-semibold">Demand</p>
-          <p className="text-[11px] font-black text-orange-500">
-            {slot.demandLevel === 'VERY_HIGH' ? '🔥🔥' : slot.demandLevel === 'HIGH' ? '🔥' : slot.demandLevel}
-          </p>
-        </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="px-4 pb-4 flex gap-2">
-        {slot.status === 'active' && !isBreakActive && !riderBreak?.endedAt === false && (
-          <button
-            onClick={startBreak}
-            className="flex-1 py-2.5 border border-amber-300 bg-amber-50 text-amber-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-          >
-            <Coffee className="w-3.5 h-3.5" />
-            Take Break
-          </button>
-        )}
-        {slot.status === 'active' && isBreakActive && (
-          <button
-            onClick={endBreak}
-            className="flex-1 py-2.5 bg-primary text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-lift"
-          >
-            Resume Online
-          </button>
-        )}
+        {/* Extend 1 Hour if ending soon */}
         {endingSoon && nextSlot && nextSlot.status === 'available' && adminConfig.slot.extensionEnabled && (
           <button
             onClick={() => extendSlot(slot.id, nextSlot.id)}
-            className="flex-1 py-2.5 bg-primary text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-lift"
+            className="w-full py-2.5 bg-primary text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-lift"
           >
             <Zap className="w-3.5 h-3.5" />
             Extend 1 Hour
           </button>
-        )}
-        {endingSoon && nextSlot && nextSlot.status === 'full' && (
-          <div className="flex-1 py-2.5 bg-slate-100 text-slate-500 font-bold text-xs rounded-xl flex items-center justify-center">
-            Next slot is full
-          </div>
         )}
       </div>
     </div>
   );
 };
 
-// ─── Available Slot Row ───────────────────────────────────────────────────────
+// ─── Available Slot Row (Professional: Time on Left, Status + Action on Right) ─
 
 const AvailableSlotRow: React.FC<{
   slot: RiderSlot;
   onBook: () => void;
-  onWaitlist: () => void;
   isBooked: boolean;
-}> = ({ slot, onBook, onWaitlist, isBooked }) => {
-  const { adminConfig } = useRider();
+}> = ({ slot, onBook, isBooked }) => {
   const now = getNow();
   const isPast = now >= slot.endTimestamp;
-  const bookingOpen = isBookingOpen(slot, adminConfig.slot);
-  const capacityPct = Math.floor((slot.bookedCount / slot.capacity) * 100);
 
   if (isPast) return null;
 
   return (
     <div
-      className={`bg-white rounded-xl border px-4 py-3 flex items-center gap-3 transition-all ${
-        isBooked ? 'border-primary/30 bg-primary/5' : 'border-slate-200'
+      className={`bg-white rounded-2xl border px-4 py-3 flex items-center justify-between gap-3 shadow-xs hover:border-slate-300 transition-all ${
+        isBooked ? 'border-blue-200/80 bg-blue-50/15' : 'border-slate-200'
       }`}
     >
-      {/* Time */}
-      <div className="shrink-0 text-center w-20">
-        <p className="text-[13px] font-black text-slate-900 font-mono">
-          {formatTimeAMPM(slot.startTimestamp)}
+      {/* Left: Time Range */}
+      <div className="shrink-0 text-left">
+        <p className="text-[14px] font-black text-slate-900 font-mono leading-none">
+          {formatTimeAMPM(slot.startTimestamp)} – {formatTimeAMPM(slot.endTimestamp)}
         </p>
-        <p className="text-[10px] text-slate-400">–{formatTimeAMPM(slot.endTimestamp)}</p>
       </div>
 
-      {/* Middle */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <DemandBadge level={slot.demandLevel} />
-          <SlotStatusBadge status={isBooked ? (slot.status === 'active' ? 'active' : 'booked') : slot.status} />
-        </div>
-
-        {/* Capacity bar */}
-        <div className="mt-1.5 flex items-center gap-2">
-          <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${
-                capacityPct >= 90 ? 'bg-red-400' : capacityPct >= 60 ? 'bg-amber-400' : 'bg-primary'
-              }`}
-              style={{ width: `${Math.min(100, capacityPct)}%` }}
-            />
-          </div>
-          <span className="text-[10px] text-slate-400 shrink-0 flex items-center gap-0.5">
-            <Users className="w-2.5 h-2.5" />
-            {slot.bookedCount}/{slot.capacity}
-          </span>
-        </div>
-      </div>
-
-      {/* Action */}
-      <div className="shrink-0">
+      {/* Right: Status Badge & Action Button aligned together */}
+      <div className="flex items-center gap-2 shrink-0">
         {isBooked ? (
-          <div className="flex items-center gap-1 text-primary text-xs font-bold">
-            <CheckCircle2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Booked</span>
+          <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1.5 rounded-xl font-bold text-xs shadow-2xs">
+            <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 stroke-[2.5]" />
+            <span>BOOKED</span>
           </div>
-        ) : slot.status === 'full' && adminConfig.slot.waitlistEnabled ? (
-          <button
-            onClick={onWaitlist}
-            className="text-[11px] font-bold text-purple-600 border border-purple-200 bg-purple-50 px-2.5 py-1.5 rounded-lg active:scale-95 whitespace-nowrap"
-          >
-            Waitlist
-          </button>
-        ) : slot.status === 'full' ? (
-          <span className="text-[10px] font-bold text-slate-400">Full</span>
-        ) : !bookingOpen ? (
-          <span className="text-[10px] font-bold text-slate-400 text-center leading-tight">
-            Booking<br />closed
-          </span>
         ) : (
-          <button
-            onClick={onBook}
-            className="text-[11px] font-bold text-white bg-primary px-3 py-1.5 rounded-lg active:scale-95 shadow-sm"
-          >
-            Book
-          </button>
+          <>
+            <SlotStatusBadge isBooked={false} />
+            <button
+              onClick={onBook}
+              className="text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 active:scale-95 px-3.5 py-1.5 rounded-xl shadow-xs transition-all"
+            >
+              Book
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -356,13 +254,6 @@ const BookingConfirmModal: React.FC<{
                   </div>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-primary/10 flex items-center justify-between text-[11px]">
-                <DemandBadge level={slot.demandLevel} />
-                <span className="text-slate-500 flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  {slot.bookedCount}/{slot.capacity} riders booked
-                </span>
-              </div>
             </div>
 
             {/* Info */}
@@ -421,7 +312,7 @@ const SlotHistoryItem: React.FC<{ slot: RiderSlot }> = ({ slot }) => {
         </p>
       </div>
       <div className="text-right shrink-0">
-        <SlotStatusBadge status={slot.status} />
+        <SlotStatusBadge isBooked={true} />
         <p className="text-[10px] text-slate-400 mt-1">{slot.date}</p>
       </div>
     </div>
@@ -448,6 +339,7 @@ export default function SlotsPage() {
 
   const [selectedTab, setSelectedTab] = useState<'slots' | 'history'>('slots');
   const [bookingSlot, setBookingSlot] = useState<RiderSlot | null>(null);
+  const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
   const [now, setNow] = useState(getNow());
 
   // Re-render every second for live countdowns
@@ -469,6 +361,26 @@ export default function SlotsPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-4 pt-2 pb-6 animate-fade-in">
+
+        {/* ── Top Header with Zone Selector ── */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black text-slate-900 leading-tight">Operating Slots</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Book your shift duties</p>
+          </div>
+
+          <button
+            onClick={() => setIsZoneModalOpen(true)}
+            className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm text-xs font-semibold text-slate-700 active:scale-95 hover:border-slate-300 transition-all text-left"
+          >
+            <MapPin className="w-3.5 h-3.5 text-green-600 shrink-0" />
+            <div className="text-left">
+              <p className="text-[9px] text-slate-400 leading-none">Your Zone</p>
+              <p className="text-[11px] font-bold text-slate-800">{rider.selectedZone || 'Robertsonpet'}</p>
+            </div>
+            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+          </button>
+        </div>
 
         {/* ── Zone Status Banner ───────────────────────── */}
         {zoneStatus !== 'inside' && zoneStatus !== 'unknown' && (
@@ -593,7 +505,7 @@ export default function SlotsPage() {
                     <div className="w-2 h-2 rounded-full bg-blue-500" />
                     <span className="text-[11px] font-extrabold tracking-wider text-slate-600 uppercase">Upcoming</span>
                   </div>
-                  <SlotStatusBadge status="booked" />
+                  <SlotStatusBadge isBooked={true} />
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-[20px] font-black text-slate-900 font-mono">
@@ -651,7 +563,6 @@ export default function SlotsPage() {
                       slot={slot}
                       isBooked={bookedIds.includes(slot.id)}
                       onBook={() => setBookingSlot(slot)}
-                      onWaitlist={() => addSlotToWaitlist(slot.id)}
                     />
                   ))}
                 </div>
@@ -728,6 +639,12 @@ export default function SlotsPage() {
           onClose={() => setBookingSlot(null)}
         />
       )}
+
+      {/* Zone Selection & Locked Modal */}
+      <ZoneSelectionModal
+        isOpen={isZoneModalOpen}
+        onClose={() => setIsZoneModalOpen(false)}
+      />
     </AppShell>
   );
 }

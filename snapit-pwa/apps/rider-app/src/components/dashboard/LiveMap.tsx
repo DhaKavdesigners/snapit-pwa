@@ -55,11 +55,11 @@ export const LiveMap: React.FC<LiveMapProps> = ({ showRoute = false, interactive
         {/* Heatmap demand hot zones */}
         {showHeatmap && (
           <g className="transition-opacity duration-300">
-            {/* Zone 1: Downtown Central High Demand */}
+            {/* Zone 1: Robertsonpet High Demand */}
             <circle cx="210" cy="380" r="110" fill="url(#heatGlow1)" />
-            {/* Zone 2: Tech Park Surge */}
+            {/* Zone 2: Andersonpet Surge */}
             <circle cx="290" cy="240" r="85" fill="url(#heatGlow2)" />
-            {/* Zone 3: Food Hub */}
+            {/* Zone 3: BEML / Bangarpet Hub */}
             <circle cx="120" cy="460" r="75" fill="url(#heatGlow1)" />
           </g>
         )}

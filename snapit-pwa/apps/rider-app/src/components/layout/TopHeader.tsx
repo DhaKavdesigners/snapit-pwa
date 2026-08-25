@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRider } from '@/context/RiderContext';
-import { Bell } from 'lucide-react';
+import { Bell, Power, X, AlertCircle } from 'lucide-react';
+import { formatTimeAMPM } from '@/services/slotService';
 
 interface TopHeaderProps {
   showBack?: boolean;
@@ -16,12 +17,26 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
     rider,
     isOnline,
     toggleOnline,
+    setOnlineStatus,
+    activeSlot,
+    activeOrder,
     alerts,
     riderBreak,
   } = useRider();
 
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+
   const unreadCount = alerts?.filter((a) => !a.read).length || 0;
   const isBreakActive = riderBreak && !riderBreak.endedAt;
+
+  // Handle online toggle click
+  const handleToggleClick = () => {
+    if (isOnline) {
+      setShowOfflineModal(true);
+    } else {
+      toggleOnline();
+    }
+  };
 
   // Online toggle label
   let onlineLabel = isOnline ? 'Online' : 'Offline';
@@ -76,7 +91,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Online toggle */}
           <div
-            onClick={toggleOnline}
+            onClick={handleToggleClick}
             className="flex items-center gap-1 select-none cursor-pointer"
             title={isOnline ? 'Go Offline' : 'Go Online'}
           >
@@ -129,6 +144,56 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
           </Link>
         </div>
       </div>
+
+      {/* ── SIMPLE & SHORT GO OFFLINE CONFIRMATION MODAL ── */}
+      {showOfflineModal && (
+        <div
+          className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setShowOfflineModal(false)}
+        >
+          <div
+            className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 animate-scale-up text-center space-y-3.5 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Red Power Icon */}
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center mx-auto shadow-sm">
+              <Power className="w-6 h-6" />
+            </div>
+
+            {/* Short Title & Prompt */}
+            <div>
+              <h3 className="text-base font-black text-slate-900">
+                Go Offline?
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Are you sure you want to go offline?
+              </p>
+            </div>
+
+            {/* Simple Yes / No Buttons */}
+            <div className="flex gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowOfflineModal(false)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl active:scale-95 transition-all"
+              >
+                No
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOnlineStatus(false);
+                  setShowOfflineModal(false);
+                }}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm active:scale-95 transition-all"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

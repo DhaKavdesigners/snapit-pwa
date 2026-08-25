@@ -66,7 +66,7 @@ export default function ProfilePage() {
               <span className="text-slate-300">·</span>
               <span className="text-slate-500 font-medium">{rider.totalDeliveries} trips</span>
             </p>
-            <p className="text-xs font-mono font-semibold text-secondary mt-0.5">{rider.selectedZone || 'Downtown Central'}</p>
+            <p className="text-xs font-mono font-semibold text-secondary mt-0.5">{rider.selectedZone || 'Robertsonpet'}</p>
             <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
               Verified Partner
             </span>

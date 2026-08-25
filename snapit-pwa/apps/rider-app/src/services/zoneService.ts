@@ -16,11 +16,12 @@ function haversineDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Mock zone geofence boundaries for the 3 existing zones
+// Mock zone geofence boundaries for the 4 zones
 const ZONE_GEOFENCES: Record<string, { lat: number; lng: number; radiusMeters: number }> = {
-  'zone-1': { lat: 12.9716, lng: 77.6412, radiusMeters: 5000 },  // Downtown Central / Indiranagar
-  'zone-2': { lat: 12.9698, lng: 77.7499, radiusMeters: 8000 },  // North Tech Park / Whitefield
-  'zone-3': { lat: 12.9289, lng: 77.5838, radiusMeters: 12000 }, // South Suburbs / Jayanagar
+  'zone-1': { lat: 12.9602, lng: 78.2711, radiusMeters: 5000 },  // Robertsonpet
+  'zone-2': { lat: 12.9358, lng: 78.2678, radiusMeters: 6000 },  // Andersonpet
+  'zone-3': { lat: 12.9815, lng: 78.2589, radiusMeters: 5000 },  // BEML
+  'zone-4': { lat: 12.9984, lng: 78.1963, radiusMeters: 8000 },  // Bangarpet
 };
 
 export interface MockLocationConfig {

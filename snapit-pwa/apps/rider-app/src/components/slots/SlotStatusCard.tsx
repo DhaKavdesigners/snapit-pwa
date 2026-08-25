@@ -63,7 +63,7 @@ export const SlotStatusCard: React.FC = () => {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>Slot Booking Required</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-medium">Zone: <strong className="text-white">{rider.selectedZone || 'Downtown Central'}</strong></span>
+          <span className="text-[10px] text-slate-400 font-medium">Zone: <strong className="text-white">{rider.selectedZone || 'Robertsonpet'}</strong></span>
         </div>
 
         {/* Main Title & Subtitle */}
