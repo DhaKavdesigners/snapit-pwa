@@ -29,7 +29,6 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'status'>('splash');
   
   // Login form state
-  const [loginPhone, setLoginPhone] = useState('');
   const [loginMpin, setLoginMpin] = useState('');
   const [showLoginMpin, setShowLoginMpin] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -68,7 +67,7 @@ export default function OnboardingPage() {
 
   const router = useRouter();
 
-  // Handle Login with Phone & MPIN
+  // Handle Login with MPIN
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -79,16 +78,11 @@ export default function OnboardingPage() {
     }
 
     setIsLoggingIn(true);
-    let result;
-    if (loginPhone.trim()) {
-      result = await loginWithMpin(loginPhone, loginMpin);
-    } else {
-      result = await loginWithMpinOnly(loginMpin);
-    }
+    const result = await loginWithMpinOnly(loginMpin);
     setIsLoggingIn(false);
 
     if (!result.success) {
-      setLoginError(result.error || 'Incorrect MPIN or mobile number. Please try again.');
+      setLoginError(result.error || 'Incorrect MPIN. Please try again.');
       return;
     }
 
@@ -247,25 +241,10 @@ export default function OnboardingPage() {
               </p>
 
               {/* Login Form */}
-              <form onSubmit={handleLoginSubmit} className="w-full bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 space-y-3.5 text-left mb-3">
-                {/* Registered Phone */}
-                <div>
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                    <Phone className="w-3.5 h-3.5 text-primary" />
-                    <span>Registered Mobile Number</span>
-                  </label>
-                  <input
-                    type="tel"
-                    value={loginPhone}
-                    onChange={(e) => setLoginPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 outline-none focus:border-primary focus:bg-white"
-                  />
-                </div>
-
+              <form onSubmit={handleLoginSubmit} className="w-full bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 space-y-4 text-left mb-3">
                 {/* MPIN */}
                 <div>
-                  <div className="flex justify-between items-center mb-1">
+                  <div className="flex justify-between items-center mb-1.5">
                     <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5 text-primary" />
                       <span>4-Digit Login MPIN</span>
@@ -285,12 +264,12 @@ export default function OnboardingPage() {
                       onChange={(e) => setLoginMpin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                       placeholder="••••"
                       maxLength={4}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center text-base font-mono tracking-widest font-bold text-slate-900 outline-none focus:border-primary focus:bg-white shadow-inner"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center text-lg font-mono tracking-widest font-bold text-slate-900 outline-none focus:border-primary focus:bg-white shadow-inner"
                     />
                     <button
                       type="button"
                       onClick={() => setShowLoginMpin(!showLoginMpin)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
                       {showLoginMpin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -306,8 +285,8 @@ export default function OnboardingPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoggingIn}
-                  className="w-full py-3 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  disabled={isLoggingIn || loginMpin.length < 4}
+                  className="w-full py-3.5 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Lock className="w-4 h-4" />
                   <span>{isLoggingIn ? 'Logging in...' : 'Login with MPIN'}</span>
