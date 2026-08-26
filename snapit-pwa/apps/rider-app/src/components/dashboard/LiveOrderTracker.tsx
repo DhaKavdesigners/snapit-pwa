@@ -39,7 +39,7 @@ export const LiveOrderTracker: React.FC = () => {
 
       if (!isReadyForPickup) {
         return {
-          label: 'Order Picked Up (Waiting for Store)',
+          label: 'Awaiting Order Preparation',
           success: 'Waiting for Store...',
           disabled: true,
         };
@@ -47,8 +47,8 @@ export const LiveOrderTracker: React.FC = () => {
 
       if (isRiderConfirmed && !isShopConfirmed) {
         return {
-          label: 'Awaiting Shopkeeper Handover...',
-          success: 'Waiting...',
+          label: 'Awaiting Shopkeeper Handover',
+          success: 'Waiting for Handover...',
           disabled: true,
         };
       }

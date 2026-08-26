@@ -128,7 +128,7 @@ export default function DashboardPage() {
       Boolean(activeOrder.shopkeeperHandoverConfirmed);
 
     if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup') {
-      if (!isReadyForPickup) return 'STORE PREPARING ORDER';
+      if (!isReadyForPickup) return 'AWAITING ORDER PREPARATION';
       if (activeOrder.riderPickupConfirmed && !activeOrder.shopkeeperHandoverConfirmed && activeOrder.dbStatus !== 'OUT_OF_SHOP') {
         return 'AWAITING SHOPKEEPER HANDOVER';
       }
@@ -165,26 +165,29 @@ export default function DashboardPage() {
       const isRiderConfirmed = Boolean(activeOrder.riderPickupConfirmed);
       const isShopConfirmed = Boolean(activeOrder.shopkeeperHandoverConfirmed || activeOrder.dbStatus === 'OUT_OF_SHOP');
 
+      // Stage 1: Order is still being prepared by store
       if (!isReadyForPickup) {
         return {
           type: 'slider',
-          label: 'ORDER PICKED UP',
+          label: 'AWAITING ORDER PREPARATION',
           success: 'Waiting for Store...',
-          hint: '⏳ Store is preparing the order... Waiting for store to mark Ready for Pickup.',
+          hint: 'Merchant is preparing the order. Slide to confirm pickup once marked ready.',
           disabled: true,
         };
       }
 
+      // Stage 2b: Rider confirmed pickup, waiting for shopkeeper handover confirmation
       if (isRiderConfirmed && !isShopConfirmed) {
         return {
           type: 'slider',
           label: 'AWAITING SHOPKEEPER HANDOVER',
-          success: 'Waiting...',
-          hint: 'You confirmed pickup. Waiting for shopkeeper to hand over package.',
+          success: 'Waiting for Handover...',
+          hint: 'You confirmed pickup. Waiting for shopkeeper to confirm handover.',
           disabled: true,
         };
       }
 
+      // Stage 2: Store marked ready -> Rider can slide ORDER PICKED UP
       return {
         type: 'slider',
         label: 'ORDER PICKED UP',
