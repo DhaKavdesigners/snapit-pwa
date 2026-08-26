@@ -57,6 +57,9 @@ export default function DashboardPage() {
     advanceActiveOrderStatus,
     markOrderPickedUp,
     triggerMockOrder,
+    simulateMerchantReadyForPickup,
+    simulateShopkeeperHandover,
+    resetActiveOrder,
     rider,
     simulateApproval,
     earnings,
@@ -118,9 +121,20 @@ export default function DashboardPage() {
   // Active Order slider config
   const getStatusBadgeLabel = () => {
     if (!activeOrder) return '';
-    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') return 'ORDER ACCEPTED';
-    if (activeOrder.status === 'arrived_at_pickup') return 'ARRIVED AT STORE';
-    if (activeOrder.status === 'in_transit') return 'ORDER PICKED UP';
+    const isReadyForPickup =
+      activeOrder.dbStatus === 'READY_FOR_PICKUP' ||
+      activeOrder.dbStatus === 'OUT_OF_SHOP' ||
+      activeOrder.dbStatus === 'OUT_FOR_DELIVERY' ||
+      Boolean(activeOrder.shopkeeperHandoverConfirmed);
+
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup') {
+      if (!isReadyForPickup) return 'STORE PREPARING ORDER';
+      if (activeOrder.riderPickupConfirmed && !activeOrder.shopkeeperHandoverConfirmed && activeOrder.dbStatus !== 'OUT_OF_SHOP') {
+        return 'AWAITING SHOPKEEPER HANDOVER';
+      }
+      return 'READY FOR PICKUP';
+    }
+    if (activeOrder.status === 'in_transit') return 'OUT FOR DELIVERY';
     if (activeOrder.status === 'arrived_at_dropoff') return 'ARRIVED AT CUSTOMER';
     if (activeOrder.status === 'delivered') return 'DELIVERED';
     return 'ACTIVE ORDER';
@@ -128,9 +142,7 @@ export default function DashboardPage() {
 
   const handleNextStepAction = () => {
     if (!activeOrder) return;
-    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
-      advanceActiveOrderStatus();
-    } else if (activeOrder.status === 'arrived_at_pickup') {
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup') {
       markOrderPickedUp();
     } else if (activeOrder.status === 'in_transit') {
       advanceActiveOrderStatus();
@@ -140,29 +152,54 @@ export default function DashboardPage() {
   };
 
   const getSliderConfig = () => {
-    if (!activeOrder) return { type: 'slider', label: '', success: '', hint: '' };
-    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
+    if (!activeOrder) return { type: 'slider', label: '', success: '', hint: '', disabled: false };
+    
+    // Check if store has prepared and marked order ready in Supabase
+    const isReadyForPickup =
+      activeOrder.dbStatus === 'READY_FOR_PICKUP' ||
+      activeOrder.dbStatus === 'OUT_OF_SHOP' ||
+      activeOrder.dbStatus === 'OUT_FOR_DELIVERY' ||
+      Boolean(activeOrder.shopkeeperHandoverConfirmed);
+
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup') {
+      const isRiderConfirmed = Boolean(activeOrder.riderPickupConfirmed);
+      const isShopConfirmed = Boolean(activeOrder.shopkeeperHandoverConfirmed || activeOrder.dbStatus === 'OUT_OF_SHOP');
+
+      if (!isReadyForPickup) {
+        return {
+          type: 'slider',
+          label: 'ORDER PICKED UP',
+          success: 'Waiting for Store...',
+          hint: '⏳ Store is preparing the order... Waiting for store to mark Ready for Pickup.',
+          disabled: true,
+        };
+      }
+
+      if (isRiderConfirmed && !isShopConfirmed) {
+        return {
+          type: 'slider',
+          label: 'AWAITING SHOPKEEPER HANDOVER',
+          success: 'Waiting...',
+          hint: 'You confirmed pickup. Waiting for shopkeeper to hand over package.',
+          disabled: true,
+        };
+      }
+
       return {
         type: 'slider',
-        label: 'SLIDE TO ARRIVE AT STORE',
-        success: 'Arrived at Store!',
-        hint: 'Head to restaurant for pickup',
-      };
-    }
-    if (activeOrder.status === 'arrived_at_pickup') {
-      return {
-        type: 'slider',
-        label: 'SLIDE TO CONFIRM PICKUP',
+        label: 'ORDER PICKED UP',
         success: 'Order Collected!',
-        hint: 'Collect food package and proceed to customer',
+        hint: 'Order is ready at store. Slide to confirm physical pickup from merchant.',
+        disabled: false,
       };
     }
     if (activeOrder.status === 'in_transit') {
       return {
         type: 'slider',
-        label: 'SLIDE TO ARRIVE AT CUSTOMER',
+        label: 'ARRIVED AT CUSTOMER',
         success: 'Arrived at Customer!',
         hint: 'Deliver package to customer doorstep',
+        disabled: false,
       };
     }
     if (activeOrder.status === 'arrived_at_dropoff') {
@@ -171,9 +208,10 @@ export default function DashboardPage() {
         label: 'Verify Delivery OTP →',
         success: '',
         hint: 'Ask customer for delivery OTP',
+        disabled: false,
       };
     }
-    return { type: 'slider', label: 'Slide to Update Status', success: 'Done', hint: '' };
+    return { type: 'slider', label: 'Update Status', success: 'Done', hint: '', disabled: false };
   };
 
   const sliderConfig = getSliderConfig();
@@ -460,9 +498,10 @@ export default function DashboardPage() {
             <div>
               {sliderConfig.type === 'slider' ? (
                 <SlideToConfirm
-                  key={activeOrder.status}
+                  key={`${activeOrder.status}-${activeOrder.riderPickupConfirmed}-${activeOrder.shopkeeperHandoverConfirmed}`}
                   label={sliderConfig.label}
                   successLabel={sliderConfig.success}
+                  disabled={sliderConfig.disabled}
                   onConfirm={handleNextStepAction}
                 />
               ) : (
@@ -474,6 +513,58 @@ export default function DashboardPage() {
                   <span>{sliderConfig.label}</span>
                 </button>
               )}
+            </div>
+
+            {/* ── TEMPORARY DEV HANDOVER SIMULATOR ── */}
+            <div className="mt-4 p-3 rounded-2xl bg-slate-900 text-white shadow-md border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="flex items-center gap-1.5 text-purple-300">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                  🧪 Temporary Dev Handover Simulator
+                </span>
+                <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  DB: {activeOrder.dbStatus || 'PREPARING'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                {/* Step 1: Merchant Marks Ready for Pickup */}
+                <button
+                  onClick={() => simulateMerchantReadyForPickup(activeOrder.dbStatus !== 'READY_FOR_PICKUP')}
+                  className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
+                    activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-500'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                  }`}
+                >
+                  <span>
+                    {activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
+                      ? '✓ 1. Ready for Pickup'
+                      : '🏪 1. Mark Ready'}
+                  </span>
+                </button>
+
+                {/* Step 2: Merchant Slide Out of Shop */}
+                <button
+                  onClick={() => simulateShopkeeperHandover(!activeOrder.shopkeeperHandoverConfirmed)}
+                  className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
+                    activeOrder.shopkeeperHandoverConfirmed
+                      ? 'bg-amber-950 text-amber-300 border border-amber-500'
+                      : 'bg-teal-600 hover:bg-teal-500 text-white'
+                  }`}
+                >
+                  <span>{activeOrder.shopkeeperHandoverConfirmed ? '✓ 2. Out of Shop' : '🏪 2. Out of Shop'}</span>
+                </button>
+              </div>
+
+              <div className="pt-0.5">
+                <button
+                  onClick={resetActiveOrder}
+                  className="w-full py-1.5 px-2 rounded-xl text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center justify-center gap-1 active:scale-95"
+                >
+                  <span>✕ Clear Test Order</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -509,20 +600,25 @@ export default function DashboardPage() {
                 : 'You are currently offline. Book your slot or go online to start receiving delivery orders.'}
             </p>
 
-            {isOnline ? (
-              <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-300/80 font-bold text-xs px-4 py-2 rounded-full shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span>Radar Active: Waiting for store assignments...</span>
-              </div>
-            ) : (
-              <Link
-                href="/slots"
-                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+            <div className="flex flex-col gap-2 w-full max-w-[280px]">
+              <button
+                onClick={triggerMockOrder}
+                className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs px-4 py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-lift"
               >
-                <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                Book or Check Slots
-              </Link>
-            )}
+                <Sparkles className="w-4 h-4" />
+                <span>Simulate Incoming Order (PREPARING)</span>
+              </button>
+
+              {!isOnline && (
+                <Link
+                  href="/slots"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                  Book or Check Slots
+                </Link>
+              )}
+            </div>
           </div>
         )}
 

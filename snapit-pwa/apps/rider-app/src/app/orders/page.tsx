@@ -9,7 +9,19 @@ import { Phone, Check, Package, Clock, AlertCircle, ShieldCheck, ChevronRight } 
 import { useRouter } from 'next/navigation';
 
 export default function OrdersPage() {
-  const { rider, activeOrder, ordersHistory, advanceActiveOrderStatus, triggerMockOrder, markOrderPickedUp, nonAcceptanceCount } = useRider();
+  const {
+    rider,
+    activeOrder,
+    ordersHistory,
+    cancelledOrders,
+    advanceActiveOrderStatus,
+    triggerMockOrder,
+    markOrderPickedUp,
+    nonAcceptanceCount,
+    simulateMerchantReadyForPickup,
+    simulateShopkeeperHandover,
+    resetActiveOrder,
+  } = useRider();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'cancelled'>('active');
   const [isFullScreenNav, setIsFullScreenNav] = useState<boolean>(false);
   const router = useRouter();
@@ -17,9 +29,7 @@ export default function OrdersPage() {
   // Strict Sequential Action Handlers
   const handleNextStepAction = () => {
     if (!activeOrder) return;
-    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
-      advanceActiveOrderStatus();
-    } else if (activeOrder.status === 'arrived_at_pickup') {
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup') {
       markOrderPickedUp();
     } else if (activeOrder.status === 'in_transit') {
       advanceActiveOrderStatus();
@@ -30,40 +40,72 @@ export default function OrdersPage() {
 
   // Label configuration for the slider
   const getSingleNextActionConfig = () => {
-    if (!activeOrder) return { type: 'slider', label: '', success: '', hint: '' };
-    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
+    if (!activeOrder) return { type: 'slider', label: '', success: '', hint: '', disabled: false };
+    
+    // Check if store has prepared and marked order ready in Supabase
+    const isReadyForPickup =
+      activeOrder.dbStatus === 'READY_FOR_PICKUP' ||
+      activeOrder.dbStatus === 'OUT_OF_SHOP' ||
+      activeOrder.dbStatus === 'OUT_FOR_DELIVERY' ||
+      Boolean(activeOrder.shopkeeperHandoverConfirmed);
+
+    // Pickup & Handover Stage
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup') {
+      const isRiderConfirmed = Boolean(activeOrder.riderPickupConfirmed);
+      const isShopConfirmed = Boolean(activeOrder.shopkeeperHandoverConfirmed || activeOrder.dbStatus === 'OUT_OF_SHOP');
+
+      if (!isReadyForPickup) {
+        return {
+          type: 'slider',
+          label: 'ORDER PICKED UP',
+          success: 'Waiting for Store...',
+          hint: '⏳ Store is preparing the order... Waiting for store to mark Ready for Pickup.',
+          disabled: true,
+        };
+      }
+
+      if (isRiderConfirmed && !isShopConfirmed) {
+        return {
+          type: 'slider',
+          label: 'AWAITING SHOPKEEPER HANDOVER',
+          success: 'Waiting...',
+          hint: 'You confirmed pickup. Waiting for shopkeeper to hand over package.',
+          disabled: true,
+        };
+      }
+
       return {
         type: 'slider',
-        label: 'SLIDE TO ARRIVE AT STORE',
-        success: 'Arrived at Store!',
-        hint: 'Collect the order and head to customer location',
-      };
-    }
-    if (activeOrder.status === 'arrived_at_pickup') {
-      return {
-        type: 'slider',
-        label: 'SLIDE TO CONFIRM PICKUP',
+        label: 'ORDER PICKED UP',
         success: 'Order Collected!',
-        hint: 'Order picked up — navigate to customer location',
+        hint: 'Order is ready at store. Slide to confirm physical pickup from merchant.',
+        disabled: false,
       };
     }
+
+    // Stage 3: Out for delivery (Both confirmed)
     if (activeOrder.status === 'in_transit') {
       return {
         type: 'slider',
-        label: 'SLIDE TO ARRIVE AT CUSTOMER',
+        label: 'ARRIVED AT CUSTOMER',
         success: 'Arrived at Customer!',
-        hint: 'You are on the way to customer location',
+        hint: 'You are at the customer delivery location',
+        disabled: false,
       };
     }
+
+    // Stage 4: Arrived at dropoff -> OTP verification
     if (activeOrder.status === 'arrived_at_dropoff') {
       return {
         type: 'button',
-        label: 'Proceed to Delivery OTP Verification',
+        label: 'Verify Delivery OTP',
         success: '',
         hint: 'Verify the OTP with the customer to complete delivery',
+        disabled: false,
       };
     }
-    return { type: 'slider', label: 'Slide to Update Status', success: 'Done', hint: '' };
+
+    return { type: 'slider', label: 'Update Status', success: 'Done', hint: '', disabled: false };
   };
 
   const actionConfig = getSingleNextActionConfig();
@@ -71,9 +113,20 @@ export default function OrdersPage() {
   // Status badge
   const getStatusBadgeLabel = () => {
     if (!activeOrder) return '';
-    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') return 'ORDER ACCEPTED';
-    if (activeOrder.status === 'arrived_at_pickup') return 'ARRIVED AT STORE';
-    if (activeOrder.status === 'in_transit') return 'ORDER PICKED UP';
+    const isReadyForPickup =
+      activeOrder.dbStatus === 'READY_FOR_PICKUP' ||
+      activeOrder.dbStatus === 'OUT_OF_SHOP' ||
+      activeOrder.dbStatus === 'OUT_FOR_DELIVERY' ||
+      Boolean(activeOrder.shopkeeperHandoverConfirmed);
+
+    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up' || activeOrder.status === 'arrived_at_pickup') {
+      if (!isReadyForPickup) return 'STORE PREPARING ORDER';
+      if (activeOrder.riderPickupConfirmed && !activeOrder.shopkeeperHandoverConfirmed && activeOrder.dbStatus !== 'OUT_OF_SHOP') {
+        return 'AWAITING SHOPKEEPER HANDOVER';
+      }
+      return 'READY FOR PICKUP';
+    }
+    if (activeOrder.status === 'in_transit') return 'OUT FOR DELIVERY';
     if (activeOrder.status === 'arrived_at_dropoff') return 'ARRIVED AT CUSTOMER';
     if (activeOrder.status === 'delivered') return 'DELIVERED';
     return 'ACTIVE ORDER';
@@ -115,7 +168,7 @@ export default function OrdersPage() {
                   : 'text-secondary hover:text-on-surface'
               }`}
             >
-              {tab === 'active' ? `Active${activeOrder ? ' (1)' : ''}` : tab === 'completed' ? `Completed (${ordersHistory.length})` : 'Cancelled (0)'}
+              {tab === 'active' ? `Active${activeOrder ? ' (1)' : ''}` : tab === 'completed' ? `Completed (${ordersHistory.length})` : `Cancelled (${cancelledOrders.length})`}
             </button>
           ))}
         </div>
@@ -239,14 +292,15 @@ export default function OrdersPage() {
                     </div>
                   )}
 
-                  {/* ── SLIDE TO ACTION — dark green pill (matches reference) ── */}
-                  <div className="px-4 pb-4">
+                    {/* ── SLIDE TO ACTION — dark green pill (matches reference) ── */}
+                  <div className="px-4 pb-3">
                     {actionConfig.type === 'slider' ? (
                       <div className="relative">
                         <SlideToConfirm
-                          key={activeOrder.status}
+                          key={`${activeOrder.status}-${activeOrder.riderPickupConfirmed}-${activeOrder.shopkeeperHandoverConfirmed}`}
                           label={actionConfig.label}
                           successLabel={actionConfig.success}
+                          disabled={actionConfig.disabled}
                           onConfirm={handleNextStepAction}
                         />
                       </div>
@@ -259,6 +313,58 @@ export default function OrdersPage() {
                         <span>{actionConfig.label}</span>
                       </button>
                     )}
+                  </div>
+
+                  {/* ── TEMPORARY DEV HANDOVER SIMULATOR ── */}
+                  <div className="mx-4 mb-4 p-3 rounded-2xl bg-slate-900 text-white shadow-md border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold">
+                      <span className="flex items-center gap-1.5 text-purple-300">
+                        <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                        🧪 Temporary Dev Handover Simulator
+                      </span>
+                      <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                        DB: {activeOrder.dbStatus || 'PREPARING'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 pt-1">
+                      {/* Step 1: Merchant Marks Ready for Pickup */}
+                      <button
+                        onClick={() => simulateMerchantReadyForPickup(activeOrder.dbStatus !== 'READY_FOR_PICKUP')}
+                        className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
+                          activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-500'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                        }`}
+                      >
+                        <span>
+                          {activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
+                            ? '✓ 1. Ready for Pickup'
+                            : '🏪 1. Mark Ready'}
+                        </span>
+                      </button>
+
+                      {/* Step 2: Merchant Slide Out of Shop */}
+                      <button
+                        onClick={() => simulateShopkeeperHandover(!activeOrder.shopkeeperHandoverConfirmed)}
+                        className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
+                          activeOrder.shopkeeperHandoverConfirmed
+                            ? 'bg-amber-950 text-amber-300 border border-amber-500'
+                            : 'bg-teal-600 hover:bg-teal-500 text-white'
+                        }`}
+                      >
+                        <span>{activeOrder.shopkeeperHandoverConfirmed ? '✓ 2. Out of Shop' : '🏪 2. Out of Shop'}</span>
+                      </button>
+                    </div>
+
+                    <div className="pt-0.5">
+                      <button
+                        onClick={resetActiveOrder}
+                        className="w-full py-1.5 px-2 rounded-xl text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center justify-center gap-1 active:scale-95"
+                      >
+                        <span>✕ Clear Test Order</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -377,14 +483,42 @@ export default function OrdersPage() {
 
         {/* TAB 3: CANCELLED ORDERS */}
         {selectedTab === 'cancelled' && (
-          <div className="bg-white rounded-3xl p-8 shadow-soft border border-slate-200 text-center flex flex-col items-center gap-3 py-12 animate-fade-in">
-            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-            <h3 className="font-bold text-sm text-on-surface">No Cancelled Orders</h3>
-            <p className="text-xs text-secondary">
-              Great job! Your cancellation rate is 0% this week.
-            </p>
+          <div className="flex flex-col gap-3 animate-fade-in">
+            {cancelledOrders.length > 0 ? (
+              cancelledOrders.map((item) => (
+                <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col gap-2.5">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-slate-800">#{item.orderNumber}</span>
+                        <span className="bg-red-50 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-red-200">
+                          Declined / Cancelled
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-700 mt-1">{item.restaurantName}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-xs text-slate-400 font-mono">₹{item.earnings}</span>
+                      <p className="text-[10px] text-slate-400">{item.timestamp}</p>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-slate-500 flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span>Customer: {item.customerName}</span>
+                    <span className="font-mono">{item.distanceKm} km</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-white rounded-3xl p-8 shadow-soft border border-slate-200 text-center flex flex-col items-center gap-3 py-12">
+                <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-sm text-on-surface">No Cancelled Orders</h3>
+                <p className="text-xs text-secondary">
+                  Great job! Your cancellation rate is 0% this week.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

@@ -25,6 +25,8 @@ export interface DbOrder {
   cooking_instructions?: string;
   payment_method?: string;
   payment_status?: string;
+  shopkeeper_handover_confirmed?: boolean;
+  rider_pickup_confirmed?: boolean;
   created_at?: string;
   updated_at?: string;
 }

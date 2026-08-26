@@ -16,36 +16,63 @@ export const LiveOrderTracker: React.FC = () => {
   if (!activeOrder) return null;
 
   const handleSlideAction = () => {
-    if (activeOrder.status === 'picking_up') {
-      advanceActiveOrderStatus(); // -> arrived_at_pickup
-    } else if (activeOrder.status === 'arrived_at_pickup') {
-      advanceActiveOrderStatus(); // -> in_transit
+    if (activeOrder.status === 'picking_up' || activeOrder.status === 'accepted' || activeOrder.status === 'arrived_at_pickup') {
+      advanceActiveOrderStatus(); // -> confirmRiderPickup()
+    } else if (activeOrder.status === 'in_transit') {
+      advanceActiveOrderStatus(); // -> arrived_at_dropoff
     } else {
-      // -> in_transit to delivery OTP
+      // -> arrived_at_dropoff to delivery OTP
       router.push('/confirm-delivery');
     }
   };
 
   const getSliderLabels = () => {
-    if (activeOrder.status === 'picking_up') {
+    const isReadyForPickup =
+      activeOrder.dbStatus === 'READY_FOR_PICKUP' ||
+      activeOrder.dbStatus === 'OUT_OF_SHOP' ||
+      activeOrder.dbStatus === 'OUT_FOR_DELIVERY' ||
+      Boolean(activeOrder.shopkeeperHandoverConfirmed);
+
+    if (activeOrder.status === 'picking_up' || activeOrder.status === 'accepted' || activeOrder.status === 'arrived_at_pickup') {
+      const isRiderConfirmed = Boolean(activeOrder.riderPickupConfirmed);
+      const isShopConfirmed = Boolean(activeOrder.shopkeeperHandoverConfirmed || activeOrder.dbStatus === 'OUT_OF_SHOP');
+
+      if (!isReadyForPickup) {
+        return {
+          label: 'Order Picked Up (Waiting for Store)',
+          success: 'Waiting for Store...',
+          disabled: true,
+        };
+      }
+
+      if (isRiderConfirmed && !isShopConfirmed) {
+        return {
+          label: 'Awaiting Shopkeeper Handover...',
+          success: 'Waiting...',
+          disabled: true,
+        };
+      }
       return {
-        label: 'Slide: Arrived at Shop',
-        success: 'Arrived at Store!',
+        label: 'Order Picked Up',
+        success: 'Order Collected!',
+        disabled: false,
       };
     }
-    if (activeOrder.status === 'arrived_at_pickup') {
+    if (activeOrder.status === 'in_transit') {
       return {
-        label: 'Slide: Order Picked Up',
-        success: 'Order Collected!',
+        label: 'Arrived at Customer',
+        success: 'Arrived at Customer!',
+        disabled: false,
       };
     }
     return {
-      label: 'Slide: Confirm Delivery (OTP)',
+      label: 'Verify Delivery OTP',
       success: 'Opening Verification...',
+      disabled: false,
     };
   };
 
-  const { label, success } = getSliderLabels();
+  const { label, success, disabled } = getSliderLabels();
 
   return (
     <div className="w-full animate-slide-up">
@@ -111,9 +138,10 @@ export const LiveOrderTracker: React.FC = () => {
         {/* Interactive "Slide to Update Order Status" on Home Screen! */}
         <div className="mt-1">
           <SlideToConfirm
-            key={activeOrder.status}
+            key={`${activeOrder.status}-${activeOrder.riderPickupConfirmed}-${activeOrder.shopkeeperHandoverConfirmed}`}
             label={label}
             successLabel={success}
+            disabled={disabled}
             onConfirm={handleSlideAction}
           />
         </div>

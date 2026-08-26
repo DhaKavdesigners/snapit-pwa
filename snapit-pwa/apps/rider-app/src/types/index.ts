@@ -38,6 +38,9 @@ export interface Order {
   earnings: number;
   items: OrderItem[];
   status: DeliveryStatus;
+  dbStatus?: string;
+  shopkeeperHandoverConfirmed?: boolean;
+  riderPickupConfirmed?: boolean;
   otp: string;
   timestamp: string;
   paymentMethod: string;

@@ -34,6 +34,14 @@ export const TestModePanel: React.FC = () => {
     setMockZone,
     refreshZoneStatus,
     canGoOnline,
+    // Order Simulation
+    activeOrder,
+    triggerMockOrder,
+    confirmRiderPickup,
+    simulateMerchantReadyForPickup,
+    simulateShopkeeperHandover,
+    resetActiveOrder,
+    completeDeliveryWithOtp,
     // Mock Time
     isMockTimeEnabled,
     enableMockTime,
@@ -311,6 +319,107 @@ export const TestModePanel: React.FC = () => {
                 <span className="text-[9px] font-mono text-amber-400">→ OUTSIDE</span>
               </button>
             </div>
+          </div>
+
+          {/* ── SECTION 3: ORDER & HANDOVER SIMULATION ── */}
+          <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-blue-400" />
+                <span className="font-bold text-white text-[11px]">Handover & Order Simulation</span>
+              </div>
+            </div>
+
+            {/* Button to trigger incoming order */}
+            <button
+              onClick={triggerMockOrder}
+              className="w-full py-1.5 px-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-[10px] flex items-center justify-center gap-1.5 shadow transition-all active:scale-98"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Simulate Incoming Order (PREPARING)</span>
+            </button>
+
+            {/* Active Order controls */}
+            {activeOrder && (
+              <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5 text-[10px]">
+                <div className="flex justify-between items-center text-slate-300 font-mono">
+                  <span>Order #{activeOrder.orderNumber}</span>
+                  <span className="text-amber-400 uppercase font-bold">{activeOrder.status}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1 py-1 border-y border-slate-800 text-[9px] font-mono">
+                  <div className="flex items-center gap-1">
+                    <span>Rider Picked:</span>
+                    <span className={activeOrder.riderPickupConfirmed ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
+                      {activeOrder.riderPickupConfirmed ? '✓ YES' : '✗ NO'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>Shop Handed:</span>
+                    <span className={activeOrder.shopkeeperHandoverConfirmed ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
+                      {activeOrder.shopkeeperHandoverConfirmed ? '✓ YES' : '✗ NO'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1 pt-1">
+                  {/* Step 1: Merchant Mark Ready for Pickup */}
+                  <button
+                    onClick={() => simulateMerchantReadyForPickup(activeOrder.dbStatus !== 'READY_FOR_PICKUP')}
+                    className={`w-full py-1.5 px-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${
+                      activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
+                        ? 'bg-indigo-950 text-indigo-300 border border-indigo-500'
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow'
+                    }`}
+                  >
+                    <span>
+                      {activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
+                        ? '✓ Merchant: Ready for Pickup'
+                        : '🏪 Simulate Merchant: Mark Ready'}
+                    </span>
+                  </button>
+
+                  {/* Step 2: Toggle / Trigger Shopkeeper Handover */}
+                  <button
+                    onClick={() => simulateShopkeeperHandover(!activeOrder.shopkeeperHandoverConfirmed)}
+                    className={`w-full py-1.5 px-2 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition-all ${
+                      activeOrder.shopkeeperHandoverConfirmed
+                        ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                        : 'bg-emerald-700 hover:bg-emerald-600 text-white shadow'
+                    }`}
+                  >
+                    <span>🏪 {activeOrder.shopkeeperHandoverConfirmed ? 'Undo Shopkeeper Handover' : 'Simulate Shopkeeper: Slide Out of Shop'}</span>
+                  </button>
+
+                  {/* Trigger Rider Pickup Confirmation */}
+                  {activeOrder.status === 'arrived_at_pickup' && (
+                    <button
+                      onClick={() => confirmRiderPickup()}
+                      disabled={activeOrder.riderPickupConfirmed}
+                      className="w-full py-1.5 px-2 rounded bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-[10px] flex items-center justify-center gap-1 shadow"
+                    >
+                      <span>🛵 Simulate Rider: Order Picked Up</span>
+                    </button>
+                  )}
+
+                  {/* Quick Clear / Reset */}
+                  <div className="flex gap-1 pt-1">
+                    <button
+                      onClick={() => completeDeliveryWithOtp('1234')}
+                      className="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-green-400 font-bold text-[9px] border border-slate-700 text-center"
+                    >
+                      ✓ Complete OTP (1234)
+                    </button>
+                    <button
+                      onClick={resetActiveOrder}
+                      className="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-red-400 font-bold text-[9px] border border-slate-700 text-center"
+                    >
+                      ✕ Reset Order
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

@@ -75,27 +75,33 @@ export const SlideToConfirm: React.FC<SlideToConfirmProps> = ({
   return (
     <div
       ref={trackRef}
-      className={`slide-track w-full relative select-none cursor-pointer transition-all duration-300 ${
-        isConfirmed
-          ? 'bg-primary/20 border-primary'
-          : 'bg-slate-200/70 border-slate-300 dark:bg-slate-800 dark:border-slate-700'
+      className={`slide-track w-full relative select-none transition-all duration-300 ${
+        disabled
+          ? 'bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 opacity-60 cursor-not-allowed'
+          : isConfirmed
+          ? 'bg-primary/20 border-primary cursor-default'
+          : 'bg-slate-200/70 border-slate-300 dark:bg-slate-800 dark:border-slate-700 cursor-pointer'
       }`}
     >
       {/* Background Fill as user drags */}
-      <div
-        className="absolute top-0 left-0 bottom-0 bg-primary/20 rounded-full transition-all duration-75 pointer-events-none"
-        style={{ width: `${Math.max(12, dragProgress * 100)}%` }}
-      />
+      {!disabled && (
+        <div
+          className="absolute top-0 left-0 bottom-0 bg-primary/20 rounded-full transition-all duration-75 pointer-events-none"
+          style={{ width: `${Math.max(12, dragProgress * 100)}%` }}
+        />
+      )}
 
       {/* Track Center Text */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12 text-center">
         <span
-          className={`text-xs uppercase font-extrabold tracking-widest transition-all duration-200 ${
-            isConfirmed
+          className={`text-xs uppercase font-extrabold tracking-wider transition-all duration-200 ${
+            disabled
+              ? 'text-slate-400 dark:text-slate-500'
+              : isConfirmed
               ? 'text-primary scale-105'
-              : 'text-secondary opacity-75'
+              : 'text-secondary opacity-90'
           }`}
-          style={{ opacity: Math.max(0.2, 1 - dragProgress * 1.5) }}
+          style={{ opacity: disabled ? 1 : Math.max(0.2, 1 - dragProgress * 1.5) }}
         >
           {isConfirmed ? successLabel : label}
         </span>
@@ -105,10 +111,12 @@ export const SlideToConfirm: React.FC<SlideToConfirmProps> = ({
       <div
         onMouseDown={handleTouchStart}
         onTouchStart={handleTouchStart}
-        className={`absolute top-1 left-1 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-transform active:scale-95 ${
-          isConfirmed
+        className={`absolute top-1 left-1 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-transform ${
+          disabled
+            ? 'bg-slate-400 dark:bg-slate-600 cursor-not-allowed shadow-none'
+            : isConfirmed
             ? 'bg-primary-dark cursor-default'
-            : 'bg-gradient-to-r from-primary to-primary-container cursor-grab active:cursor-grabbing hover:shadow-glow'
+            : 'bg-gradient-to-r from-primary to-primary-container cursor-grab active:cursor-grabbing hover:shadow-glow active:scale-95'
         }`}
         style={{
           transform: `translateX(${thumbPosition}px)`,
@@ -116,7 +124,7 @@ export const SlideToConfirm: React.FC<SlideToConfirmProps> = ({
         }}
       >
         <span className="material-symbols-outlined text-[24px]">
-          {isConfirmed ? 'check' : 'chevron_right'}
+          {disabled ? 'lock' : isConfirmed ? 'check' : 'chevron_right'}
         </span>
       </div>
     </div>

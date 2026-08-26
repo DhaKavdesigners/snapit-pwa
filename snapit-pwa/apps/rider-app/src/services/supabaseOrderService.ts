@@ -44,7 +44,10 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     estimatedMinutes: 12,
     earnings,
     items,
-    status: mapDbStatusToAppStatus(dbOrder.status),
+    status: mapDbStatusToAppStatus(dbOrder.status, dbOrder),
+    dbStatus: dbOrder.status,
+    shopkeeperHandoverConfirmed: Boolean(dbOrder.shopkeeper_handover_confirmed || dbOrder.status === 'OUT_OF_SHOP'),
+    riderPickupConfirmed: Boolean(dbOrder.rider_pickup_confirmed),
     otp: '1234',
     timestamp: dbOrder.created_at ? new Date(dbOrder.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
     paymentMethod: dbOrder.payment_method || 'Prepaid UPI',
@@ -65,24 +68,30 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
   };
 }
 
-function mapDbStatusToAppStatus(dbStatus: string): any {
+function mapDbStatusToAppStatus(dbStatus: string, dbOrder?: DbOrder): any {
   const s = (dbStatus || '').toUpperCase();
-  if (s === 'PLACED' || s === 'PENDING' || s === 'ASSIGNED') return 'pending';
-  if (s === 'ACCEPTED') return 'accepted';
-  if (s === 'ARRIVED_AT_STORE' || s === 'ARRIVED_AT_PICKUP') return 'arrived_at_pickup';
-  if (s === 'PICKED_UP' || s === 'IN_TRANSIT') return 'in_transit';
+  if (s === 'PLACED' || s === 'PENDING' || s === 'PREPARING' || s === 'ASSIGNED') return 'pending';
+  if (s === 'ACCEPTED') return 'picking_up';
+  if (s === 'ARRIVED_AT_STORE' || s === 'READY_FOR_PICKUP' || s === 'OUT_OF_SHOP') {
+    const shopConfirmed = Boolean(dbOrder?.shopkeeper_handover_confirmed || s === 'OUT_OF_SHOP');
+    const riderConfirmed = Boolean(dbOrder?.rider_pickup_confirmed);
+    if (shopConfirmed && riderConfirmed) return 'in_transit';
+    return 'arrived_at_pickup';
+  }
+  if (s === 'PICKED_UP' || s === 'IN_TRANSIT' || s === 'OUT_FOR_DELIVERY') return 'in_transit';
   if (s === 'ARRIVED_AT_CUSTOMER' || s === 'ARRIVED_AT_DROPOFF') return 'arrived_at_dropoff';
   if (s === 'DELIVERED' || s === 'COMPLETED') return 'delivered';
-  if (s === 'CANCELLED') return 'cancelled';
+  if (s === 'CANCELLED' || s === 'REJECTED') return 'cancelled';
   return 'pending';
 }
 
 function mapAppStatusToDbStatus(appStatus: string): string {
-  if (appStatus === 'accepted') return 'ACCEPTED';
+  if (appStatus === 'accepted' || appStatus === 'picking_up') return 'ACCEPTED';
   if (appStatus === 'arrived_at_pickup') return 'ARRIVED_AT_STORE';
-  if (appStatus === 'in_transit') return 'PICKED_UP';
+  if (appStatus === 'in_transit') return 'OUT_FOR_DELIVERY';
   if (appStatus === 'arrived_at_dropoff') return 'ARRIVED_AT_CUSTOMER';
   if (appStatus === 'delivered') return 'DELIVERED';
+  if (appStatus === 'cancelled') return 'CANCELLED';
   return 'PLACED';
 }
 
@@ -108,7 +117,7 @@ export async function fetchLiveOrders(): Promise<DbOrder[]> {
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(20);
     if (error) {
       console.warn('Error fetching orders from Supabase:', error);
       return [];
@@ -138,6 +147,34 @@ export async function updateDbOrderStatus(orderId: string, status: string, rider
     return { data, error };
   } catch (err) {
     console.warn('Supabase updateDbOrderStatus exception:', err);
+    return { error: err };
+  }
+}
+
+/** Update order handover confirmation state in Supabase */
+export async function updateDbOrderHandover(
+  orderId: string,
+  updates: {
+    status?: string;
+    rider_id?: string;
+    rider_pickup_confirmed?: boolean;
+    shopkeeper_handover_confirmed?: boolean;
+  }
+) {
+  try {
+    const updatePayload: any = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updatePayload)
+      .eq('id', orderId);
+
+    if (error) console.warn('Error updating Supabase handover status:', error);
+    return { data, error };
+  } catch (err) {
+    console.warn('Supabase updateDbOrderHandover exception:', err);
     return { error: err };
   }
 }
