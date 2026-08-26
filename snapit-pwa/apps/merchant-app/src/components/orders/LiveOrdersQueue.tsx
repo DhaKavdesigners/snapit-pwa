@@ -60,10 +60,11 @@ export const LiveOrdersQueue: React.FC = () => {
             <h2 className="text-sm sm:text-base font-black text-slate-950 tracking-tight">
               LIVE QUEUE
             </h2>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black font-mono ${
-              orders.length > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black font-mono flex items-center gap-1 ${
+              isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
             }`}>
-              {orders.length} ACTIVE
+              <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+              {isOnline ? 'ONLINE' : 'OFFLINE'}
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
@@ -71,9 +72,15 @@ export const LiveOrdersQueue: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold">
-          <Radio className={`w-3.5 h-3.5 ${isOnline ? 'text-emerald-500 animate-pulse' : 'text-slate-400'}`} />
-          <span className="text-[11px] font-mono">{isOnline ? 'ONLINE • RECEIVING ORDERS' : 'STORE OFFLINE'}</span>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors ${
+          orders.length > 0
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-900 shadow-xs'
+            : 'bg-slate-50 border-slate-200 text-slate-700'
+        }`}>
+          <ShoppingBag className={`w-3.5 h-3.5 ${orders.length > 0 ? 'text-emerald-600' : 'text-slate-400'}`} />
+          <span className="text-[11px] font-black font-mono tracking-tight">
+            {orders.length} ACTIVE {orders.length === 1 ? 'ORDER' : 'ORDERS'}
+          </span>
         </div>
       </div>
 

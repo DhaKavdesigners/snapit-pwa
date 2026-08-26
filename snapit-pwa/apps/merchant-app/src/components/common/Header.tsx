@@ -13,6 +13,7 @@ import {
 import { useMerchantStore } from '../../store/useMerchantStore';
 import { counterAudio } from '../../lib/audio';
 import { mockStores } from '../../lib/mockData';
+import { ConfirmModal } from './ConfirmModal';
 
 interface HeaderProps {
   isSimulatorMode?: boolean;
@@ -35,6 +36,8 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
 
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isStoreMenuOpen, setIsStoreMenuOpen] = useState(false);
+  const [isOfflineConfirmOpen, setIsOfflineConfirmOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     const updateClock = () => {
@@ -189,7 +192,13 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
             <div className="flex items-center">
               <button
                 type="button"
-                onClick={toggleStoreStatus}
+                onClick={() => {
+                  if (isOnline) {
+                    setIsOfflineConfirmOpen(true);
+                  } else {
+                    toggleStoreStatus();
+                  }
+                }}
                 className={`group relative flex items-center gap-2.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-sm cursor-pointer border ${
                   isOnline
                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-600/20'
@@ -213,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
             {/* Logout Action */}
             <button
               type="button"
-              onClick={logout}
+              onClick={() => setIsLogoutConfirmOpen(true)}
               title="Logout (Store will automatically go OFFLINE)"
               className="p-2 sm:p-2.5 rounded-xl text-slate-600 hover:text-rose-700 hover:bg-rose-50 transition-colors border border-transparent hover:border-rose-200 cursor-pointer"
             >
@@ -222,6 +231,34 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
           </div>
         </div>
       </div>
+
+      {/* 🔴 Turn Store Offline Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isOfflineConfirmOpen}
+        title="Turn Store Offline?"
+        subtitle={activeStore.name}
+        description={`Are you sure you want to turn ${activeStore.name} OFFLINE? Your store will be marked closed on the customer app and new incoming orders will be paused.`}
+        confirmLabel="Turn Store Offline"
+        cancelLabel="Cancel"
+        variant="danger"
+        icon="power"
+        onConfirm={toggleStoreStatus}
+        onClose={() => setIsOfflineConfirmOpen(false)}
+      />
+
+      {/* 🚪 Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        title="Log Out & Switch Store OFFLINE?"
+        subtitle={activeStore.name}
+        description={`Are you sure you want to log out from ${activeStore.name}? Your store counter will automatically be switched OFFLINE and stop receiving customer orders until you log back in.`}
+        confirmLabel="Yes, Log Out"
+        cancelLabel="Cancel"
+        variant="danger"
+        icon="logout"
+        onConfirm={logout}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+      />
     </header>
   );
 };

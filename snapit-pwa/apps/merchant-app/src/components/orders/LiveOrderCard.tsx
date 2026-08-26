@@ -185,9 +185,9 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
     }
     if (isOutOfShop) {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse flex items-center gap-1.5 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
-          OUT OF SHOP (WAITING FOR RIDER)
+        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse flex items-center gap-1.5 shadow-2xs whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
+          Handed Over (Awaiting Rider Confirmation)
         </span>
       );
     }
@@ -436,28 +436,6 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
                 <Bike className="w-5 h-5" />
                 <span>Handover to Delivery Rider</span>
               </button>
-            </div>
-          )}
-
-          {isOutOfShop && (
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-600"></span>
-                  </span>
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-950">
-                    Handed Over • Awaiting Rider Confirmation
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900 font-mono">
-                  Custody Pending
-                </span>
-              </div>
-              <p className="text-[11px] text-amber-900/90 font-medium">
-                Order remains active on your counter until the rider confirms custody on their device.
-              </p>
             </div>
           )}
         </div>
