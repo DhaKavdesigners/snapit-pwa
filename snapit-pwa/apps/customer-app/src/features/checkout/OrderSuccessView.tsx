@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, MapPin, ShoppingBag, Clock, Sparkles, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { CheckCircle2, MapPin, ShoppingBag, Clock, Sparkles, ArrowRight, ShieldCheck, Zap, Bike } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useCartStore } from '../../store/cartStore';
+import { useOrderStore } from '../../store/orderStore';
 import { formatCurrency } from '../../utils/currency';
 
 // ── Premium triumphant 4-note celebration chime ──────────────────────────────
@@ -222,10 +223,13 @@ export const OrderSuccessView: React.FC = () => {
         >
           {/* Primary Track Order */}
           <button
-            onClick={() => navigate('/profile', { state: { openOrders: true } })}
+            onClick={() => {
+              useOrderStore.getState().setTrackerOpen(true, orderId);
+              navigate('/');
+            }}
             className="w-full h-14 rounded-2xl bg-white text-brand font-black text-base flex items-center justify-center gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-transform uppercase tracking-wider"
           >
-            <MapPin className="w-5 h-5 text-brand" />
+            <Bike className="w-5 h-5 text-brand" />
             Track Order Live
           </button>
 

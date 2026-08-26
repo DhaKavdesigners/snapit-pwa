@@ -142,9 +142,13 @@ export const ProfileView: React.FC = () => {
   // Live Orders State
   const [orders, setOrders] = useState<any[]>([]);
   const [storesMap, setStoresMap] = useState<Record<string, string>>({
+    g1: 'Mhetha Stores',
     s1: 'Mhetha Stores',
+    g2: 'Vishal Mart',
     s2: 'Vishal Mart',
+    g3: 'RR Bazar',
     s3: 'RR Bazar',
+    d1: 'Nandhini KGF',
     s4: 'Nandhini KGF',
     f1: 'Bakio',
     f2: 'Mayura',
@@ -954,7 +958,7 @@ export const ProfileView: React.FC = () => {
 
                       {activeOrders.map((order) => {
                         const statusInfo = getOrderStatusInfo(order.status, order.prep_time_minutes, order.rejection_reason);
-                        const storeName = storesMap[order.store_id] || (order.store_id === 's1' ? 'Mhetha Stores' : order.store_id === 's4' ? 'Nandhini KGF' : 'Partner Store');
+                        const storeName = storesMap[order.store_id] || (order.store_id === 'g1' || order.store_id === 's1' ? 'Mhetha Stores' : order.store_id === 'd1' || order.store_id === 's4' ? 'Nandhini KGF' : 'Partner Store');
 
                         return (
                           <div key={order.id} className="bg-white rounded-3xl p-5 border-2 border-emerald-300 shadow-[0_4px_20px_rgba(5,150,105,0.1)] space-y-4">

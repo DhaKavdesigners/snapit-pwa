@@ -29,7 +29,7 @@ export const mockMerchants: Merchant[] = [
     name: 'Sanjay Mhetha',
     phone: '+91 99001 23456',
     role: 'merchant',
-    storeId: 's1',
+    storeId: 'g1',
     storeName: 'Mhetha Stores',
   },
   {
@@ -45,7 +45,7 @@ export const mockMerchants: Merchant[] = [
     name: 'Suresh Kumar',
     phone: '+91 94480 33445',
     role: 'merchant',
-    storeId: 's4',
+    storeId: 'd1',
     storeName: 'Nandhini KGF',
   },
 ];
@@ -61,7 +61,7 @@ export const mockStores: Store[] = [
     address: 'Robertsonpet, KGF',
   },
   {
-    id: 's1',
+    id: 'g1',
     name: 'Mhetha Stores',
     logoUrl: '/images/stores/metha-stores.avif',
     rating: 4.5,
@@ -79,13 +79,13 @@ export const mockStores: Store[] = [
     address: 'Geetha Road, KGF',
   },
   {
-    id: 's4',
+    id: 'd1',
     name: 'Nandhini KGF',
-    logoUrl: 'https://images.unsplash.com/photo-1527153857715-3908f2ae5e81?w=300&auto=format&fit=crop&q=80',
+    logoUrl: '/images/stores/nandhini-kgf/logo.jpg',
     rating: 4.9,
-    category: 'dairy',
+    category: 'grocery',
     isOpen: false,
-    address: 'Geetha Road, KGF',
+    address: 'Robertsonpet, KGF',
   },
 ];
 
@@ -173,13 +173,13 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
   ],
 
   // MHETHA STORES (Grocery Store with detailed categories)
-  s1: [
+  g1: [
     {
       id: 'ms01',
       name: 'Maggi 2-Minute Noodles (Pack of 2)',
       price: 2800, // ₹28
       imageUrl: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=400&auto=format&fit=crop&q=80',
-      storeId: 's1',
+      storeId: 'g1',
       category: 'Noodles & Snacks',
       deliveryEtaMinutes: 10,
       inStock: true,
@@ -192,7 +192,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Fortune Sunflower Oil (1L Pouch)',
       price: 13500, // ₹135
       imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&auto=format&fit=crop&q=80',
-      storeId: 's1',
+      storeId: 'g1',
       category: 'Edible Oils',
       deliveryEtaMinutes: 10,
       inStock: true,
@@ -205,7 +205,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Tata Tea Gold (250g)',
       price: 4500, // ₹45
       imageUrl: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&auto=format&fit=crop&q=80',
-      storeId: 's1',
+      storeId: 'g1',
       category: 'Tea & Coffee',
       deliveryEtaMinutes: 10,
       inStock: true,
@@ -218,7 +218,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Aashirvaad Shudh Chakki Atta (5kg)',
       price: 24500, // ₹245
       imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&auto=format&fit=crop&q=80',
-      storeId: 's1',
+      storeId: 'g1',
       category: 'Atta & Flours',
       deliveryEtaMinutes: 10,
       inStock: true,
@@ -231,7 +231,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Surf Excel Easy Wash (1kg)',
       price: 13000, // ₹130
       imageUrl: 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=400&auto=format&fit=crop&q=80',
-      storeId: 's1',
+      storeId: 'g1',
       category: 'Soaps & Detergents',
       deliveryEtaMinutes: 10,
       inStock: true,
@@ -242,13 +242,13 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
   ],
 
   // NANDHINI KGF (Daily Essentials & Dairy)
-  s4: [
+  d1: [
     {
       id: 'nd01',
       name: 'Nandini Pasteurised Toned Milk (500ml)',
       price: 2400, // ₹24
       imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&auto=format&fit=crop&q=80',
-      storeId: 's4',
+      storeId: 'd1',
       category: 'Milk & Curd',
       deliveryEtaMinutes: 8,
       inStock: true,
@@ -261,7 +261,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Nandini Special Curd (500g)',
       price: 2600, // ₹26
       imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&auto=format&fit=crop&q=80',
-      storeId: 's4',
+      storeId: 'd1',
       category: 'Milk & Curd',
       deliveryEtaMinutes: 8,
       inStock: true,
@@ -274,7 +274,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Nandini Pure Cow Ghee (500ml Pouch)',
       price: 32000, // ₹320
       imageUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=400&auto=format&fit=crop&q=80',
-      storeId: 's4',
+      storeId: 'd1',
       category: 'Butter & Ghee',
       deliveryEtaMinutes: 8,
       inStock: false,
@@ -287,7 +287,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Nandini Fresh Paneer (200g)',
       price: 9500, // ₹95
       imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&auto=format&fit=crop&q=80',
-      storeId: 's4',
+      storeId: 'd1',
       category: 'Paneer & Cheese',
       deliveryEtaMinutes: 8,
       inStock: true,
@@ -300,7 +300,7 @@ export const mockProductsByStore: Record<string, ProductInventoryItem[]> = {
       name: 'Nandini Pasteurized Table Butter (100g)',
       price: 5600, // ₹56
       imageUrl: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400&auto=format&fit=crop&q=80',
-      storeId: 's4',
+      storeId: 'd1',
       category: 'Butter & Ghee',
       deliveryEtaMinutes: 8,
       inStock: true,

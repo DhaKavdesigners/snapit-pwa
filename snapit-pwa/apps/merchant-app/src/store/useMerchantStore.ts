@@ -104,7 +104,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
   isAuthenticated: false,
   merchantUser: null,
   activeStore: {
-    id: 's1',
+    id: 'g1',
     name: 'Mhetha Stores',
     logoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300&auto=format&fit=crop&q=80',
     rating: 4.8,
@@ -908,7 +908,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
   },
 
   // ── 4. CATALOG & INVENTORY (SYNCED WITH SUPABASE) ─────────────────────────
-  products: mockProductsByStore['s1'],
+  products: mockProductsByStore['g1'],
   selectedCategory: 'ALL',
   setSelectedCategory: (cat: string) => set({ selectedCategory: cat }),
   customCategories: [

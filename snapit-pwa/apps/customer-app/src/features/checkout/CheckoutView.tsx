@@ -77,7 +77,7 @@ export const CheckoutView: React.FC = () => {
     orderPlacedRef.current = true;
     
     const displayId = `ORD-${Date.now().toString().slice(-6)}`;
-    const storeId = cartItemsWithDetails[0]?.product?.storeId || 's1';
+    const storeId = cartItemsWithDetails[0]?.product?.storeId || 'g1';
     
     const activeAddressObject = {
       title: displayTitle,

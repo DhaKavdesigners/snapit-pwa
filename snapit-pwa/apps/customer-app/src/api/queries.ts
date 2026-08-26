@@ -100,7 +100,7 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
         inStock: isAvailableInStock,
         stockCount: stockCount,
         description: p.description,
-        storeName: store?.name || (p.store_id === 's1' ? 'Mhetha Stores' : p.store_id === 's4' ? 'Nandhini KGF' : 'Local Store'),
+        storeName: store?.name || (p.store_id === 'g1' || p.store_id === 's1' ? 'Mhetha Stores' : p.store_id === 'd1' || p.store_id === 's4' ? 'Nandhini KGF' : 'Local Store'),
         storeIsOpen: isStoreOpen,
       });
     }
