@@ -191,9 +191,9 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
             </span>
           )}
           {isOutOfShop && (
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse flex items-center gap-1 whitespace-nowrap">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
-              OUT OF SHOP
+              Handed Over (Awaiting Rider Confirmation)
             </span>
           )}
         </div>
@@ -346,28 +346,6 @@ export const MobileOrderCard: React.FC<MobileOrderCardProps> = ({ order }) => {
                 <Bike className="w-4 h-4" />
                 <span>Handover to Delivery Rider</span>
               </button>
-            </div>
-          )}
-
-          {isOutOfShop && (
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
-                  </span>
-                  <span className="text-[11px] font-black uppercase tracking-wider text-amber-950">
-                    Handed Over • Awaiting Rider
-                  </span>
-                </div>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-900 font-mono">
-                  Pending Ack
-                </span>
-              </div>
-              <p className="text-[10px] text-amber-800 font-medium">
-                Stays in Live Window until rider confirms custody.
-              </p>
             </div>
           )}
         </div>

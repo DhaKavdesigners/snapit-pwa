@@ -21,6 +21,7 @@ import { RejectModal } from './components/orders/RejectModal';
 import { AddEditProductModal } from './components/menu/AddEditProductModal';
 import { DeleteConfirmModal } from './components/menu/DeleteConfirmModal';
 import { SettlementModal } from './components/dashboard/SettlementModal';
+import { ConfirmModal } from './components/common/ConfirmModal';
 
 type MobileTab = 'orders' | 'menu' | 'settlement' | 'store';
 
@@ -37,6 +38,14 @@ export const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<MobileTab>('orders');
   const [isSettlementOpen, setIsSettlementOpen] = useState(false);
+  const [isHeaderOfflineConfirmOpen, setIsHeaderOfflineConfirmOpen] = useState(false);
+
+  // Always reset to 'orders' tab on login / session start
+  useEffect(() => {
+    if (isAuthenticated) {
+      setActiveTab('orders');
+    }
+  }, [isAuthenticated]);
 
   // Live Real-Time Digital Clock
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -146,7 +155,13 @@ export const App: React.FC = () => {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 type="button"
-                onClick={toggleStoreStatus}
+                onClick={() => {
+                  if (isOnline) {
+                    setIsHeaderOfflineConfirmOpen(true);
+                  } else {
+                    toggleStoreStatus();
+                  }
+                }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer ${
                   isOnline
                     ? 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/25'
@@ -307,6 +322,20 @@ export const App: React.FC = () => {
       <AddEditProductModal />
       <DeleteConfirmModal />
       <SettlementModal isOpen={isSettlementOpen} onClose={() => setIsSettlementOpen(false)} />
+
+      {/* Header Offline Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isHeaderOfflineConfirmOpen}
+        title="Turn Store Offline?"
+        subtitle={activeStore.name}
+        description={`Are you sure you want to turn ${activeStore.name} OFFLINE? Your store will be marked closed on the customer app and new incoming orders will be paused.`}
+        confirmLabel="Turn Store Offline"
+        cancelLabel="Cancel"
+        variant="danger"
+        icon="power"
+        onConfirm={toggleStoreStatus}
+        onClose={() => setIsHeaderOfflineConfirmOpen(false)}
+      />
     </div>
   );
 };

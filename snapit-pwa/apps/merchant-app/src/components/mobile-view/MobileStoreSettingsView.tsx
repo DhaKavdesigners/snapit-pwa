@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Power,
   Flame,
@@ -7,6 +7,7 @@ import {
   Store,
 } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 export const MobileStoreSettingsView: React.FC = () => {
   const {
@@ -18,6 +19,17 @@ export const MobileStoreSettingsView: React.FC = () => {
     toggleRushMode,
     logout,
   } = useMerchantStore();
+
+  const [isOfflineConfirmOpen, setIsOfflineConfirmOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+
+  const handleToggleStatus = () => {
+    if (isOnline) {
+      setIsOfflineConfirmOpen(true);
+    } else {
+      toggleStoreStatus();
+    }
+  };
 
   return (
     <div className="space-y-4 pb-8">
@@ -37,7 +49,7 @@ export const MobileStoreSettingsView: React.FC = () => {
               Merchant: <strong className="text-slate-800">{merchantUser?.name || 'Authorized Merchant'}</strong>
             </p>
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-              {/* 1. GROCERY / FOOD */}
+              {/* 1. GROCERY / FOOD / DAIRY */}
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase font-mono">
                 {activeStore.category || 'GROCERY'}
               </span>
@@ -76,7 +88,7 @@ export const MobileStoreSettingsView: React.FC = () => {
 
           <button
             type="button"
-            onClick={toggleStoreStatus}
+            onClick={handleToggleStatus}
             className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all active:scale-95 shadow-sm cursor-pointer ${
               isOnline
                 ? 'bg-emerald-600 text-white shadow-emerald-600/20'
@@ -132,12 +144,40 @@ export const MobileStoreSettingsView: React.FC = () => {
       {/* Logout Action */}
       <button
         type="button"
-        onClick={logout}
+        onClick={() => setIsLogoutConfirmOpen(true)}
         className="w-full p-4 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 active:scale-95 font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer"
       >
         <LogOut className="w-4 h-4" />
         <span>Logout & Switch Store OFFLINE</span>
       </button>
+
+      {/* 🔴 Turn Store Offline Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isOfflineConfirmOpen}
+        title="Turn Store Offline?"
+        subtitle={activeStore.name}
+        description={`Are you sure you want to turn ${activeStore.name} OFFLINE? Your store will be marked closed on the customer app and new incoming orders will be paused.`}
+        confirmLabel="Turn Store Offline"
+        cancelLabel="Cancel"
+        variant="danger"
+        icon="power"
+        onConfirm={toggleStoreStatus}
+        onClose={() => setIsOfflineConfirmOpen(false)}
+      />
+
+      {/* 🚪 Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        title="Log Out & Switch Store OFFLINE?"
+        subtitle={activeStore.name}
+        description={`Are you sure you want to log out from ${activeStore.name}? Your store counter will automatically be switched OFFLINE and stop receiving customer orders until you log back in.`}
+        confirmLabel="Yes, Log Out"
+        cancelLabel="Cancel"
+        variant="danger"
+        icon="logout"
+        onConfirm={logout}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+      />
     </div>
   );
 };
