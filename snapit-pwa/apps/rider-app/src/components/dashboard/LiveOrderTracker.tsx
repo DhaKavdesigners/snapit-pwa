@@ -53,8 +53,8 @@ export const LiveOrderTracker: React.FC = () => {
         };
       }
       return {
-        label: 'Out for Delivery',
-        success: 'Out for Delivery!',
+        label: 'Order Picked Up',
+        success: 'Order Collected!',
         disabled: false,
       };
     }
