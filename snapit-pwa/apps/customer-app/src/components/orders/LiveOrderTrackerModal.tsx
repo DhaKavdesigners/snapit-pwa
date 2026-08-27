@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import confetti from 'canvas-confetti';
 import { 
   X, MapPin, Store as StoreIcon, Package, Check, 
   Bike, Home, Sparkles, Clock, AlertCircle, Phone, 
@@ -46,29 +45,32 @@ export const LiveOrderTrackerModal: React.FC = () => {
   useEffect(() => {
     if (status === 'DELIVERED' && isTrackerOpen) {
       try {
-        confetti({
-          particleCount: 90,
-          spread: 70,
-          origin: { y: 0.55 },
-          colors: ['#00E676', '#10B981', '#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7']
-        });
-        const timer = setTimeout(() => {
-          confetti({
-            particleCount: 60,
-            angle: 60,
-            spread: 60,
-            origin: { x: 0.1, y: 0.6 },
-            colors: ['#00E676', '#FFD700', '#FF9F43']
+        const confettiFn = (window as any).confetti;
+        if (typeof confettiFn === 'function') {
+          confettiFn({
+            particleCount: 90,
+            spread: 70,
+            origin: { y: 0.55 },
+            colors: ['#00E676', '#10B981', '#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7']
           });
-          confetti({
-            particleCount: 60,
-            angle: 120,
-            spread: 60,
-            origin: { x: 0.9, y: 0.6 },
-            colors: ['#00E676', '#10B981', '#54A0FF']
-          });
-        }, 350);
-        return () => clearTimeout(timer);
+          const timer = setTimeout(() => {
+            confettiFn({
+              particleCount: 60,
+              angle: 60,
+              spread: 60,
+              origin: { x: 0.1, y: 0.6 },
+              colors: ['#00E676', '#FFD700', '#FF9F43']
+            });
+            confettiFn({
+              particleCount: 60,
+              angle: 120,
+              spread: 60,
+              origin: { x: 0.9, y: 0.6 },
+              colors: ['#00E676', '#10B981', '#54A0FF']
+            });
+          }, 350);
+          return () => clearTimeout(timer);
+        }
       } catch (e) {
         // Safe fallback
       }

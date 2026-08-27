@@ -16,46 +16,24 @@ export async function fetchLiveStores(context?: 'shopping' | 'food'): Promise<St
       return [...mockShoppingStores, ...mockFoodStores];
     }
 
-    const dbStoreMap = new Map(dbStores.map(s => [s.id, s]));
-
-    const mapStore = (mock: Store): Store => {
-      const db = dbStoreMap.get(mock.id);
-      if (!db) return mock;
+    const liveStores: Store[] = dbStores.map(db => {
+      const isFood = (db.category || '').toUpperCase() === 'FOOD' || (db.category || '').toUpperCase() === 'RESTAURANT';
       return {
-        ...mock,
-        name: db.name || mock.name,
-        isOpen: db.is_online !== undefined ? Boolean(db.is_online) : mock.isOpen,
-        rating: db.rating !== undefined && db.rating !== null ? Number(db.rating) : mock.rating,
-        logoUrl: db.logo_url ? db.logo_url : mock.logoUrl,
-        category: db.category?.toUpperCase() === 'FOOD' ? 'food' : 'grocery',
+        id: db.id,
+        name: db.name,
+        logoUrl: db.logo_url || (isFood ? '/images/stores/venus ambur biriyani.jpg' : '/images/stores/mhetha-stores/metha-stores.avif'),
+        fallbackLogoUrl: isFood
+          ? 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=300&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300&auto=format&fit=crop&q=80',
+        rating: db.rating !== undefined && db.rating !== null ? Number(db.rating) : 4.8,
+        category: isFood ? 'food' : 'grocery',
+        isOpen: db.is_online !== undefined ? Boolean(db.is_online) : false,
       };
-    };
+    });
 
-    const mergedShopping = mockShoppingStores.map(mapStore);
-    const mergedFood = mockFoodStores.map(mapStore);
-
-    // Include any new stores in DB not present in mock data
-    const existingIds = new Set([...mergedShopping.map(s => s.id), ...mergedFood.map(s => s.id)]);
-    for (const db of dbStores) {
-      if (!existingIds.has(db.id)) {
-        const isFood = db.category?.toUpperCase() === 'FOOD';
-        const newStore: Store = {
-          id: db.id,
-          name: db.name,
-          logoUrl: db.logo_url || (isFood ? '/images/stores/bakio/bakio_kgf.jpg' : '/images/stores/mhetha-stores/metha-stores.avif'),
-          fallbackLogoUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300&auto=format&fit=crop&q=80',
-          rating: db.rating ? Number(db.rating) : 4.8,
-          category: isFood ? 'food' : 'grocery',
-          isOpen: db.is_online !== undefined ? Boolean(db.is_online) : true,
-        };
-        if (isFood) mergedFood.push(newStore);
-        else mergedShopping.push(newStore);
-      }
-    }
-
-    if (context === 'shopping') return mergedShopping;
-    if (context === 'food') return mergedFood;
-    return [...mergedShopping, ...mergedFood];
+    if (context === 'shopping') return liveStores.filter(s => s.category === 'grocery');
+    if (context === 'food') return liveStores.filter(s => s.category === 'food');
+    return liveStores;
   } catch (err) {
     console.warn("Using mock stores fallback:", err);
     if (context === 'shopping') return mockShoppingStores;
@@ -64,7 +42,7 @@ export async function fetchLiveStores(context?: 'shopping' | 'food'): Promise<St
   }
 }
 
-// Helper: fetch live merged products from Supabase
+// Helper: fetch live products directly from Supabase (Strict 1:1 Database Sync)
 export async function fetchLiveProducts(context?: 'shopping' | 'food', category?: string): Promise<Product[]> {
   try {
     const [storesResult, productsResult] = await Promise.all([
@@ -75,69 +53,57 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
     const storeMap = new Map(storesResult.map(s => [s.id, s]));
     const dbProducts = productsResult.data || [];
 
-    // 1. Map all real database products
-    const dbStoreIdsWithProducts = new Set<string>();
-    const mappedDbProducts: Product[] = [];
+    // If database returned products, display ONLY what is in the Supabase products table
+    if (dbProducts && dbProducts.length > 0) {
+      const mappedDbProducts: Product[] = [];
 
-    for (const p of dbProducts) {
-      dbStoreIdsWithProducts.add(p.store_id);
-      const isFood = p.category?.toUpperCase().includes('FOOD') || p.category?.toUpperCase().includes('BIRYANI');
-      const store = storeMap.get(p.store_id);
-      const isStoreOpen = store !== undefined ? store.isOpen : true;
-      const stockCount = p.stock_count !== undefined && p.stock_count !== null ? Number(p.stock_count) : 99;
-      const isAvailableInStock = p.in_stock !== false && p.availability !== 'OUT OF STOCK' && stockCount > 0;
+      for (const db of dbProducts) {
+        const s = storeMap.get(db.store_id) || (db.store_id === 's1' ? storeMap.get('g1') : db.store_id === 's4' ? storeMap.get('d1') : db.store_id === 'f3' ? storeMap.get('f1') : undefined);
+        const isFood = (s?.category === 'food') || (db.category || '').toUpperCase().includes('FOOD') || (db.category || '').toUpperCase().includes('BIRYANI') || (db.category || '').toUpperCase().includes('STARTER') || (db.category || '').toUpperCase().includes('GRAV');
+        const isStoreOpen = s !== undefined ? Boolean(s.isOpen) : false;
+        const stockCount = db.stock_count !== undefined && db.stock_count !== null ? Number(db.stock_count) : 99;
+        const isAvailableInStock = db.in_stock !== false && db.availability !== 'OUT OF STOCK' && stockCount > 0;
+        const storeName = s?.name || (db.store_id === 'g1' || db.store_id === 's1' ? 'Mhetha Stores' : db.store_id === 'd1' || db.store_id === 's4' ? 'Nandhini KGF' : db.store_id === 'f1' || db.store_id === 'f3' ? 'Ambur Biriyani KGF' : 'Local Store');
 
-      mappedDbProducts.push({
-        id: p.id,
-        name: p.name,
-        price: Number(p.price) || 0,
-        imageUrl: p.image_url || '/images/products/placeholder.jpg',
-        fallbackImageUrl: p.image_url || undefined,
-        storeId: p.store_id,
-        category: isFood ? 'food' : 'grocery',
-        subCategory: p.category,
-        deliveryEtaMinutes: p.delivery_eta_minutes || 10,
-        inStock: isAvailableInStock,
-        stockCount: stockCount,
-        description: p.description,
-        storeName: store?.name || (p.store_id === 'g1' || p.store_id === 's1' ? 'Mhetha Stores' : p.store_id === 'd1' || p.store_id === 's4' ? 'Nandhini KGF' : 'Local Store'),
-        storeIsOpen: isStoreOpen,
-      });
-    }
+        mappedDbProducts.push({
+          id: db.id,
+          name: db.name || 'Product',
+          price: Number(db.price) || 0,
+          imageUrl: db.image_url || '/images/products/placeholder.jpg',
+          fallbackImageUrl: db.image_url || undefined,
+          storeId: db.store_id,
+          category: isFood ? 'food' : 'grocery',
+          subCategory: db.category || (isFood ? 'Biryani Specials' : 'Cooking Essentials'),
+          deliveryEtaMinutes: db.delivery_eta_minutes || 10,
+          inStock: isAvailableInStock,
+          stockCount: stockCount,
+          description: db.description || '',
+          storeName: storeName,
+          storeIsOpen: isStoreOpen,
+        });
+      }
 
-    const baseProducts = context === 'shopping' 
-      ? mockShoppingProducts 
-      : context === 'food' 
-        ? mockFoodProducts 
-        : [...mockShoppingProducts, ...mockFoodProducts];
-
-    // 2. Remove dummy products for any store that has real database products
-    const filteredDummyProducts = baseProducts
-      .filter(mock => !dbStoreIdsWithProducts.has(mock.storeId))
-      .map(mock => {
-        const store = storeMap.get(mock.storeId);
-        return {
-          ...mock,
-          storeName: store?.name || mock.storeName,
-          storeIsOpen: store !== undefined ? store.isOpen : true,
-          stockCount: mock.stockCount ?? 20,
-        };
+      const filteredByContext = mappedDbProducts.filter(p => {
+        if (!context) return true;
+        if (context === 'shopping') return p.category === 'grocery';
+        if (context === 'food') return p.category === 'food' || p.category === 'bakery';
+        return p.category === context;
       });
 
-    // 3. Filter DB products by context if requested
-    const filteredDbProducts = mappedDbProducts.filter(live => !context || live.category === context);
-
-    // 4. Combine: Real products first, then dummy items for unseeded stores
-    const mergedList = [...filteredDbProducts, ...filteredDummyProducts];
-
-    if (category) {
-      return mergedList.filter(p => p.category === category || p.subCategory === category);
+      if (category) {
+        return filteredByContext.filter(p => p.category === category || p.subCategory === category);
+      }
+      return filteredByContext;
     }
-    return mergedList;
+
+    // Fallback only if database is completely empty or offline
+    const base = context === 'shopping' ? mockShoppingProducts : context === 'food' ? mockFoodProducts : [...mockShoppingProducts, ...mockFoodProducts];
+    if (category) return base.filter(p => p.category === category || p.subCategory === category);
+    return base;
   } catch (err) {
     console.warn("Using mock products fallback:", err);
     const base = context === 'shopping' ? mockShoppingProducts : context === 'food' ? mockFoodProducts : [...mockShoppingProducts, ...mockFoodProducts];
-    if (category) return base.filter(p => p.category === category);
+    if (category) return base.filter(p => p.category === category || p.subCategory === category);
     return base;
   }
 }

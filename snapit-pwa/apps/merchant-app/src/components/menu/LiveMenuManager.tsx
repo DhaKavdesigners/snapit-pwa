@@ -31,6 +31,9 @@ export const LiveMenuManager: React.FC = () => {
   const outOfStockCount = products.filter(
     (p) => p.stockCount === 0 || p.availability === 'OUT OF STOCK' || !p.inStock
   ).length;
+  const lowStockCount = products.filter(
+    (p) => p.stockCount > 0 && p.stockCount <= 3 && p.availability === 'AVAILABLE' && p.inStock !== false
+  ).length;
 
   const filteredProducts = products.filter((prod) => {
     let matchesCategory = false;
@@ -38,6 +41,8 @@ export const LiveMenuManager: React.FC = () => {
       matchesCategory = true;
     } else if (selectedCategory === 'OUT_OF_STOCK') {
       matchesCategory = prod.stockCount === 0 || prod.availability === 'OUT OF STOCK' || !prod.inStock;
+    } else if (selectedCategory === 'LOW_STOCK') {
+      matchesCategory = prod.stockCount > 0 && prod.stockCount <= 3 && prod.availability === 'AVAILABLE' && prod.inStock !== false;
     } else {
       matchesCategory = prod.category.toLowerCase() === selectedCategory.toLowerCase();
     }
@@ -50,11 +55,19 @@ export const LiveMenuManager: React.FC = () => {
   });
 
   const getAvailabilityBadge = (item: ProductInventoryItem) => {
-    if (item.availability === 'AVAILABLE' && item.stockCount > 0) {
+    if (item.availability === 'AVAILABLE' && item.stockCount > 3) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
           <CheckCircle className="w-3 h-3 text-emerald-600" />
           AVAILABLE
+        </span>
+      );
+    }
+    if (item.availability === 'AVAILABLE' && item.stockCount > 0 && item.stockCount <= 3) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+          <Package className="w-3 h-3 text-amber-700" />
+          LOW STOCK ({item.stockCount} left)
         </span>
       );
     }
@@ -143,6 +156,30 @@ export const LiveMenuManager: React.FC = () => {
                 }`}
               >
                 {outOfStockCount}
+              </span>
+            )}
+          </button>
+
+          {/* LOW STOCK (≤3) Tab */}
+          <button
+            type="button"
+            onClick={() => setSelectedCategory('LOW_STOCK')}
+            className={`px-3 py-1 rounded-xl font-bold uppercase text-[11px] transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+              selectedCategory === 'LOW_STOCK'
+                ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-500/30'
+                : lowStockCount > 0
+                ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <span>LOW STOCK (≤3)</span>
+            {lowStockCount > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-extrabold ${
+                  selectedCategory === 'LOW_STOCK' ? 'bg-white text-amber-800' : 'bg-amber-500 text-white'
+                }`}
+              >
+                {lowStockCount}
               </span>
             )}
           </button>

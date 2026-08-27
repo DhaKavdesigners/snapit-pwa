@@ -56,15 +56,73 @@ export const HomeView: React.FC = () => {
   const isSearching = searchQuery.trim().length > 0;
 
   // Shopping Categories
-  const snacks = products?.filter(p => p.subCategory === 'Snacks & Beverages') || [];
-  const dairy = products?.filter(p => ['Milk & Curd', 'Butter, Ghee & Cream', 'Ice Cream'].includes(p.subCategory || '')) || [];
-  const masalas = products?.filter(p => p.subCategory === 'Cooking Essentials') || [];
-  const homecare = products?.filter(p => ['Home Essentials', 'Personal Care'].includes(p.subCategory || '')) || [];
+  const snacks = products?.filter(p => 
+    p.subCategory === 'Snacks & Beverages' || 
+    p.subCategory?.toLowerCase().includes('snack') || 
+    p.subCategory?.toLowerCase().includes('juice') || 
+    p.subCategory?.toLowerCase().includes('drink') ||
+    p.subCategory?.toLowerCase().includes('tea') ||
+    p.subCategory?.toLowerCase().includes('coffee')
+  ) || [];
+
+  const dairy = products?.filter(p => 
+    ['Milk & Curd', 'Butter, Ghee & Cream', 'Butter & Ghee', 'Paneer & Cheese', 'Ice Cream'].includes(p.subCategory || '') ||
+    p.subCategory?.toLowerCase().includes('dairy') ||
+    p.subCategory?.toLowerCase().includes('milk') ||
+    p.subCategory?.toLowerCase().includes('curd') ||
+    p.subCategory?.toLowerCase().includes('paneer') ||
+    p.subCategory?.toLowerCase().includes('ghee') ||
+    p.subCategory?.toLowerCase().includes('butter')
+  ) || [];
+
+  const masalas = products?.filter(p => 
+    ['Cooking Essentials', 'Atta & Flours', 'Edible Oils', 'Rice & Dals', 'Spices & Masalas'].includes(p.subCategory || '') ||
+    p.subCategory?.toLowerCase().includes('oil') ||
+    p.subCategory?.toLowerCase().includes('atta') ||
+    p.subCategory?.toLowerCase().includes('flour') ||
+    p.subCategory?.toLowerCase().includes('rice') ||
+    p.subCategory?.toLowerCase().includes('dal') ||
+    p.subCategory?.toLowerCase().includes('masala') ||
+    p.subCategory?.toLowerCase().includes('salt') ||
+    p.subCategory?.toLowerCase().includes('sugar')
+  ) || [];
+
+  const homecare = products?.filter(p => 
+    ['Home Essentials', 'Personal Care', 'Soaps & Detergents'].includes(p.subCategory || '') ||
+    p.subCategory?.toLowerCase().includes('soap') ||
+    p.subCategory?.toLowerCase().includes('detergent') ||
+    p.subCategory?.toLowerCase().includes('clean') ||
+    p.subCategory?.toLowerCase().includes('shampoo') ||
+    p.subCategory?.toLowerCase().includes('wash')
+  ) || [];
 
   // Food Categories
-  const biryani = products?.filter(p => p.subCategory === 'Biryani Specialties') || [];
-  const fastfood = products?.filter(p => p.subCategory === 'Fast Food & Rolls') || [];
-  const bakery = products?.filter(p => ['Breads & Cakes', 'Puffs & Savories'].includes(p.subCategory || '')) || [];
+  const biryani = products?.filter(p => 
+    p.subCategory === 'Biryani Specials' || 
+    p.subCategory === 'Biryani Specialties' || 
+    p.subCategory?.toLowerCase().includes('biryani') || 
+    p.subCategory?.toLowerCase().includes('rice')
+  ) || [];
+
+  const fastfood = products?.filter(p => 
+    ['Starters & Grills', 'Fast Food & Rolls', 'Fried Chicken', 'Burgers', 'Sides & Fries', 'Starters'].includes(p.subCategory || '') ||
+    p.subCategory?.toLowerCase().includes('starter') ||
+    p.subCategory?.toLowerCase().includes('grill') ||
+    p.subCategory?.toLowerCase().includes('fry') ||
+    p.subCategory?.toLowerCase().includes('burger') ||
+    p.subCategory?.toLowerCase().includes('roll') ||
+    p.subCategory?.toLowerCase().includes('chicken 65')
+  ) || [];
+
+  const bakery = products?.filter(p => 
+    ['Veg Gravies', 'Gravies & Curries', 'Breads & Cakes', 'Puffs & Savories'].includes(p.subCategory || '') ||
+    p.subCategory?.toLowerCase().includes('gravy') ||
+    p.subCategory?.toLowerCase().includes('curry') ||
+    p.subCategory?.toLowerCase().includes('paneer') ||
+    p.subCategory?.toLowerCase().includes('bread') ||
+    p.subCategory?.toLowerCase().includes('cake') ||
+    p.subCategory?.toLowerCase().includes('puff')
+  ) || [];
 
   // Deduplication Logic for "All Essentials" / "All Menu Items"
   const featuredIds = activeContext === 'shopping' 
@@ -216,70 +274,76 @@ export const HomeView: React.FC = () => {
                   {activeContext === 'shopping' ? (
                     <>
                       {/* id="section-snacks" */}
-                      <section id="section-snacks" className="mb-6 scroll-mt-32">
-                        <h3 className="font-bold text-lg text-gray-900 mb-3">🍿 Snacks & Juices</h3>
-                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                          {productsLoading ? (
-                            Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-snk-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
-                          ) : (
-                            snacks.map(product => <ProductCard key={product.id} product={product} />)
-                          )}
-                        </div>
-                      </section>
+                      {snacks.length > 0 && (
+                        <section id="section-snacks" className="mb-6 scroll-mt-32">
+                          <h3 className="font-bold text-lg text-gray-900 mb-3">🍿 Snacks & Juices</h3>
+                          <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                            {snacks.map(product => <ProductCard key={product.id} product={product} />)}
+                          </div>
+                        </section>
+                      )}
 
                       {/* id="section-dairy" */}
-                      <section id="section-dairy" className="mb-6 scroll-mt-32">
-                        <h3 className="font-bold text-lg text-gray-900 mb-3">🥛 Dairy Items</h3>
-                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                          {dairy.map(product => <ProductCard key={product.id} product={product} />)}
-                        </div>
-                      </section>
+                      {dairy.length > 0 && (
+                        <section id="section-dairy" className="mb-6 scroll-mt-32">
+                          <h3 className="font-bold text-lg text-gray-900 mb-3">🥛 Dairy Items</h3>
+                          <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                            {dairy.map(product => <ProductCard key={product.id} product={product} />)}
+                          </div>
+                        </section>
+                      )}
 
                       {/* id="section-masala" */}
-                      <section id="section-masala" className="mb-6 scroll-mt-32">
-                        <h3 className="font-bold text-lg text-gray-900 mb-3">🧂 Cooking Masalas & Spices</h3>
-                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                          {masalas.map(product => <ProductCard key={product.id} product={product} />)}
-                        </div>
-                      </section>
+                      {masalas.length > 0 && (
+                        <section id="section-masala" className="mb-6 scroll-mt-32">
+                          <h3 className="font-bold text-lg text-gray-900 mb-3">🧂 Cooking Masalas & Spices</h3>
+                          <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                            {masalas.map(product => <ProductCard key={product.id} product={product} />)}
+                          </div>
+                        </section>
+                      )}
 
                       {/* id="section-homecare" */}
-                      <section id="section-homecare" className="mb-6 scroll-mt-32">
-                        <h3 className="font-bold text-lg text-gray-900 mb-3">🧼 Home Care & Cleaning</h3>
-                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                          {homecare.map(product => <ProductCard key={product.id} product={product} />)}
-                        </div>
-                      </section>
+                      {homecare.length > 0 && (
+                        <section id="section-homecare" className="mb-6 scroll-mt-32">
+                          <h3 className="font-bold text-lg text-gray-900 mb-3">🧼 Home Care & Cleaning</h3>
+                          <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                            {homecare.map(product => <ProductCard key={product.id} product={product} />)}
+                          </div>
+                        </section>
+                      )}
                     </>
                   ) : (
                     <>
                       {/* id="section-biryani" */}
-                      <section id="section-biryani" className="mb-6 scroll-mt-32">
-                        <h3 className="font-bold text-lg text-gray-900 mb-3">🍚 Biryani Specialties</h3>
-                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                          {productsLoading ? (
-                            Array(4).fill(0).map((_, i) => <Skeleton key={`skeleton-biry-${i}`} className="min-w-[130px] h-52 shrink-0 snap-start rounded-xl" />)
-                          ) : (
-                            biryani.map(product => <ProductCard key={product.id} product={product} />)
-                          )}
-                        </div>
-                      </section>
+                      {biryani.length > 0 && (
+                        <section id="section-biryani" className="mb-6 scroll-mt-32">
+                          <h3 className="font-bold text-lg text-gray-900 mb-3">🍚 Biryani Specialties</h3>
+                          <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                            {biryani.map(product => <ProductCard key={product.id} product={product} />)}
+                          </div>
+                        </section>
+                      )}
 
                       {/* id="section-fastfood" */}
-                      <section id="section-fastfood" className="mb-6 scroll-mt-32">
-                        <h3 className="font-bold text-lg text-gray-900 mb-3">🍔 Fast Food & Rolls</h3>
-                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                          {fastfood.map(product => <ProductCard key={product.id} product={product} />)}
-                        </div>
-                      </section>
+                      {fastfood.length > 0 && (
+                        <section id="section-fastfood" className="mb-6 scroll-mt-32">
+                          <h3 className="font-bold text-lg text-gray-900 mb-3">🍔 Fast Food & Starters</h3>
+                          <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                            {fastfood.map(product => <ProductCard key={product.id} product={product} />)}
+                          </div>
+                        </section>
+                      )}
 
                       {/* id="section-bakery" */}
-                      <section id="section-bakery" className="mb-6 scroll-mt-32">
-                        <h3 className="font-bold text-lg text-gray-900 mb-3">🥐 Bakery & Sweets</h3>
-                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
-                          {bakery.map(product => <ProductCard key={product.id} product={product} />)}
-                        </div>
-                      </section>
+                      {bakery.length > 0 && (
+                        <section id="section-bakery" className="mb-6 scroll-mt-32">
+                          <h3 className="font-bold text-lg text-gray-900 mb-3">🍛 Gravies & Specialties</h3>
+                          <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar gap-3 py-2 -mx-4 px-4">
+                            {bakery.map(product => <ProductCard key={product.id} product={product} />)}
+                          </div>
+                        </section>
+                      )}
                     </>
                   )}
 

@@ -27,8 +27,8 @@ export const ExploreView: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
 
   const { data: allProducts, isLoading } = useAllProducts();
-  const { data: shoppingStores = mockShoppingStores } = useStores('shopping');
-  const { data: foodStores = mockFoodStores } = useStores('food');
+  const { data: shoppingStores = [] } = useStores('shopping');
+  const { data: foodStores = [] } = useStores('food');
 
   const categories = isShopping ? exploreShoppingCategories : exploreFoodCategories;
 
@@ -134,7 +134,15 @@ export const ExploreView: React.FC = () => {
   if (exploreState === 'store' && selectedStore) {
     const store = [...shoppingStores, ...foodStores].find(s => s.id === selectedStore);
     const isStoreOpen = store !== undefined ? store.isOpen : true;
-    const storeProducts = (allProducts?.filter(p => p.storeId === selectedStore) || []).map(p => ({
+    const storeProducts = (allProducts?.filter(p => 
+      p.storeId === selectedStore || 
+      (selectedStore === 'g1' && p.storeId === 's1') || 
+      (selectedStore === 's1' && p.storeId === 'g1') || 
+      (selectedStore === 'd1' && p.storeId === 's4') || 
+      (selectedStore === 's4' && p.storeId === 'd1') || 
+      (selectedStore === 'f1' && (p.storeId === 'f3' || p.storeId === 'f4')) ||
+      (selectedStore === 'f3' && p.storeId === 'f1')
+    ) || []).map(p => ({
       ...p,
       storeIsOpen: isStoreOpen
     }));
