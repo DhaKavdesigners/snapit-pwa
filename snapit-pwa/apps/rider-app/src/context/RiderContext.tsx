@@ -910,9 +910,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
+    // Flow: Customer places order (PLACED/PENDING) -> Merchant accepts order (status becomes PREPARING)
+    // Rider receives order acceptance notification ONLY when merchant accepts and Supabase status becomes PREPARING (or READY_FOR_PICKUP)
     const isEligibleNotificationStatus = (statusStr?: string) => {
       const s = (statusStr || '').toUpperCase();
-      return s === 'PREPARING' || s === 'PLACED' || s === 'ASSIGNED' || s === 'READY_FOR_PICKUP';
+      return s === 'PREPARING' || s === 'READY_FOR_PICKUP';
     };
 
     const setupLiveOrders = async () => {
@@ -931,6 +933,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
         unsubscribe = subscribeToOrders(
           (newOrder) => {
+            // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
             if (isEligibleNotificationStatus(newOrder.status)) {
               const store = dbStores.find((s) => s.id === newOrder.store_id);
               const mapped = mapDbOrderToAppOrder(newOrder, store);
@@ -979,7 +982,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
               };
             });
 
-            // Trigger notification if order reaches PREPARING or PLACED
+            // Trigger notification when merchant accepts and order reaches PREPARING
             if (isEligibleNotificationStatus(updatedOrder.status)) {
               const store = dbStores.find((s) => s.id === updatedOrder.store_id);
               const mapped = mapDbOrderToAppOrder(updatedOrder, store);

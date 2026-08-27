@@ -398,7 +398,7 @@ export const TestModePanel: React.FC = () => {
                       disabled={activeOrder.riderPickupConfirmed}
                       className="w-full py-1.5 px-2 rounded bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-[10px] flex items-center justify-center gap-1 shadow"
                     >
-                      <span>🛵 Simulate Rider: Order Picked Up</span>
+                      <span>🛵 Simulate Rider: Out for Delivery</span>
                     </button>
                   )}
 

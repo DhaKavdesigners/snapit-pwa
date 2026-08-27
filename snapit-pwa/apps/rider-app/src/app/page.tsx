@@ -187,12 +187,12 @@ export default function DashboardPage() {
         };
       }
 
-      // Stage 2: Store marked ready -> Rider can slide ORDER PICKED UP
+      // Stage 2: Store marked ready -> Rider can slide OUT FOR DELIVERY
       return {
         type: 'slider',
-        label: 'ORDER PICKED UP',
-        success: 'Order Collected!',
-        hint: 'Order is ready at store. Slide to confirm physical pickup from merchant.',
+        label: 'OUT FOR DELIVERY',
+        success: 'Out for Delivery!',
+        hint: 'Order is ready at store. Slide out for delivery to customer.',
         disabled: false,
       };
     }
