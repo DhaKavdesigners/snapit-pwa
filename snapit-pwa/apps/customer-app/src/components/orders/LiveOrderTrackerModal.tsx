@@ -183,6 +183,18 @@ export const LiveOrderTrackerModal: React.FC = () => {
           eta: `~${currentOrder.prep_time_minutes || 10} mins`,
           isOutForDelivery: false,
         };
+      case 'RIDER_ARRIVING_TO_STORE':
+      case 'RIDER_ASSIGNED':
+        return {
+          step: 2.2,
+          pathRatio: 0.235,
+          title: 'Rider Assigned & Arriving at Store 🛵',
+          subtitle: 'Rider is traveling to store counter while items are being prepared.',
+          badge: 'RIDER ARRIVING TO STORE',
+          badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+          eta: `~${currentOrder.prep_time_minutes || 8} mins`,
+          isOutForDelivery: false,
+        };
       case 'READY':
         return {
           step: 2.5,
@@ -227,6 +239,18 @@ export const LiveOrderTrackerModal: React.FC = () => {
           badge: 'OUT FOR DELIVERY',
           badgeColor: 'bg-emerald-500 text-white border-emerald-600',
           eta: '~2-4 mins',
+          isOutForDelivery: true,
+        };
+      case 'RIDER_AT_LOC':
+      case 'ARRIVED_AT_CUSTOMER':
+        return {
+          step: 4.5,
+          pathRatio: 0.920,
+          title: 'Rider is at Your Doorstep! 🔔',
+          subtitle: 'Please share your 4-digit PIN with the delivery rider to collect your order.',
+          badge: 'RIDER AT LOCATION',
+          badgeColor: 'bg-purple-600 text-white border-purple-700 animate-pulse',
+          eta: 'Arrived',
           isOutForDelivery: true,
         };
       case 'DELIVERED':

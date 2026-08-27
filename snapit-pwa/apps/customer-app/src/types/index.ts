@@ -38,11 +38,15 @@ export interface Order {
     | 'PAID'
     | 'ACCEPTED'
     | 'PREPARING'
+    | 'RIDER_ARRIVING_TO_STORE'
+    | 'RIDER_ASSIGNED'
     | 'READY'
     | 'READY_FOR_PICKUP'
     | 'OUT_OF_SHOP'
     | 'PICKED_UP'
     | 'OUT_FOR_DELIVERY'
+    | 'RIDER_AT_LOC'
+    | 'ARRIVED_AT_CUSTOMER'
     | 'DELIVERED'
     | 'CANCELLED';
   items: CartItem[];

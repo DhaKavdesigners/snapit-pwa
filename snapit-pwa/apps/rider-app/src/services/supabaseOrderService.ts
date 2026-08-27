@@ -29,20 +29,21 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
 
   const shopLat = store?.lat || 12.9785;
   const shopLng = store?.lng || 77.645;
-  const storeName = store?.name || (dbOrder.store_id ? STORES_MAP[dbOrder.store_id] : '') || 'SnapIt Partner Store';
-  const storeAddress = store?.address || (dbOrder.store_id && (dbOrder.store_id === 'g1' || dbOrder.store_id === 's1') ? 'Robertsonpet, KGF' : 'Near Clock Tower, Robertsonpet, KGF');
+  const storeName = store?.name || (dbOrder.store_id ? STORES_MAP[dbOrder.store_id] : '') || 'Mhetha Stores';
+  const storeAddress = store?.address || store?.store_address || (dbOrder.store_id && (dbOrder.store_id === 'g1' || dbOrder.store_id === 's1') ? 'Robertsonpet, KGF' : 'Near Clock Tower, Robertsonpet, KGF');
+  const storePhone = store?.phone || '8217649688';
 
   // Items
   const items = Array.isArray(dbOrder.items)
     ? dbOrder.items.map((item: any) => ({
         name: item.name || item.title || 'Item',
         quantity: Number(item.quantity || item.qty || 1),
-        price: Number(item.price || 0),
+        price: Number(item.price || item.price_paise || 0),
       }))
-    : [{ name: 'Order Package', quantity: 1, price: dbOrder.estimated_total || 100 }];
+    : [{ name: 'Order Package', quantity: 1, price: 100 }];
 
-  // Compute rider payout (base + approx distance)
-  const earnings = Math.max(40, Math.round((dbOrder.estimated_total || 200) * 0.18));
+  // Compute rider payout: standard ₹45 per delivery (fixed fair fee for quick-commerce delivery)
+  const earnings = 45;
 
   // 4-Digit Handshake OTP
   const rawOtp = dbOrder.delivery_pin || (String(dbOrder.id).replace(/\D/g, '').length >= 4 ? String(dbOrder.id).replace(/\D/g, '').slice(-4) : '4821');
@@ -85,8 +86,8 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
 
 function mapDbStatusToAppStatus(dbStatus: string, dbOrder?: DbOrder): any {
   const s = (dbStatus || '').toUpperCase();
-  if (s === 'PLACED' || s === 'PENDING' || s === 'PREPARING' || s === 'ASSIGNED') return 'pending';
-  if (s === 'ACCEPTED') return 'picking_up';
+  if (s === 'PLACED' || s === 'PENDING') return 'pending';
+  if (s === 'PREPARING' || s === 'PACKING' || s === 'ACCEPTED' || s === 'RIDER_ARRIVING_TO_STORE' || s === 'ASSIGNED') return 'picking_up';
   if (s === 'ARRIVED_AT_STORE' || s === 'READY_FOR_PICKUP' || s === 'OUT_OF_SHOP') {
     const shopConfirmed = Boolean(dbOrder?.shopkeeper_handover_confirmed || s === 'OUT_OF_SHOP');
     const riderConfirmed = Boolean(dbOrder?.rider_pickup_confirmed);
@@ -94,20 +95,24 @@ function mapDbStatusToAppStatus(dbStatus: string, dbOrder?: DbOrder): any {
     return 'arrived_at_pickup';
   }
   if (s === 'PICKED_UP' || s === 'IN_TRANSIT' || s === 'OUT_FOR_DELIVERY') return 'in_transit';
-  if (s === 'ARRIVED_AT_CUSTOMER' || s === 'ARRIVED_AT_DROPOFF') return 'arrived_at_dropoff';
+  if (s === 'RIDER_AT_LOC' || s === 'ARRIVED_AT_CUSTOMER' || s === 'ARRIVED_AT_DROPOFF') return 'arrived_at_dropoff';
   if (s === 'DELIVERED' || s === 'COMPLETED') return 'delivered';
   if (s === 'CANCELLED' || s === 'REJECTED') return 'cancelled';
   return 'pending';
 }
 
 function mapAppStatusToDbStatus(appStatus: string): string {
-  if (appStatus === 'accepted' || appStatus === 'picking_up') return 'ACCEPTED';
+  const upper = (appStatus || '').toUpperCase();
+  if (['PLACED', 'PREPARING', 'PACKING', 'RIDER_ARRIVING_TO_STORE', 'READY_FOR_PICKUP', 'OUT_OF_SHOP', 'OUT_FOR_DELIVERY', 'RIDER_AT_LOC', 'ARRIVED_AT_CUSTOMER', 'DELIVERED', 'CANCELLED'].includes(upper)) {
+    return upper;
+  }
+  if (appStatus === 'accepted' || appStatus === 'picking_up') return 'RIDER_ARRIVING_TO_STORE';
   if (appStatus === 'arrived_at_pickup') return 'ARRIVED_AT_STORE';
   if (appStatus === 'in_transit') return 'OUT_FOR_DELIVERY';
-  if (appStatus === 'arrived_at_dropoff') return 'ARRIVED_AT_CUSTOMER';
+  if (appStatus === 'arrived_at_dropoff') return 'RIDER_AT_LOC';
   if (appStatus === 'delivered') return 'DELIVERED';
   if (appStatus === 'cancelled') return 'CANCELLED';
-  return 'PLACED';
+  return 'RIDER_ARRIVING_TO_STORE';
 }
 
 /** Fetch stores from Supabase */
@@ -118,37 +123,65 @@ export async function fetchStores(): Promise<DbStore[]> {
       console.warn('Error fetching stores from Supabase:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as DbStore[];
   } catch (err) {
-    console.warn('Supabase fetchStores exception:', err);
+    console.warn('fetchStores exception:', err);
     return [];
   }
 }
 
-/** Fetch pending or assigned live orders */
+/** Fetch live active orders from Supabase */
 export async function fetchLiveOrders(): Promise<DbOrder[]> {
   try {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .not('status', 'in', '("DELIVERED","CANCELLED","REJECTED")')
+      .order('created_at', { ascending: false });
+
     if (error) {
-      console.warn('Error fetching orders from Supabase:', error);
+      console.warn('Error fetching live orders from Supabase:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as DbOrder[];
   } catch (err) {
-    console.warn('Supabase fetchLiveOrders exception:', err);
+    console.warn('fetchLiveOrders exception:', err);
     return [];
   }
 }
 
-/** Update order status in Supabase */
-export async function updateDbOrderStatus(orderId: string, status: string, riderId?: string) {
+/** Assign rider to order without modifying merchant status */
+export async function assignRiderToOrder(orderId: string, riderId: string) {
   try {
     const updatePayload: any = {
-      status: mapAppStatusToDbStatus(status),
+      rider_assignment: 'assigned',
+      rider_id: riderId,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updatePayload)
+      .eq('id', orderId);
+
+    if (error) console.warn('Error assigning rider to order in Supabase:', error);
+    return { data, error };
+  } catch (err) {
+    console.warn('Supabase assignRiderToOrder exception:', err);
+    return { error: err };
+  }
+}
+
+/** Update an order's status in Supabase */
+export async function updateDbOrderStatus(
+  orderId: string,
+  status: string,
+  riderId?: string
+) {
+  try {
+    const dbStatus = mapAppStatusToDbStatus(status);
+    const updatePayload: any = {
+      status: dbStatus,
       updated_at: new Date().toISOString(),
     };
     if (riderId) updatePayload.rider_id = riderId;
@@ -191,6 +224,32 @@ export async function updateDbOrderHandover(
   } catch (err) {
     console.warn('Supabase updateDbOrderHandover exception:', err);
     return { error: err };
+  }
+}
+
+/** Upload file/photo to Supabase Storage */
+export async function uploadFileToSupabaseStorage(
+  file: File | Blob | string,
+  bucket: string,
+  path: string
+): Promise<string> {
+  try {
+    if (typeof file === 'string' && file.startsWith('data:')) {
+      return file;
+    }
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(path, file as any, { upsert: true });
+
+    if (error) {
+      const { data: pubUrl } = supabase.storage.from(bucket).getPublicUrl(path);
+      return pubUrl?.publicUrl || (typeof window !== 'undefined' && typeof file !== 'string' ? URL.createObjectURL(file) : String(file));
+    }
+
+    const { data: pubUrl } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return pubUrl.publicUrl;
+  } catch (err: any) {
+    return typeof window !== 'undefined' && typeof file !== 'string' ? URL.createObjectURL(file) : String(file);
   }
 }
 
@@ -247,7 +306,8 @@ export async function registerRiderInDb(riderData: {
 }): Promise<{ profile?: DbRiderProfile; error?: string }> {
   try {
     const cleanPhone = riderData.phone.replace(/[^0-9+]/g, '');
-    const newRecord = {
+    const newRecord: any = {
+      id: 'rider_' + Date.now(),
       name: riderData.name,
       phone: cleanPhone,
       mpin: riderData.mpin,
@@ -265,16 +325,19 @@ export async function registerRiderInDb(riderData: {
       pan_doc_url: riderData.pan_doc_url || null,
       dl_number: riderData.dl_number || null,
       dl_doc_url: riderData.dl_doc_url || null,
-      upi_id: riderData.upi_id || null,
-      avatar_url: riderData.avatar_url || riderData.selfie_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      upi_id: riderData.upi_id || `${cleanPhone}@upi`,
+      avatar_url: riderData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       selfie_url: riderData.selfie_url || null,
-      is_verified: true, // Temporary instant approval as requested
-      verification_step: 4,
-      is_online: false,
       wallet_balance: 0,
       rating: 5.0,
       total_deliveries: 0,
       acceptance_rate: 100,
+      is_verified: true,
+      verification_step: 4,
+      is_online: false,
+      current_lat: 12.9716,
+      current_lng: 77.6412,
+      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
@@ -285,57 +348,18 @@ export async function registerRiderInDb(riderData: {
       .single();
 
     if (error) {
-      console.warn('Supabase rider_profiles table note:', error.message);
-      // If table is not created in Supabase yet, return fallback local record so user can proceed without blocking
-      return {
-        profile: {
-          id: `rider-${Date.now()}`,
-          name: riderData.name,
-          phone: cleanPhone,
-          mpin: riderData.mpin,
-          vehicle_type: riderData.vehicle_type || 'Bike',
-          vehicle_number: riderData.vehicle_number || '',
-          selected_zone_id: riderData.selected_zone_id || 'zone-1',
-          selected_zone_name: riderData.selected_zone_name || 'Robertsonpet',
-          avatar_url: riderData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-          is_verified: true,
-          verification_step: 4,
-          is_online: false,
-          wallet_balance: 0,
-          rating: 5.0,
-          total_deliveries: 0,
-          acceptance_rate: 100,
-        } as DbRiderProfile,
-      };
+      console.warn('Error saving rider to Supabase:', error);
+      return { error: error.message };
     }
 
     return { profile: data as DbRiderProfile };
   } catch (err: any) {
     console.warn('registerRiderInDb exception:', err);
-    return {
-      profile: {
-        id: `rider-${Date.now()}`,
-        name: riderData.name,
-        phone: riderData.phone,
-        mpin: riderData.mpin,
-        vehicle_type: riderData.vehicle_type || 'Bike',
-        vehicle_number: riderData.vehicle_number || '',
-        selected_zone_id: riderData.selected_zone_id || 'zone-1',
-        selected_zone_name: riderData.selected_zone_name || 'Robertsonpet',
-        avatar_url: riderData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-        is_verified: true,
-        verification_step: 4,
-        is_online: false,
-        wallet_balance: 0,
-        rating: 5.0,
-        total_deliveries: 0,
-        acceptance_rate: 100,
-      } as DbRiderProfile,
-    };
+    return { error: err.message || 'Network error saving rider profile.' };
   }
 }
 
-/** Authenticate rider with phone number and MPIN */
+/** Login a rider using Phone + MPIN */
 export async function loginRiderWithMpin(
   phone: string,
   mpin: string
@@ -346,38 +370,29 @@ export async function loginRiderWithMpin(
       .from('rider_profiles')
       .select('*')
       .eq('phone', cleanPhone)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
-      // Check local storage for fallback account
-      try {
-        const saved = localStorage.getItem('snapit_rider_profile_v2');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.phone === cleanPhone || parsed.phone?.replace(/[^0-9+]/g, '') === cleanPhone) {
-            if (parsed.mpin === mpin) {
-              return { profile: parsed as DbRiderProfile };
-            }
-            return { error: 'Incorrect MPIN. Please try again.' };
-          }
-        }
-      } catch (e) {}
-
-      return { error: 'No account found with this phone number. Please register first.' };
+    if (error) {
+      console.warn('Error querying rider profile:', error);
+      return { error: 'Database connection failed. Please check your network.' };
     }
 
-    if (data.mpin !== mpin) {
-      return { error: 'Incorrect MPIN. Please try again or use Forgot MPIN.' };
+    if (!data) {
+      return { error: 'Rider profile not found. Please register first.' };
+    }
+
+    if (data.mpin && data.mpin !== mpin) {
+      return { error: 'Incorrect 4-Digit MPIN. Please try again.' };
     }
 
     return { profile: data as DbRiderProfile };
   } catch (err: any) {
     console.warn('loginRiderWithMpin exception:', err);
-    return { error: err.message || 'Login failed' };
+    return { error: err.message || 'Login error.' };
   }
 }
 
-/** Authenticate rider with MPIN only */
+/** Login with MPIN only for quick unlock */
 export async function loginRiderWithMpinOnly(
   mpin: string
 ): Promise<{ profile?: DbRiderProfile; error?: string }> {
@@ -386,161 +401,35 @@ export async function loginRiderWithMpinOnly(
       .from('rider_profiles')
       .select('*')
       .eq('mpin', mpin)
-      .limit(1);
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (error || !data || data.length === 0) {
-      // Check local storage for fallback account
-      try {
-        const saved = localStorage.getItem('snapit_rider_profile_v2');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.mpin === mpin || !parsed.mpin) {
-            return { profile: { ...parsed, mpin: mpin } as DbRiderProfile };
-          }
-        }
-      } catch (e) {}
-
-      // Fallback for default demo MPINs or quick test
-      if (mpin.length === 4) {
-        return {
-          profile: {
-            id: 'rider-demo-01',
-            name: 'Vikram Singh',
-            phone: '+91 98765 43210',
-            mpin: mpin,
-            vehicle_type: 'Motorcycle',
-            vehicle_number: 'KA 03 EQ 8821',
-            selected_zone_id: 'zone-1',
-            selected_zone_name: 'Robertsonpet',
-            avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-            is_verified: true,
-            verification_step: 4,
-            is_online: false,
-            wallet_balance: 450,
-            rating: 4.9,
-            total_deliveries: 48,
-            acceptance_rate: 98,
-          } as DbRiderProfile,
-        };
-      }
-
-      return { error: 'Incorrect MPIN. Please enter a valid 4-digit MPIN.' };
+    if (error || !data) {
+      return { error: 'Incorrect MPIN.' };
     }
 
-    return { profile: data[0] as DbRiderProfile };
+    return { profile: data as DbRiderProfile };
   } catch (err: any) {
-    console.warn('loginRiderWithMpinOnly exception:', err);
-    try {
-      const saved = localStorage.getItem('snapit_rider_profile_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.mpin === mpin || !parsed.mpin) {
-          return { profile: { ...parsed, mpin: mpin } as DbRiderProfile };
-        }
-      }
-    } catch (e) {}
-
-    if (mpin.length === 4) {
-      return {
-        profile: {
-          id: 'rider-demo-01',
-          name: 'Vikram Singh',
-          phone: '+91 98765 43210',
-          mpin: mpin,
-          vehicle_type: 'Motorcycle',
-          vehicle_number: 'KA 03 EQ 8821',
-          selected_zone_id: 'zone-1',
-          selected_zone_name: 'Robertsonpet',
-          avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-          is_verified: true,
-          verification_step: 4,
-          is_online: false,
-          wallet_balance: 450,
-          rating: 4.9,
-          total_deliveries: 48,
-          acceptance_rate: 98,
-        } as DbRiderProfile,
-      };
-    }
-
-    return { error: err.message || 'Login failed' };
+    return { error: 'Login failed.' };
   }
 }
 
-/** Upload a file or base64 blob to Supabase Storage bucket 'rider-documents' */
-export async function uploadFileToSupabaseStorage(
-  fileOrBlob: File | Blob | string,
-  folder: 'selfies' | 'kyc' | 'avatars' = 'selfies',
-  customFileName?: string
-): Promise<string | null> {
-  try {
-    let blobToUpload: Blob;
-    let fileExt = 'jpg';
-
-    if (typeof fileOrBlob === 'string') {
-      if (fileOrBlob.startsWith('data:')) {
-        const parts = fileOrBlob.split(',');
-        const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-        fileExt = mime.includes('png') ? 'png' : mime.includes('pdf') ? 'pdf' : 'jpg';
-        const byteString = atob(parts[1]);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        blobToUpload = new Blob([ab], { type: mime });
-      } else {
-        return fileOrBlob; // Already a remote URL
-      }
-    } else if (fileOrBlob instanceof File) {
-      blobToUpload = fileOrBlob;
-      fileExt = fileOrBlob.name.split('.').pop() || 'jpg';
-    } else {
-      blobToUpload = fileOrBlob;
-    }
-
-    const uniqueName = customFileName || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-    const filePath = `${folder}/${uniqueName}`;
-
-    const { data, error } = await supabase.storage
-      .from('rider-documents')
-      .upload(filePath, blobToUpload, {
-        cacheControl: '3600',
-        upsert: true,
-      });
-
-    if (error) {
-      console.warn('Supabase storage note:', error.message);
-      if (typeof fileOrBlob === 'string') return fileOrBlob;
-      return null;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('rider-documents')
-      .getPublicUrl(filePath);
-
-    return publicUrlData?.publicUrl || null;
-  } catch (err) {
-    console.warn('uploadFileToSupabaseStorage exception:', err);
-    if (typeof fileOrBlob === 'string') return fileOrBlob;
-    return null;
-  }
-}
-
-/** Fetch rider profile by phone */
-export async function fetchRiderProfileFromDb(phone: string): Promise<DbRiderProfile | null> {
+/** Fetch a rider profile by phone */
+export async function fetchRiderProfileFromDb(
+  phone: string
+): Promise<DbRiderProfile | null> {
   try {
     const cleanPhone = phone.replace(/[^0-9+]/g, '');
     const { data, error } = await supabase
       .from('rider_profiles')
       .select('*')
       .eq('phone', cleanPhone)
-      .single();
+      .maybeSingle();
 
-    if (error) return null;
+    if (error || !data) return null;
     return data as DbRiderProfile;
   } catch (err) {
     return null;
   }
 }
-

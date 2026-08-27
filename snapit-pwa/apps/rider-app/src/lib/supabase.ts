@@ -27,6 +27,7 @@ export interface DbOrder {
   payment_status?: string;
   shopkeeper_handover_confirmed?: boolean;
   rider_pickup_confirmed?: boolean;
+  rider_assignment?: string;
   delivery_pin?: string;
   created_at?: string;
   updated_at?: string;
@@ -36,6 +37,8 @@ export interface DbStore {
   id: string;
   name: string;
   address?: string;
+  store_address?: string;
+  store_location?: string;
   lat?: number;
   lng?: number;
   phone?: string;

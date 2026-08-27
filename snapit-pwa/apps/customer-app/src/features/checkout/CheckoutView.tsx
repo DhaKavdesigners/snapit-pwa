@@ -110,7 +110,8 @@ export const CheckoutView: React.FC = () => {
           payment_method: 'UPI_NOW',
           payment_status: 'PAID',
           recipient_name: finalRecipientName,
-          recipient_phone: finalRecipientPhone
+          recipient_phone: finalRecipientPhone,
+          delivery_pin: displayId.replace(/\D/g, '').length >= 4 ? displayId.replace(/\D/g, '').slice(-4) : '4821'
         })
         .select();
 

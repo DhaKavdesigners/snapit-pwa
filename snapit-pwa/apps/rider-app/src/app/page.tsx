@@ -27,6 +27,7 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  Truck,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -100,12 +101,29 @@ export default function DashboardPage() {
 
   // ── Database Order Flow Mapping (snapit-flow.txt) ──
   const rawDbStatus = (activeOrder?.dbStatus || '').toUpperCase();
-  const isPreparing = rawDbStatus === 'PREPARING' || (!rawDbStatus && activeOrder?.status === 'accepted');
-  const isReadyForPickup = rawDbStatus === 'READY_FOR_PICKUP';
-  const isOutOfShop = rawDbStatus === 'OUT_OF_SHOP' || (Boolean(activeOrder?.shopkeeperHandoverConfirmed) && !activeOrder?.riderPickupConfirmed);
-  const isOutForDelivery = rawDbStatus === 'OUT_FOR_DELIVERY' || rawDbStatus === 'IN_TRANSIT' || activeOrder?.status === 'in_transit' || (Boolean(activeOrder?.shopkeeperHandoverConfirmed) && Boolean(activeOrder?.riderPickupConfirmed));
 
-  const isOrderInPickupStage = !isOutForDelivery;
+  // 1. Stage 1: Store Pickup Stages
+  const isOutOfShop = rawDbStatus === 'OUT_OF_SHOP';
+  const isReadyForPickup = !isOutOfShop && rawDbStatus === 'READY_FOR_PICKUP';
+  const isPreparing = !isOutOfShop && !isReadyForPickup && (
+    rawDbStatus === 'PREPARING' ||
+    rawDbStatus === 'PACKING' ||
+    rawDbStatus === 'PLACED' ||
+    rawDbStatus === 'PENDING' ||
+    rawDbStatus === 'ACCEPTED' ||
+    rawDbStatus === 'RIDER_ARRIVING_TO_STORE' ||
+    (!rawDbStatus && Boolean(activeOrder))
+  );
+
+  // 2. Stage 2: Customer Delivery Stages
+  const isArrivedAtCustomer = rawDbStatus === 'RIDER_AT_LOC' || rawDbStatus === 'ARRIVED_AT_CUSTOMER' || activeOrder?.status === 'arrived_at_dropoff';
+  const isOutForDelivery = !isOutOfShop && !isReadyForPickup && !isPreparing && (
+    rawDbStatus === 'OUT_FOR_DELIVERY' ||
+    rawDbStatus === 'IN_TRANSIT' ||
+    rawDbStatus === 'PICKED_UP'
+  ) && !isArrivedAtCustomer;
+
+  const isOrderInPickupStage = isPreparing || isReadyForPickup || isOutOfShop;
   const displaySlot = activeSlot || upcomingSlot;
 
   return (
@@ -129,7 +147,7 @@ export default function DashboardPage() {
               </h1>
               <button
                 onClick={() => setIsZoneModalOpen(true)}
-                className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors mt-0.5"
+                className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors mt-0.5 cursor-pointer"
               >
                 <MapPin className="w-3 h-3 text-emerald-600" />
                 <span>{rider.selectedZone || 'Robertsonpet, KGF'}</span>
@@ -252,7 +270,7 @@ export default function DashboardPage() {
               <div className="bg-emerald-500/20 border border-emerald-400/50 rounded-2xl px-3.5 py-2 text-right">
                 <span className="text-[10px] font-bold uppercase text-emerald-300 block">Payout</span>
                 <span className="text-2xl font-black text-white font-mono leading-none">
-                  ₹{incomingOrder.earnings}
+                  ₹{incomingOrder.earnings || 45}
                 </span>
               </div>
             </div>
@@ -317,7 +335,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <span className="text-sm font-mono font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                ₹{activeOrder.earnings} Payout
+                ₹{activeOrder.earnings || 45} Payout
               </span>
             </div>
 
@@ -368,7 +386,7 @@ export default function DashboardPage() {
                     <span>Call Store</span>
                   </a>
                   <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeOrder.restaurantName + ', ' + activeOrder.restaurantAddress)}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeOrder.restaurantName + ' ' + activeOrder.restaurantAddress)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs hover:bg-slate-800 active:scale-95"
@@ -396,10 +414,17 @@ export default function DashboardPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="mb-1">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        Out for Delivery
-                      </span>
+                      {isArrivedAtCustomer ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 border border-purple-300 animate-pulse">
+                          <CheckCircle2 className="w-3 h-3 text-purple-600" />
+                          Arrived at Customer Doorstep
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <Truck className="w-3 h-3 text-emerald-600" />
+                          Out for Delivery
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-base font-black text-slate-900 mt-0.5">
                       {activeOrder.customerName}
@@ -420,7 +445,7 @@ export default function DashboardPage() {
                     <span>Call Customer</span>
                   </a>
                   <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeOrder.deliveryAddress)}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeOrder.deliveryAddress)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs hover:bg-slate-800 active:scale-95"
@@ -436,19 +461,19 @@ export default function DashboardPage() {
             <div>
               {isPreparing ? (
                 <button
-                  onClick={markOrderPickedUp}
-                  className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm rounded-2xl shadow-lg transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                  disabled
+                  className="w-full py-4 bg-amber-100 text-amber-900 font-bold text-xs rounded-2xl border border-amber-300 flex items-center justify-center gap-2 cursor-not-allowed opacity-90"
                 >
-                  <Clock className="w-5 h-5" />
-                  <span>MERCHANT PREPARING • I HAVE COLLECTED ➔</span>
+                  <Clock className="w-4 h-4 text-amber-700 animate-spin" />
+                  <span>WAITING FOR MERCHANT TO PACK ORDER...</span>
                 </button>
               ) : isReadyForPickup ? (
                 <button
-                  onClick={markOrderPickedUp}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                  disabled
+                  className="w-full py-4 bg-blue-100 text-blue-900 font-bold text-xs rounded-2xl border border-blue-300 flex items-center justify-center gap-2 cursor-not-allowed opacity-90"
                 >
-                  <Package className="w-5 h-5" />
-                  <span>ORDER READY • CONFIRM PICKUP ➔</span>
+                  <Package className="w-4 h-4 text-blue-700" />
+                  <span>ORDER PACKED • WAITING FOR MERCHANT HANDOVER</span>
                 </button>
               ) : isOutOfShop ? (
                 <button
@@ -456,12 +481,20 @@ export default function DashboardPage() {
                   className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-2xl ring-4 ring-emerald-400/30 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer animate-pulse"
                 >
                   <Check className="w-5 h-5 stroke-[3]" />
-                  <span>CONFIRM ORDER RECEIVED ➔</span>
+                  <span>CONFIRM PARCEL PICKED UP ➔</span>
+                </button>
+              ) : isOutForDelivery ? (
+                <button
+                  onClick={advanceActiveOrderStatus}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <MapPin className="w-5 h-5" />
+                  <span>ARRIVED AT CUSTOMER LOCATION ➔</span>
                 </button>
               ) : (
                 <button
                   onClick={() => router.push('/confirm-delivery')}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black text-sm rounded-2xl shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer animate-pulse"
                 >
                   <ShieldCheck className="w-5 h-5" />
                   <span>ENTER 4-DIGIT PIN TO COMPLETE ➔</span>

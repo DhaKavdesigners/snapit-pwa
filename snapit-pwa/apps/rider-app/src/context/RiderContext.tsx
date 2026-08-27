@@ -72,6 +72,7 @@ import {
 import {
   fetchStores,
   fetchLiveOrders,
+  assignRiderToOrder,
   updateDbOrderStatus,
   updateDbOrderHandover,
   subscribeToOrders,
@@ -922,13 +923,47 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         const dbStores = await fetchStores();
         const dbOrders = await fetchLiveOrders();
 
+        // 1. Sync Active Order with Live Database: Clear stale cache if order is not in DB
+        setActiveOrder((currentActive) => {
+          if (!currentActive) {
+            // Check if any live order in DB is assigned to this rider
+            const myAssignedOrder = dbOrders.find((o) =>
+              (o.rider_id === rider.phone || o.rider_id === rider.name || o.rider_id === '9217649600' || o.rider_assignment === 'assigned') &&
+              !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase())
+            );
+            if (myAssignedOrder) {
+              const store = dbStores.find((s) => s.id === myAssignedOrder.store_id);
+              return mapDbOrderToAppOrder(myAssignedOrder, store);
+            }
+            return null;
+          }
+
+          // If we had a cached active order, check if it still exists in live DB orders
+          const liveMatching = dbOrders.find((o) => o.id === currentActive.id);
+          if (!liveMatching || ['DELIVERED', 'CANCELLED', 'REJECTED'].includes((liveMatching.status || '').toUpperCase())) {
+            try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+            return null;
+          }
+
+          const store = dbStores.find((s) => s.id === liveMatching.store_id);
+          return mapDbOrderToAppOrder(liveMatching, store);
+        });
+
+        // 2. Sync Incoming Orders (unassigned orders waiting for rider)
         if (dbOrders && dbOrders.length > 0) {
-          const eligible = dbOrders.find((o) => isEligibleNotificationStatus(o.status));
+          const eligible = dbOrders.find((o) =>
+            isEligibleNotificationStatus(o.status) &&
+            (!o.rider_id || o.rider_id === rider.phone || o.rider_assignment !== 'assigned')
+          );
           if (eligible) {
             const store = dbStores.find((s) => s.id === eligible.store_id);
             const mapped = mapDbOrderToAppOrder(eligible, store);
             setIncomingOrder((prev) => prev || mapped);
+          } else {
+            setIncomingOrder(null);
           }
+        } else {
+          setIncomingOrder(null);
         }
 
         unsubscribe = subscribeToOrders(
@@ -943,43 +978,24 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           (updatedOrder) => {
             const s = (updatedOrder.status || '').toUpperCase();
 
+            // If order completed or cancelled -> clear active order immediately
+            if (['DELIVERED', 'CANCELLED', 'REJECTED'].includes(s)) {
+              setActiveOrder((currentActive) => {
+                if (currentActive && currentActive.id === updatedOrder.id) {
+                  try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+                  return null;
+                }
+                return currentActive;
+              });
+              return;
+            }
+
             // Realtime Handover Sync for Active Order
             setActiveOrder((currentActive) => {
               if (!currentActive || currentActive.id !== updatedOrder.id) return currentActive;
 
-              const isShopConfirmed = Boolean(
-                updatedOrder.shopkeeper_handover_confirmed || s === 'OUT_OF_SHOP'
-              );
-              const isRiderConfirmed = Boolean(
-                updatedOrder.rider_pickup_confirmed || currentActive.riderPickupConfirmed
-              );
-
-              // If BOTH confirmed -> advance atomically to OUT_FOR_DELIVERY (in_transit)
-              if (isShopConfirmed && isRiderConfirmed) {
-                if (s !== 'OUT_FOR_DELIVERY' && s !== 'IN_TRANSIT') {
-                  updateDbOrderHandover(currentActive.id, {
-                    status: 'OUT_FOR_DELIVERY',
-                    rider_pickup_confirmed: true,
-                    shopkeeper_handover_confirmed: true,
-                  });
-                }
-                return {
-                  ...currentActive,
-                  status: 'in_transit',
-                  navStage: 'to_customer',
-                  dbStatus: 'OUT_FOR_DELIVERY',
-                  shopkeeperHandoverConfirmed: true,
-                  riderPickupConfirmed: true,
-                };
-              }
-
-              // Update persistent confirmation flags on active order
-              return {
-                ...currentActive,
-                dbStatus: updatedOrder.status,
-                shopkeeperHandoverConfirmed: isShopConfirmed,
-                riderPickupConfirmed: isRiderConfirmed,
-              };
+              const store = dbStores.find((s) => s.id === updatedOrder.store_id);
+              return mapDbOrderToAppOrder(updatedOrder, store);
             });
 
             // Trigger notification when merchant accepts and order reaches PREPARING
@@ -1030,7 +1046,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     recordOrderAcceptance(incomingOrder.id, 'accepted');
     const orderWithActiveStatus: Order = {
       ...incomingOrder,
-      status: 'arrived_at_pickup',
+      status: 'picking_up',
       navStage: 'to_shop',
       riderPickupConfirmed: false,
       shopkeeperHandoverConfirmed: Boolean(incomingOrder.shopkeeperHandoverConfirmed),
@@ -1040,7 +1056,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9716, lng: 77.6412 },
     };
     setActiveOrder(orderWithActiveStatus);
-    updateDbOrderStatus(incomingOrder.id, 'ACCEPTED', rider.phone || rider.name);
+    assignRiderToOrder(incomingOrder.id, rider.phone || rider.name || '9217649600');
     setIncomingOrder(null);
   };
 
@@ -1115,56 +1131,34 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setActiveOrder({ ...activeOrder, status: nextStatus, navStage: nextStage });
   };
 
-  /** Rider confirms physical pickup ("Slide Order Picked") */
+  /** Rider confirms physical pickup ("Confirm Parcel Picked Up") */
   const confirmRiderPickup = () => {
     if (!activeOrder) return;
 
-    const isShopConfirmed = Boolean(
-      activeOrder.shopkeeperHandoverConfirmed || activeOrder.dbStatus === 'OUT_OF_SHOP'
-    );
+    setActiveOrder({
+      ...activeOrder,
+      status: 'in_transit',
+      navStage: 'to_customer',
+      riderPickupConfirmed: true,
+      shopkeeperHandoverConfirmed: true,
+      dbStatus: 'OUT_FOR_DELIVERY',
+    });
 
-    if (isShopConfirmed) {
-      // Both confirmed! Advance to OUT_FOR_DELIVERY
-      setActiveOrder({
-        ...activeOrder,
-        status: 'in_transit',
-        navStage: 'to_customer',
-        riderPickupConfirmed: true,
-        shopkeeperHandoverConfirmed: true,
-        dbStatus: 'OUT_FOR_DELIVERY',
-      });
-      updateDbOrderHandover(activeOrder.id, {
-        status: 'OUT_FOR_DELIVERY',
-        rider_pickup_confirmed: true,
-        shopkeeper_handover_confirmed: true,
-      });
-      addAlert({
-        id: `alert-handover-${Date.now()}`,
-        title: '🛍️ Handover Complete!',
-        message: `Order #${activeOrder.orderNumber} pickup verified. Now out for delivery!`,
-        time: 'Just now',
-        type: 'system',
-        read: false,
-      });
-    } else {
-      // Rider confirmed, awaiting shopkeeper "Slide Out of Shop"
-      setActiveOrder({
-        ...activeOrder,
-        status: 'arrived_at_pickup',
-        riderPickupConfirmed: true,
-      });
-      updateDbOrderHandover(activeOrder.id, {
-        rider_pickup_confirmed: true,
-      });
-      addAlert({
-        id: `alert-handover-wait-${Date.now()}`,
-        title: '⏳ Order Picked Confirmed',
-        message: `Pickup confirmed. Awaiting shopkeeper to Slide Out of Shop.`,
-        time: 'Just now',
-        type: 'system',
-        read: false,
-      });
-    }
+    updateDbOrderHandover(activeOrder.id, {
+      status: 'OUT_FOR_DELIVERY',
+      rider_pickup_confirmed: true,
+      shopkeeper_handover_confirmed: true,
+    });
+    updateDbOrderStatus(activeOrder.id, 'OUT_FOR_DELIVERY');
+
+    addAlert({
+      id: `alert-handover-${Date.now()}`,
+      title: '🛍️ Handover Complete!',
+      message: `Order #${activeOrder.orderNumber} pickup verified. Now out for delivery!`,
+      time: 'Just now',
+      type: 'system',
+      read: false,
+    });
   };
 
   const markOrderPickedUp = () => {
@@ -1179,20 +1173,18 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const advanceActiveOrderStatus = () => {
     if (!activeOrder) return;
 
-    if (activeOrder.status === 'accepted' || activeOrder.status === 'picking_up') {
-      // Rider arrived at shop -> move to arrived_at_pickup
-      setActiveOrder({ ...activeOrder, status: 'arrived_at_pickup', navStage: 'at_shop' });
-      updateDbOrderStatus(activeOrder.id, 'arrived_at_pickup');
-    } else if (activeOrder.status === 'arrived_at_pickup') {
-      // Rider slides "Slide Order Picked" -> evaluate dual handover confirmation
+    const rawDbStatus = (activeOrder.dbStatus || '').toUpperCase();
+
+    if (rawDbStatus === 'OUT_OF_SHOP') {
       confirmRiderPickup();
-    } else if (activeOrder.status === 'in_transit') {
-      // Rider arrived at customer location
-      setActiveOrder({ ...activeOrder, status: 'arrived_at_dropoff', navStage: 'at_customer' });
-      updateDbOrderStatus(activeOrder.id, 'arrived_at_dropoff');
-    } else if (activeOrder.status === 'arrived_at_dropoff') {
-      setActiveOrder({ ...activeOrder, status: 'delivered', navStage: 'delivered' });
-      updateDbOrderStatus(activeOrder.id, 'delivered');
+    } else if (rawDbStatus === 'OUT_FOR_DELIVERY' || activeOrder.status === 'in_transit') {
+      setActiveOrder({
+        ...activeOrder,
+        status: 'arrived_at_dropoff',
+        dbStatus: 'RIDER_AT_LOC',
+        navStage: 'at_customer',
+      });
+      updateDbOrderStatus(activeOrder.id, 'RIDER_AT_LOC');
     }
   };
 
