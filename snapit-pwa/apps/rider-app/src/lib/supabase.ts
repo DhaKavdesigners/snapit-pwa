@@ -27,6 +27,7 @@ export interface DbOrder {
   payment_status?: string;
   shopkeeper_handover_confirmed?: boolean;
   rider_pickup_confirmed?: boolean;
+  delivery_pin?: string;
   created_at?: string;
   updated_at?: string;
 }

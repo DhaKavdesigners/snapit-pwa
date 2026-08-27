@@ -43,8 +43,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
   if (isBreakActive && isOnline === false) onlineLabel = 'Break';
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-200">
-      <div className="w-full max-w-md mx-auto h-16 px-3 flex items-center justify-between glass-nav border-b border-surface-variant/40 shadow-sm gap-1">
+    <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-200 flex justify-center">
+      <div className="w-full max-w-md h-16 px-4 flex items-center justify-between glass-nav border-b border-slate-200/80 shadow-xs gap-1">
 
         {/* Left: Avatar + Snapit RIDER Branding */}
         <div className="flex items-center gap-1.5 shrink-0">

@@ -444,12 +444,6 @@ export default function OrdersPage() {
                     You&apos;re online in {rider.selectedZone || 'Robertsonpet'}. New orders will appear here automatically.
                   </p>
                 </div>
-                <button
-                  onClick={triggerMockOrder}
-                  className="bg-primary text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lift hover:bg-primary/90 transition-all active:scale-95"
-                >
-                  Generate Test Delivery Request
-                </button>
               </div>
             )}
           </>

@@ -15,10 +15,22 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     if (dbOrder.delivery_address.lng) dropLng = Number(dbOrder.delivery_address.lng);
   }
 
+  const STORES_MAP: Record<string, string> = {
+    g1: 'Mhetha Stores',
+    d1: 'Nandhini KGF',
+    s1: 'Mhetha Stores',
+    s4: 'Nandhini KGF',
+    f1: 'Bakio - Pizza & Burgers',
+    f2: 'Mayura Pure Veg',
+    f3: 'Ambur Star Dum Biriyani',
+    f4: 'Al Baik Crunch Express',
+    f5: 'Al Naz Shawarma & Rolls',
+  };
+
   const shopLat = store?.lat || 12.9785;
   const shopLng = store?.lng || 77.645;
-  const storeName = store?.name || 'Partner Store';
-  const storeAddress = store?.address || 'Store Location';
+  const storeName = store?.name || (dbOrder.store_id ? STORES_MAP[dbOrder.store_id] : '') || 'SnapIt Partner Store';
+  const storeAddress = store?.address || (dbOrder.store_id && (dbOrder.store_id === 'g1' || dbOrder.store_id === 's1') ? 'Robertsonpet, KGF' : 'Near Clock Tower, Robertsonpet, KGF');
 
   // Items
   const items = Array.isArray(dbOrder.items)
@@ -32,11 +44,14 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
   // Compute rider payout (base + approx distance)
   const earnings = Math.max(40, Math.round((dbOrder.estimated_total || 200) * 0.18));
 
+  // 4-Digit Handshake OTP
+  const rawOtp = dbOrder.delivery_pin || (String(dbOrder.id).replace(/\D/g, '').length >= 4 ? String(dbOrder.id).replace(/\D/g, '').slice(-4) : '4821');
+
   return {
     id: dbOrder.id,
     orderNumber: String(dbOrder.id).slice(-5).toUpperCase(),
     customerName: dbOrder.recipient_name || 'Customer',
-    customerPhone: dbOrder.recipient_phone || '+91 91234 56789',
+    customerPhone: dbOrder.recipient_phone || '+91 8217649688',
     restaurantName: storeName,
     restaurantAddress: storeAddress,
     deliveryAddress: deliveryAddrStr,
@@ -48,7 +63,7 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     dbStatus: dbOrder.status,
     shopkeeperHandoverConfirmed: Boolean(dbOrder.shopkeeper_handover_confirmed || dbOrder.status === 'OUT_OF_SHOP'),
     riderPickupConfirmed: Boolean(dbOrder.rider_pickup_confirmed),
-    otp: '1234',
+    otp: rawOtp,
     timestamp: dbOrder.created_at ? new Date(dbOrder.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
     paymentMethod: dbOrder.payment_method || 'Prepaid UPI',
     shopLocation: {
