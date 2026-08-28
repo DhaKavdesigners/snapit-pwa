@@ -242,7 +242,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
           isOutForDelivery: true,
         };
       case 'RIDER_AT_LOC':
-      case 'ARRIVED_AT_CUSTOMER':
+      case 'RIDER_AT_LOC':
         return {
           step: 4.5,
           pathRatio: 0.920,
