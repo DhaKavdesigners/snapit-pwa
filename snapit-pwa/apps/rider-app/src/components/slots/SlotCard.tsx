@@ -40,6 +40,8 @@ const SlotStatusBadge: React.FC<{ status: SlotStatus }> = ({ status }) => {
     full: { cls: 'bg-red-100 text-red-600 border-red-200', label: 'FULL' },
     waitlisted: { cls: 'bg-purple-100 text-purple-600 border-purple-200', label: 'WAITLISTED' },
     booking_closed: { cls: 'bg-slate-100 text-slate-400 border-slate-200', label: 'CLOSED' },
+    past: { cls: 'bg-rose-100 text-rose-700 border-rose-200', label: 'PAST' },
+    expiring_soon: { cls: 'bg-amber-100 text-amber-700 border-amber-300 animate-pulse', label: 'CLOSES SOON' },
   };
   const { cls, label } = config[status] || config.available;
   return (

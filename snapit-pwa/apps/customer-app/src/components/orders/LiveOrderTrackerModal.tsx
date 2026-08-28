@@ -242,7 +242,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
           isOutForDelivery: true,
         };
       case 'RIDER_AT_LOC':
-      case 'RIDER_AT_LOC':
+      case 'ARRIVED_AT_CUSTOMER':
         return {
           step: 4.5,
           pathRatio: 0.920,
@@ -294,8 +294,10 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
   // Deterministic 4-digit Delivery Handshake PIN
   const getDeliveryPin = () => {
-    if (currentOrder.delivery_pin && currentOrder.delivery_pin.length === 4) {
-      return currentOrder.delivery_pin;
+    if (currentOrder.delivery_pin !== undefined && currentOrder.delivery_pin !== null) {
+      const pinStr = String(currentOrder.delivery_pin);
+      if (pinStr.length === 4) return pinStr;
+      return pinStr.padStart(4, '0');
     }
     const digits = (currentOrder.id || '').replace(/\D/g, '');
     if (digits.length >= 4) return digits.slice(-4);

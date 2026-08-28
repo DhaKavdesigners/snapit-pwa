@@ -34,6 +34,7 @@ import {
   buildExtendedSlot,
   isSlotOnlineReady,
   timeToTodayMs,
+  checkZoneSwitchAllowed,
 } from '@/services/slotService';
 import {
   checkZoneStatus,
@@ -72,6 +73,7 @@ import {
 import {
   fetchStores,
   fetchLiveOrders,
+  fetchRiderDeliveredStats,
   assignRiderToOrder,
   updateDbOrderStatus,
   updateDbOrderHandover,
@@ -82,6 +84,7 @@ import {
   loginRiderWithMpinOnly,
   fetchRiderProfileFromDb,
 } from '@/services/supabaseOrderService';
+import { verifyDeliveryPin } from '../../../../common_logic/deliveryLogic';
 
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
@@ -152,6 +155,7 @@ interface RiderContextType {
   // ── New ──
   adminConfig: AdminConfig;
   slots: RiderSlot[];
+  bookedSlotIds: string[];
   activeSlot: RiderSlot | null;
   upcomingSlot: RiderSlot | null;
   riderBreak: RiderBreak | null;
@@ -161,6 +165,7 @@ interface RiderContextType {
   nonAcceptanceCount: number;
   bookSlot: (slotId: string, zoneId: string, zoneName: string) => void;
   cancelSlot: (slotId: string) => void;
+  switchZone: (zoneId: string, zoneName: string) => { success: boolean; message?: string };
   extendSlot: (currentSlotId: string, nextSlotId: string) => void;
   addSlotToWaitlist: (slotId: string) => void;
   startBreak: () => void;
@@ -807,6 +812,48 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     refreshSlots(nextBooked);
   };
 
+  const switchZone = (zoneId: string, zoneName: string): { success: boolean; message?: string } => {
+    const history = rider.zoneSwitchHistory || (rider.lastZoneSwitchTimestamp ? [rider.lastZoneSwitchTimestamp] : []);
+    const check = checkZoneSwitchAllowed(history);
+    if (!check.allowed && rider.selectedZoneId !== zoneId) {
+      addAlert({
+        id: `alert-zone-limit-${Date.now()}`,
+        title: '⚠️ Zone Switch Limit Reached',
+        message: check.reason || 'You have used your 2 daily zone switches.',
+        time: 'Just now',
+        type: 'policy_action',
+        read: false,
+      });
+      return { success: false, message: check.reason };
+    }
+
+    const updatedHistory = [...history, Date.now()];
+    const updatedRider = {
+      ...rider,
+      selectedZone: zoneName,
+      selectedZoneId: zoneId,
+      lastZoneSwitchTimestamp: Date.now(),
+      zoneSwitchHistory: updatedHistory,
+    };
+
+    setRider(updatedRider);
+    try {
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedRider));
+    } catch (e) {}
+
+    refreshSlots(bookedSlotIds, zoneId, zoneName);
+    addAlert({
+      id: `alert-zone-switch-${Date.now()}`,
+      title: '📍 Operating Zone Updated',
+      message: `Your duty zone has been switched to ${zoneName}.`,
+      time: 'Just now',
+      type: 'system',
+      read: false,
+    });
+
+    return { success: true };
+  };
+
   const extendSlot = (currentSlotId: string, nextSlotId: string) => {
     const nextSlot = slots.find((s) => s.id === nextSlotId);
     if (!nextSlot) return;
@@ -964,6 +1011,22 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           setIncomingOrder(null);
+        }
+
+        // 3. Sync live delivered statistics & history from Supabase
+        const stats = await fetchRiderDeliveredStats(rider.phone || rider.name);
+        setEarnings((prev) => ({
+          ...prev,
+          today: stats.todayEarnings,
+          todayDeliveries: stats.todayDeliveries,
+          thisWeek: stats.totalEarnings,
+          weekDeliveries: stats.totalDeliveries,
+          thisMonth: stats.totalEarnings,
+          monthDeliveries: stats.totalDeliveries,
+          baseFare: stats.todayEarnings,
+        }));
+        if (stats.orders.length > 0) {
+          setOrdersHistory(stats.orders);
         }
 
         unsubscribe = subscribeToOrders(
@@ -1190,52 +1253,60 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const completeDeliveryWithOtp = (enteredOtp: string): boolean => {
     if (!activeOrder) return false;
-    if (enteredOtp === activeOrder.otp || enteredOtp === '1234' || enteredOtp === '4821') {
-      const completedOrder: Order = { ...activeOrder, status: 'delivered', timestamp: 'Just now' };
-      setOrdersHistory((prev) => [completedOrder, ...prev]);
-      const orderEarnings = activeOrder.earnings || 45;
 
-      updateDbOrderStatus(activeOrder.id, 'delivered');
+    // Strict Verification via common_logic
+    const expectedPin = activeOrder.delivery_pin || activeOrder.otp || '4821';
+    const isPinValid = verifyDeliveryPin(enteredOtp, expectedPin);
 
-      setRider((prev) => ({
-        ...prev,
-        walletBalance: prev.walletBalance + orderEarnings,
-        totalDeliveries: prev.totalDeliveries + 1,
-      }));
-      setEarnings((prev) => ({
-        ...prev,
-        today: prev.today + orderEarnings,
-        todayDeliveries: prev.todayDeliveries + 1,
-        thisWeek: prev.thisWeek + orderEarnings,
-        weekDeliveries: prev.weekDeliveries + 1,
-        thisMonth: prev.thisMonth + orderEarnings,
-        baseFare: prev.baseFare + orderEarnings,
-        dailyTrend: prev.dailyTrend.map((d) =>
-          d.isToday ? { ...d, amount: d.amount + orderEarnings, deliveries: d.deliveries + 1 } : d
-        ),
-      }));
-
-      const newAlert: AlertNotification = {
-        id: `alert-${Date.now()}`,
-        title: '💰 Wallet Credited: ₹' + orderEarnings,
-        message: `Order #${activeOrder.orderNumber} delivered. ₹${orderEarnings} added to your Snapit Wallet.`,
-        time: 'Just now',
-        type: 'payout',
-        read: false,
-        amount: orderEarnings,
-      };
-      setAlerts((prev) => [newAlert, ...prev]);
-      setActiveOrder(null);
-
-      // If slot ended during delivery, now go offline
-      if (activeSlot && Date.now() >= activeSlot.endTimestamp) {
-        setIsOnline(false);
-        addAlert(createSlotEndedAlert(activeSlot));
-      }
-
-      return true;
+    if (!isPinValid) {
+      return false;
     }
-    return false;
+
+    const completedOrder: Order = { ...activeOrder, status: 'delivered', timestamp: 'Just now' };
+    setOrdersHistory((prev) => [completedOrder, ...prev.filter((o) => o.id !== activeOrder.id)]);
+    const orderEarnings = activeOrder.earnings || 45;
+
+    updateDbOrderStatus(activeOrder.id, 'DELIVERED');
+
+    setRider((prev) => ({
+      ...prev,
+      walletBalance: prev.walletBalance + orderEarnings,
+      totalDeliveries: prev.totalDeliveries + 1,
+    }));
+    setEarnings((prev) => ({
+      ...prev,
+      today: prev.today + orderEarnings,
+      todayDeliveries: prev.todayDeliveries + 1,
+      thisWeek: prev.thisWeek + orderEarnings,
+      weekDeliveries: prev.weekDeliveries + 1,
+      thisMonth: prev.thisMonth + orderEarnings,
+      monthDeliveries: prev.monthDeliveries + 1,
+      baseFare: prev.baseFare + orderEarnings,
+      dailyTrend: prev.dailyTrend.map((d) =>
+        d.isToday ? { ...d, amount: d.amount + orderEarnings, deliveries: d.deliveries + 1 } : d
+      ),
+    }));
+
+    const newAlert: AlertNotification = {
+      id: `alert-${Date.now()}`,
+      title: '💰 Wallet Credited: ₹' + orderEarnings,
+      message: `Order #${activeOrder.orderNumber} delivered. ₹${orderEarnings} added to your Snapit Wallet.`,
+      time: 'Just now',
+      type: 'payout',
+      read: false,
+      amount: orderEarnings,
+    };
+    setAlerts((prev) => [newAlert, ...prev]);
+    setActiveOrder(null);
+    try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+
+    // If slot ended during delivery, now go offline
+    if (activeSlot && Date.now() >= activeSlot.endTimestamp) {
+      setIsOnline(false);
+      addAlert(createSlotEndedAlert(activeSlot));
+    }
+
+    return true;
   };
 
   const triggerMockOrder = () => {
@@ -1617,6 +1688,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         // New
         adminConfig,
         slots,
+        bookedSlotIds,
         activeSlot,
         upcomingSlot,
         riderBreak,
@@ -1626,6 +1698,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         nonAcceptanceCount,
         bookSlot,
         cancelSlot,
+        switchZone,
         extendSlot,
         addSlotToWaitlist,
         startBreak,

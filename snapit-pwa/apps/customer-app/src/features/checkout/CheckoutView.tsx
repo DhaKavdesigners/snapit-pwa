@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
+import { calculateDeliveryFee, generateDeliveryPin } from '../../../../../common_logic/deliveryLogic';
 
 type PayMethod = 'online' | 'upiDelivery';
 
@@ -48,7 +49,7 @@ export const CheckoutView: React.FC = () => {
   })).filter(item => item.product !== undefined);
 
   const itemTotal   = cartItemsWithDetails.reduce((sum, item) => sum + (item.product!.price * item.quantity), 0);
-  const deliveryFee = 3000; // ₹30
+  const deliveryFee = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feePaise;
   const total       = itemTotal + deliveryFee;
 
   // ── Address Logic ────────────────────────────────────────
@@ -96,27 +97,46 @@ export const CheckoutView: React.FC = () => {
     }));
 
     try {
-      // 1. Insert Order into Supabase
+      const basePayload: any = {
+        id: displayId,
+        customer_id: userProfile?.phone || 'guest_user',
+        store_id: storeId,
+        status: 'PLACED',
+        items: itemsJson,
+        estimated_total: total,
+        delivery_address: activeAddressObject,
+        payment_method: 'UPI_NOW',
+        payment_status: 'PAID',
+        recipient_name: finalRecipientName,
+        recipient_phone: finalRecipientPhone,
+      };
+
+      const { pinNumber } = generateDeliveryPin(displayId);
+      const feeRupees = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feeRupees;
+
+      // 1. Insert with extended columns (delivery_pin as numeric, delivery_fee as int2)
       const { data: insertedOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
-          id: displayId,
-          customer_id: userProfile?.phone || 'guest_user',
-          store_id: storeId,
-          status: 'PLACED',
-          items: itemsJson,
-          estimated_total: total,
-          delivery_address: activeAddressObject,
-          payment_method: 'UPI_NOW',
-          payment_status: 'PAID',
-          recipient_name: finalRecipientName,
-          recipient_phone: finalRecipientPhone,
-          delivery_pin: displayId.replace(/\D/g, '').length >= 4 ? displayId.replace(/\D/g, '').slice(-4) : '4821'
+          ...basePayload,
+          delivery_pin: pinNumber,
+          delivery_fee: feeRupees,
         })
         .select();
 
       if (orderError) {
-        console.error("Supabase Order Insert Error:", orderError);
+        console.warn("Extended columns not present in Supabase, inserting with base columns:", orderError.message);
+        // Fallback insert with base columns
+        const { data: fallbackOrder, error: fallbackError } = await supabase
+          .from('orders')
+          .insert(basePayload)
+          .select();
+
+        if (fallbackError) {
+          console.error("Supabase Order Base Insert Error:", fallbackError);
+        } else {
+          console.info("Order successfully placed in Supabase:", fallbackOrder);
+        }
       } else {
         console.info("Order successfully placed in Supabase:", insertedOrder);
       }

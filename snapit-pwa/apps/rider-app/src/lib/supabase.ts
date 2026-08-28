@@ -28,7 +28,8 @@ export interface DbOrder {
   shopkeeper_handover_confirmed?: boolean;
   rider_pickup_confirmed?: boolean;
   rider_assignment?: string;
-  delivery_pin?: string;
+  delivery_pin?: string | number;
+  delivery_fee?: number;
   created_at?: string;
   updated_at?: string;
 }

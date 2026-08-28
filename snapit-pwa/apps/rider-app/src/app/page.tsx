@@ -130,45 +130,7 @@ export default function DashboardPage() {
     <AppShell>
       <div className="flex flex-col gap-3.5 pt-2 pb-6 max-w-md mx-auto w-full">
 
-        {/* ── 1. TOP GREETING & ZONE HEADER ── */}
-        <div className="flex items-center justify-between bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <img
-                src={rider.selfieCapturedUrl || rider.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                alt={rider.name}
-                className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500 shadow-xs"
-              />
-              <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-            </div>
-            <div>
-              <h1 className="text-base font-black text-slate-900 leading-tight">
-                {getGreeting()}, {rider.name.split(' ')[0]} 👋
-              </h1>
-              <button
-                onClick={() => setIsZoneModalOpen(true)}
-                className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors mt-0.5 cursor-pointer"
-              >
-                <MapPin className="w-3 h-3 text-emerald-600" />
-                <span>{rider.selectedZone || 'Robertsonpet, KGF'}</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </button>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black tracking-wide border ${
-              isOnline
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                : 'bg-slate-100 text-slate-500 border-slate-200'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
-              <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
-            </span>
-          </div>
-        </div>
-
-        {/* ── 2. TODAY'S OVERVIEW (3 LARGE CLEAN METRIC TILES) ── */}
+        {/* ── 1. TODAY'S OVERVIEW (3 METRIC TILES) ── */}
         <div className="grid grid-cols-3 gap-2">
           {/* Earnings */}
           <Link href="/earnings" className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs flex flex-col justify-between active:scale-98 transition-transform">

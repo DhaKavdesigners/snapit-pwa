@@ -41,6 +41,8 @@ export interface Order {
   dbStatus?: string;
   shopkeeperHandoverConfirmed?: boolean;
   riderPickupConfirmed?: boolean;
+  delivery_pin?: string | number;
+  delivery_fee?: number;
   otp: string;
   timestamp: string;
   paymentMethod: string;
@@ -87,6 +89,8 @@ export interface RiderProfile {
   vehicleNumber: string;
   selectedZone: string;
   selectedZoneId?: string;
+  lastZoneSwitchTimestamp?: number;
+  zoneSwitchHistory?: number[];
   isVerified: boolean;
   verificationStep: number; // 1: submitted, 2: reviewing, 3: admin check, 4: approved
   mpin?: string;
@@ -151,7 +155,9 @@ export type SlotStatus =
   | 'missed'
   | 'full'
   | 'waitlisted'
-  | 'booking_closed';
+  | 'booking_closed'
+  | 'past'
+  | 'expiring_soon';
 
 export type DemandLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
 
@@ -173,6 +179,9 @@ export interface RiderSlot {
   capacity: number;
   bookedCount: number;
   onWaitlist?: boolean;
+  ordersFulfilled?: number;
+  ordersMissed?: number;
+  closesInMinutes?: number;
 }
 
 // ─── Break ───────────────────────────────────────────────────────────────────

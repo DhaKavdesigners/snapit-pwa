@@ -1,5 +1,6 @@
 import { supabase, DbOrder, DbStore, DbRiderProfile } from '@/lib/supabase';
 import { Order, RiderProfile } from '@/types';
+import { calculateDeliveryFee, generateDeliveryPin } from '../../../../common_logic/deliveryLogic';
 
 /** Map a Supabase DB order row to Rider App Order object */
 export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
@@ -42,11 +43,17 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
       }))
     : [{ name: 'Order Package', quantity: 1, price: 100 }];
 
-  // Compute rider payout: standard ₹45 per delivery (fixed fair fee for quick-commerce delivery)
-  const earnings = 45;
+  // Compute rider payout: from database delivery_fee column (defaults to common_logic if unset)
+  const earnings = Number(dbOrder.delivery_fee) || calculateDeliveryFee({ distanceKm: 2.4 }).feeRupees;
 
-  // 4-Digit Handshake OTP
-  const rawOtp = dbOrder.delivery_pin || (String(dbOrder.id).replace(/\D/g, '').length >= 4 ? String(dbOrder.id).replace(/\D/g, '').slice(-4) : '4821');
+  // 4-Digit Handshake PIN from database delivery_pin column or common_logic generator
+  let rawOtp = '4821';
+  if (dbOrder.delivery_pin !== undefined && dbOrder.delivery_pin !== null) {
+    const pinStr = String(dbOrder.delivery_pin);
+    rawOtp = pinStr.length >= 4 ? pinStr.slice(-4) : pinStr.padStart(4, '0');
+  } else {
+    rawOtp = generateDeliveryPin(dbOrder.id).pinString;
+  }
 
   return {
     id: dbOrder.id,
@@ -426,10 +433,61 @@ export async function fetchRiderProfileFromDb(
       .select('*')
       .eq('phone', cleanPhone)
       .maybeSingle();
-
     if (error || !data) return null;
     return data as DbRiderProfile;
   } catch (err) {
     return null;
+  }
+}
+
+/** Fetch rider delivered orders and calculate actual live earnings from Supabase */
+export async function fetchRiderDeliveredStats(riderPhoneOrName?: string): Promise<{
+  todayEarnings: number;
+  todayDeliveries: number;
+  totalEarnings: number;
+  totalDeliveries: number;
+  orders: Order[];
+}> {
+  try {
+    const { data: dbOrders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('status', 'DELIVERED')
+      .order('created_at', { ascending: false });
+
+    if (error || !dbOrders) {
+      return { todayEarnings: 0, todayDeliveries: 0, totalEarnings: 0, totalDeliveries: 0, orders: [] };
+    }
+
+    const stores = await fetchStores();
+    const mappedOrders = dbOrders.map((o) => {
+      const store = stores.find((s) => s.id === o.store_id);
+      return mapDbOrderToAppOrder(o, store);
+    });
+
+    const now = new Date();
+    const todayYear = now.getFullYear();
+    const todayMonth = now.getMonth();
+    const todayDate = now.getDate();
+
+    const todayOrders = dbOrders.filter((o) => {
+      if (!o.created_at) return false;
+      const d = new Date(o.created_at);
+      return d.getFullYear() === todayYear && d.getMonth() === todayMonth && d.getDate() === todayDate;
+    });
+
+    const todayEarnings = todayOrders.reduce((sum, o) => sum + (Number(o.delivery_fee) || 45), 0);
+    const totalEarnings = dbOrders.reduce((sum, o) => sum + (Number(o.delivery_fee) || 45), 0);
+
+    return {
+      todayEarnings,
+      todayDeliveries: todayOrders.length,
+      totalEarnings,
+      totalDeliveries: dbOrders.length,
+      orders: mappedOrders,
+    };
+  } catch (err) {
+    console.warn('Error fetching rider delivered stats:', err);
+    return { todayEarnings: 0, todayDeliveries: 0, totalEarnings: 0, totalDeliveries: 0, orders: [] };
   }
 }

@@ -44,12 +44,12 @@ export default function ConfirmDeliveryPage() {
       return;
     }
 
-    // Call context completion method
+    // Call context completion method to evaluate against database delivery_pin
     const success = completeDeliveryWithOtp(enteredOtp);
-    if (success || enteredOtp === '1234') {
+    if (success) {
       setIsSuccess(true);
     } else {
-      setErrorMessage('Invalid OTP code. Please check with customer (Hint: 1234).');
+      setErrorMessage('Invalid Delivery PIN. Please ask customer for the 4-digit PIN shown on their live tracking screen.');
     }
   };
 

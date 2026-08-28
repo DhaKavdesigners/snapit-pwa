@@ -7,6 +7,7 @@ import { formatCurrency } from '../../utils/currency';
 import { Plus, Minus, ArrowRight, ShoppingBag, Sparkles, Clock, Zap, Store } from 'lucide-react';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { motion } from 'framer-motion';
+import { calculateDeliveryFee } from '../../../../../common_logic/deliveryLogic';
 
 export const CartView: React.FC = () => {
   const { items, updateQuantity } = useCartStore();
@@ -19,7 +20,7 @@ export const CartView: React.FC = () => {
   })).filter(item => item.product !== undefined);
 
   const itemTotal   = cartItemsWithDetails.reduce((sum, item) => sum + (item.product!.price * item.quantity), 0);
-  const deliveryFee = 3000; // ₹30
+  const deliveryFee = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feePaise;
   const total       = itemTotal + deliveryFee;
 
   if (items.length === 0) {

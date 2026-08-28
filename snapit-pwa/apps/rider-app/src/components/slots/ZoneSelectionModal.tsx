@@ -7,6 +7,7 @@ import {
   formatRemainingTime,
   generateDailySlots,
   demandLabel,
+  checkZoneSwitchAllowed,
 } from '@/services/slotService';
 import { getNow } from '@/services/mockService';
 import { DeliveryZone, RiderSlot, DemandLevel } from '@/types';
@@ -45,6 +46,7 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
     upcomingSlot,
     adminConfig,
     bookSlot,
+    switchZone,
     updateRiderProfile,
   } = useRider();
 
@@ -63,11 +65,13 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
   const [selectedZone, setSelectedZone] = useState<DeliveryZone | null>(null);
   const [bookedSlotInfo, setBookedSlotInfo] = useState<{ slot: RiderSlot; zone: DeliveryZone } | null>(null);
   const [isBookingForNextSlot, setIsBookingForNextSlot] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Initialize view state whenever modal opens
   useEffect(() => {
     if (!isOpen) return;
 
+    setErrorMessage('');
     if (initialMode === 'locked' || (initialMode === 'auto' && hasActiveSlotDuty)) {
       setViewState('locked');
       setIsBookingForNextSlot(false);
@@ -101,7 +105,18 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
 
   const handleZoneSelect = (zone: DeliveryZone) => {
     setSelectedZone(zone);
-    setViewState('select_slot');
+    setErrorMessage('');
+
+    if (zone.id !== rider.selectedZoneId) {
+      const result = switchZone(zone.id, zone.name);
+      if (!result.success) {
+        setErrorMessage(result.message || 'Zone switch limit reached for today.');
+        return;
+      }
+    }
+
+    // Instantly select zone and exit modal
+    onClose();
   };
 
   const handleConfirmBookSlot = (slot: RiderSlot) => {
@@ -221,6 +236,13 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
                   : 'Choose a delivery zone to view and book your time slots.'}
               </p>
             </div>
+
+            {errorMessage && (
+              <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-3 text-xs flex items-start gap-2 shadow-xs">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="font-medium">{errorMessage}</p>
+              </div>
+            )}
 
             <div className="space-y-2.5">
               {zones.map((zone) => {
