@@ -13,7 +13,7 @@ type ExploreTab = 'categories' | 'stores';
 type ExploreState = 'main' | 'category' | 'store';
 
 export const ExploreView: React.FC = () => {
-  const { activeContext } = useContextStore();
+  const { activeContext, setContext } = useContextStore();
   const isShopping = activeContext === 'shopping';
   
   // Navigation State
@@ -103,7 +103,7 @@ export const ExploreView: React.FC = () => {
             ))}
           </div>
         </div>
-        
+
         <div className="p-4 pb-28">
           {isLoading ? (
             <div className="grid grid-cols-3 gap-2">
@@ -114,14 +114,10 @@ export const ExploreView: React.FC = () => {
               {filteredProducts.length > 0 ? (
                 filteredProducts.map(product => <ProductCard key={product.id} product={product} fullWidth />)
               ) : (
-                <div className="col-span-3 text-center py-12 px-6 bg-white rounded-3xl border border-gray-100 shadow-xs">
-                  <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mb-3 shadow-xs">
-                    {selectedCategory.emoji || '📦'}
-                  </div>
-                  <h3 className="font-black text-gray-900 text-base mb-1">{activeSubCategory}</h3>
-                  <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">
-                    Fresh stock arriving soon directly from local KGF vendors &amp; farms. Check back daily at 7:00 AM!
-                  </p>
+                <div className="col-span-3 text-center py-10 text-gray-500">
+                  <div className="text-4xl mb-2">🥕</div>
+                  <h3 className="font-bold text-gray-900 mb-1">No products found</h3>
+                  <p className="text-sm">We are adding more fresh stock for this category.</p>
                 </div>
               )}
             </div>
@@ -217,28 +213,54 @@ export const ExploreView: React.FC = () => {
       <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm px-4 pt-2 pb-0 sticky top-0 z-10">
         <SearchBar value={exploreSearchQuery} onChange={setExploreSearchQuery} />
 
-        <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-full border border-gray-200/50 w-[260px] mx-auto">
-          {(['categories', 'stores'] as ExploreTab[]).map((tab) => (
+        <div className="flex items-center justify-center gap-4 mb-3">
+          {/* Main Switcher Pill with dynamic labels */}
+          <div className="flex bg-gray-100 p-1 rounded-full border border-gray-200/50 w-[240px]">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
-                activeTab === tab
+              onClick={() => setActiveTab('categories')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-black transition-all duration-200 cursor-pointer ${
+                activeTab === 'categories'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <span className="text-base">{tab === 'categories' ? '📦' : '🏪'}</span>
-              <span className="capitalize">{tab}</span>
+              <span className="text-sm">{isShopping ? '📦' : '🍽️'}</span>
+              <span>{isShopping ? 'Categories' : 'Food'}</span>
             </button>
-          ))}
+
+            <button
+              onClick={() => setActiveTab('stores')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-black transition-all duration-200 cursor-pointer ${
+                activeTab === 'stores'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span className="text-sm">{isShopping ? '🏪' : '🏨'}</span>
+              <span>{isShopping ? 'Stores' : 'Restaurants'}</span>
+            </button>
+          </div>
+
+          {/* Opposite Sector Circular Toggle Button on the Right (Slightly larger, thin border, spaced to right) */}
+          <button
+            onClick={() => setContext(isShopping ? 'food' : 'shopping')}
+            title={isShopping ? 'Switch to Food & Restaurants' : 'Switch to Grocery & Stores'}
+            className="relative w-11 h-11 rounded-full p-0.5 border border-emerald-500/70 bg-white shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 overflow-hidden flex items-center justify-center ml-1"
+            aria-label={isShopping ? 'Switch to Food' : 'Switch to Grocery'}
+          >
+            <img
+              src={isShopping ? '/images/exp_togle_foods.jpg' : '/images/exp_togle_groceries.jpg'}
+              alt={isShopping ? 'Food Toggle' : 'Grocery Toggle'}
+              className="w-full h-full object-cover rounded-full"
+            />
+          </button>
         </div>
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-4 pb-28">
         
-        {/* CATEGORIES TAB */}
+        {/* CATEGORIES / FOOD TAB */}
         {activeTab === 'categories' && (
           <div className="grid grid-cols-1 gap-3.5">
             {categories.map((category) => (
@@ -277,43 +299,84 @@ export const ExploreView: React.FC = () => {
           </div>
         )}
 
-        {/* STORES TAB */}
+        {/* STORES / RESTAURANTS TAB */}
         {activeTab === 'stores' && (
           <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-2">
             
-            {/* GROCERY SECTION */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
-                  <span>🛒</span> Grocery & Essentials
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {shoppingStores.map((store) => (
-                  <div key={store.id} onClick={() => handleStoreClick(store.id)}>
-                    <StoreCard store={store} />
+            {/* When Shopping is active, show Grocery first */}
+            {isShopping ? (
+              <>
+                {/* GROCERY SECTION */}
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
+                      <span>🛒</span> Grocery & Essentials
+                    </h2>
                   </div>
-                ))}
-              </div>
-            </section>
-
-            <div className="h-px bg-gray-200/50 w-full" />
-
-            {/* FOOD SECTION */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
-                  <span>🍽️</span> Food & Restaurants
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {foodStores.map((store) => (
-                  <div key={store.id} onClick={() => handleStoreClick(store.id)}>
-                    <StoreCard store={store} />
+                  <div className="grid grid-cols-2 gap-4">
+                    {shoppingStores.map((store) => (
+                      <div key={store.id} onClick={() => handleStoreClick(store.id)}>
+                        <StoreCard store={store} />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
+                </section>
+
+                <div className="h-px bg-gray-200/50 w-full" />
+
+                {/* FOOD SECTION */}
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
+                      <span>🍽️</span> Food & Restaurants
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {foodStores.map((store) => (
+                      <div key={store.id} onClick={() => handleStoreClick(store.id)}>
+                        <StoreCard store={store} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </>
+            ) : (
+              <>
+                {/* FOOD SECTION FIRST */}
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
+                      <span>🍽️</span> Restaurants & Food Outlets
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {foodStores.map((store) => (
+                      <div key={store.id} onClick={() => handleStoreClick(store.id)}>
+                        <StoreCard store={store} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="h-px bg-gray-200/50 w-full" />
+
+                {/* GROCERY SECTION */}
+                <section>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-black text-xl text-gray-900 tracking-tight flex items-center gap-2">
+                      <span>🛒</span> Grocery & Essentials
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {shoppingStores.map((store) => (
+                      <div key={store.id} onClick={() => handleStoreClick(store.id)}>
+                        <StoreCard store={store} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
             
           </div>
         )}
