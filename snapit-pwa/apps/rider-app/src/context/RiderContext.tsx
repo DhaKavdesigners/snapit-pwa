@@ -34,7 +34,6 @@ import {
   buildExtendedSlot,
   isSlotOnlineReady,
   timeToTodayMs,
-  checkZoneSwitchAllowed,
 } from '@/services/slotService';
 import {
   checkZoneStatus,
@@ -155,7 +154,6 @@ interface RiderContextType {
   // ── New ──
   adminConfig: AdminConfig;
   slots: RiderSlot[];
-  bookedSlotIds: string[];
   activeSlot: RiderSlot | null;
   upcomingSlot: RiderSlot | null;
   riderBreak: RiderBreak | null;
@@ -165,7 +163,6 @@ interface RiderContextType {
   nonAcceptanceCount: number;
   bookSlot: (slotId: string, zoneId: string, zoneName: string) => void;
   cancelSlot: (slotId: string) => void;
-  switchZone: (zoneId: string, zoneName: string) => { success: boolean; message?: string };
   extendSlot: (currentSlotId: string, nextSlotId: string) => void;
   addSlotToWaitlist: (slotId: string) => void;
   startBreak: () => void;
@@ -810,48 +807,6 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       setIsOnline(false);
     }
     refreshSlots(nextBooked);
-  };
-
-  const switchZone = (zoneId: string, zoneName: string): { success: boolean; message?: string } => {
-    const history = rider.zoneSwitchHistory || (rider.lastZoneSwitchTimestamp ? [rider.lastZoneSwitchTimestamp] : []);
-    const check = checkZoneSwitchAllowed(history);
-    if (!check.allowed && rider.selectedZoneId !== zoneId) {
-      addAlert({
-        id: `alert-zone-limit-${Date.now()}`,
-        title: '⚠️ Zone Switch Limit Reached',
-        message: check.reason || 'You have used your 2 daily zone switches.',
-        time: 'Just now',
-        type: 'policy_action',
-        read: false,
-      });
-      return { success: false, message: check.reason };
-    }
-
-    const updatedHistory = [...history, Date.now()];
-    const updatedRider = {
-      ...rider,
-      selectedZone: zoneName,
-      selectedZoneId: zoneId,
-      lastZoneSwitchTimestamp: Date.now(),
-      zoneSwitchHistory: updatedHistory,
-    };
-
-    setRider(updatedRider);
-    try {
-      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedRider));
-    } catch (e) {}
-
-    refreshSlots(bookedSlotIds, zoneId, zoneName);
-    addAlert({
-      id: `alert-zone-switch-${Date.now()}`,
-      title: '📍 Operating Zone Updated',
-      message: `Your duty zone has been switched to ${zoneName}.`,
-      time: 'Just now',
-      type: 'system',
-      read: false,
-    });
-
-    return { success: true };
   };
 
   const extendSlot = (currentSlotId: string, nextSlotId: string) => {
@@ -1688,7 +1643,6 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         // New
         adminConfig,
         slots,
-        bookedSlotIds,
         activeSlot,
         upcomingSlot,
         riderBreak,
@@ -1698,7 +1652,6 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         nonAcceptanceCount,
         bookSlot,
         cancelSlot,
-        switchZone,
         extendSlot,
         addSlotToWaitlist,
         startBreak,
