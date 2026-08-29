@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRider } from '@/context/RiderContext';
-import { Bell, Power, X, AlertCircle, MapPin, ChevronDown } from 'lucide-react';
-import { formatTimeAMPM } from '@/services/slotService';
+import { Power, MapPin, ChevronDown } from 'lucide-react';
 
 interface TopHeaderProps {
   showBack?: boolean;
@@ -26,9 +25,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
     isOnline,
     toggleOnline,
     setOnlineStatus,
-    activeSlot,
-    activeOrder,
-    alerts,
     riderBreak,
   } = useRider();
 
@@ -59,7 +55,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
     }
   }, [showOfflineModal]);
 
-  const unreadCount = alerts?.filter((a) => !a.read).length || 0;
   const isBreakActive = riderBreak && !riderBreak.endedAt;
 
   // Handle online toggle click
@@ -133,89 +128,62 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
           </div>
         )}
 
-        {/* Right: Online toggle + Bell */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Professional Online/Offline toggle button */}
+        {/* Right: Compact Professional Online/Offline Switch with Text Outside */}
+        <div className="flex items-center justify-end shrink-0">
           <button
             type="button"
             role="switch"
             aria-checked={isOnline}
             aria-label={isOnline ? 'Go Offline' : 'Go Online'}
             onClick={handleToggleClick}
-            className={`flex items-center gap-2 select-none cursor-pointer px-3 py-1.5 rounded-full border shadow-2xs transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 ${
-              isBreakActive
-                ? 'bg-amber-50 hover:bg-amber-100/90 border-amber-300 text-amber-900 ring-2 ring-amber-500/15 focus-visible:ring-amber-500'
-                : isOnline
-                ? 'bg-emerald-50/90 hover:bg-emerald-100/90 border-emerald-300/90 text-emerald-950 ring-2 ring-emerald-500/15 focus-visible:ring-emerald-500'
-                : 'bg-slate-100/90 hover:bg-slate-200/80 border-slate-200 text-slate-600 focus-visible:ring-slate-400'
-            }`}
+            className="flex items-center gap-2 select-none cursor-pointer py-1 px-1 rounded-full hover:opacity-95 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
             title={isOnline ? 'Switch to Offline' : 'Switch to Online'}
           >
-            {/* Status dot / live radar beacon */}
-            {isBreakActive ? (
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+            {/* Outside Text Label + Status Indicator */}
+            <div className="flex items-center gap-1.5">
+              {isBreakActive ? (
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              ) : isOnline ? (
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+              )}
+              <span
+                className={`text-xs font-black uppercase tracking-wider ${
+                  isBreakActive
+                    ? 'text-amber-600'
+                    : isOnline
+                    ? 'text-emerald-600'
+                    : 'text-slate-500'
+                }`}
+              >
+                {onlineLabel}
               </span>
-            ) : isOnline ? (
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-            ) : (
-              <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-            )}
+            </div>
 
-            {/* Label text */}
-            <span
-              className={`text-[11px] font-black uppercase tracking-wider ${
-                isBreakActive
-                  ? 'text-amber-800'
-                  : isOnline
-                  ? 'text-emerald-800'
-                  : 'text-slate-600'
-              }`}
-            >
-              {onlineLabel}
-            </span>
-
-            {/* Switch pill slider */}
+            {/* Small Compact iOS-Style Switch Slider */}
             <div
-              className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-300 relative flex items-center shrink-0 ${
+              className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 relative flex items-center shrink-0 ${
                 isBreakActive
                   ? 'bg-amber-400'
                   : isOnline
-                  ? 'bg-emerald-500 shadow-glow'
+                  ? 'bg-emerald-500 shadow-2xs'
                   : 'bg-slate-300'
               }`}
             >
               <div
-                className={`w-3.5 h-3.5 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${
-                  isOnline || isBreakActive ? 'translate-x-[14px]' : 'translate-x-0'
+                className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-out ${
+                  isOnline || isBreakActive ? 'translate-x-4' : 'translate-x-0'
                 }`}
-              >
-                <div
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                    isBreakActive
-                      ? 'bg-amber-500'
-                      : isOnline
-                      ? 'bg-emerald-500'
-                      : 'bg-slate-400'
-                  }`}
-                />
-              </div>
+              />
             </div>
           </button>
-
-          {/* Bell icon with unread badge */}
-          <Link href="/alerts" className="relative w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors shrink-0" aria-label="Notifications">
-            <Bell className="w-4.5 h-4.5 text-slate-600" />
-            {unreadCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </Link>
         </div>
       </div>
 
