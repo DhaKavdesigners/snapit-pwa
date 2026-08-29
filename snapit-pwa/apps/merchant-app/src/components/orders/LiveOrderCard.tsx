@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   ShoppingBag,
   User,
+  Phone,
 } from 'lucide-react';
 import type { Order } from '../../types/snapit-types';
 import { formatCurrency, formatOrderTime } from '../../utils/formatters';
@@ -29,6 +30,7 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
     markOrderPrepared,
     handoverToRider,
     prepTimers,
+    ridersMap,
   } = useMerchantStore();
 
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
@@ -386,6 +388,46 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
             })}
           </div>
         </div>
+
+        {/* 4.5 Assigned Delivery Rider Information */}
+        {(order.riderId || order.riderAssignment === 'ASSIGNED' || isRiderAssigned) && (() => {
+          const cleanRiderId = order.riderId ? String(order.riderId).replace(/[^0-9]/g, '').slice(-10) : '';
+          const rider = cleanRiderId ? (ridersMap[cleanRiderId] || ridersMap[order.riderId || '']) : null;
+          return (
+            <div className="p-3.5 bg-purple-50/80 border border-purple-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-2xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center text-base font-black shrink-0 shadow-xs">
+                  🛵
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-slate-900 truncate text-sm">
+                      {rider?.name || 'Rider Assigned'}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-200 text-purple-900 uppercase font-mono">
+                      ASSIGNED
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 truncate font-medium mt-0.5">
+                    {rider?.phone ? `+91 ${rider.phone}` : (cleanRiderId ? `+91 ${cleanRiderId}` : 'Assigned')}
+                    {rider?.vehicle_type ? ` • ${rider.vehicle_type}` : ''}
+                    {rider?.vehicle_number ? ` (${rider.vehicle_number})` : ''}
+                  </div>
+                </div>
+              </div>
+
+              {(rider?.phone || cleanRiderId) && (
+                <a
+                  href={`tel:+91${rider?.phone || cleanRiderId}`}
+                  className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-xs font-bold shrink-0 flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Call</span>
+                </a>
+              )}
+            </div>
+          );
+        })()}
 
         {/* 5. Kitchen Action Buttons */}
         <div className="pt-2">

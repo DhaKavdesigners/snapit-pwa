@@ -32,6 +32,8 @@ export interface LiveOrder {
   items: LiveOrderItem[];
   prep_time_minutes?: number;
   delivery_pin?: string;
+  rider_id?: string;
+  rider_assignment?: string;
   rider_name?: string;
   rider_phone?: string;
   rider_vehicle?: string;

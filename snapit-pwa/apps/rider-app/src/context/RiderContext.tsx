@@ -1074,7 +1074,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9716, lng: 77.6412 },
     };
     setActiveOrder(orderWithActiveStatus);
-    assignRiderToOrder(incomingOrder.id, rider.phone || rider.name || '9217649600');
+    const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
+    assignRiderToOrder(incomingOrder.id, cleanPhone);
     setIncomingOrder(null);
   };
 

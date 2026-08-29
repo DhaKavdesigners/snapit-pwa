@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useOrderStore, LiveOrder, getActiveOrders } from '../../store/orderStore';
 import { formatCurrency } from '../../utils/currency';
+import { supabase } from '../../lib/supabase';
 
 // Imported milestone images
 import packingImg from '../../assets/packing_icon.png';
@@ -40,6 +41,41 @@ export const LiveOrderTrackerModal: React.FC = () => {
     : activeOrders[0] || orders[0];
 
   const status = currentOrder?.status || 'PLACED';
+
+  // Dynamic Rider Profile from Supabase rider_profiles table
+  const [riderInfo, setRiderInfo] = useState<{
+    name: string;
+    phone: string;
+    avatarUrl?: string;
+    vehicleType?: string;
+    vehicleNumber?: string;
+    rating?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!currentOrder?.rider_id) {
+      setRiderInfo(null);
+      return;
+    }
+    const cleanId = String(currentOrder.rider_id).replace(/[^0-9]/g, '').slice(-10);
+    supabase
+      .from('rider_profiles')
+      .select('id, name, phone, avatar_url, selfie_url, vehicle_type, vehicle_number, rating')
+      .or(`id.eq.${cleanId},phone.eq.${cleanId}`)
+      .maybeSingle()
+      .then(({ data, error }: { data: any; error: any }) => {
+        if (!error && data) {
+          setRiderInfo({
+            name: data.name || 'Delivery Partner',
+            phone: data.phone || cleanId,
+            avatarUrl: data.avatar_url || data.selfie_url,
+            vehicleType: data.vehicle_type || 'Bike',
+            vehicleNumber: data.vehicle_number || '',
+            rating: Number(data.rating || 5.0),
+          });
+        }
+      });
+  }, [currentOrder?.rider_id]);
 
   // Trigger celebratory party pop confetti when order is DELIVERED
   useEffect(() => {
@@ -224,8 +260,13 @@ export const LiveOrderTrackerModal: React.FC = () => {
         return {
           step: 3.5,
           pathRatio: 0.500,
+<<<<<<< Updated upstream
           title: `Rider Picked Up & Out of Shop 🛵`,
           subtitle: `Package handed over to ${currentOrder.rider_name || 'the rider'}. Rider is starting the trip to your address.`,
+=======
+          title: 'Rider Picked Up & Out of Shop 🛵',
+          subtitle: `Package handed over to ${riderInfo?.name || 'delivery rider'}. Rider is starting the trip to your address.`,
+>>>>>>> Stashed changes
           badge: 'OUT OF SHOP',
           badgeColor: 'bg-emerald-500 text-white border-emerald-600',
           eta: '~4-6 mins',
@@ -235,7 +276,11 @@ export const LiveOrderTrackerModal: React.FC = () => {
         return {
           step: 4,
           pathRatio: 0.810,
+<<<<<<< Updated upstream
           title: `Rider ${currentOrder.rider_name || 'Partner'} is Rushing to Your Door! 🛵`,
+=======
+          title: `Rider ${riderInfo?.name ? riderInfo.name + ' ' : ''}is Rushing to Your Door! 🛵`,
+>>>>>>> Stashed changes
           subtitle: 'Package is on the way! Rider is approaching your registered address.',
           badge: 'OUT FOR DELIVERY',
           badgeColor: 'bg-emerald-500 text-white border-emerald-600',
@@ -581,8 +626,8 @@ export const LiveOrderTrackerModal: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ── 3. RIDER INFORMATION & DELIVERY OTP PIN CARD (ONLY SHOWN WHEN OUT FOR DELIVERY) ── */}
-            {progressState.isOutForDelivery && status !== 'DELIVERED' && (
+            {/* ── 3. RIDER INFORMATION & DELIVERY OTP PIN CARD (SHOWN AS SOON AS RIDER ASSIGNED) ── */}
+            {((progressState.isOutForDelivery || Boolean(currentOrder.rider_id) || currentOrder.rider_assignment === 'ASSIGNED') && status !== 'DELIVERED') && (
               <motion.div
                 initial={{ opacity: 0, y: 15, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -605,12 +650,20 @@ export const LiveOrderTrackerModal: React.FC = () => {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative shrink-0">
                       <img
+<<<<<<< Updated upstream
                         src={currentOrder.rider_avatar || riderIconImg}
                         alt={currentOrder.rider_name || 'SnapIt Rider'}
                         className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 bg-white"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           if (target.src !== riderIconImg) target.src = riderIconImg;
+=======
+                        src={riderInfo?.avatarUrl || riderIconImg}
+                        alt={riderInfo?.name || 'Delivery Partner'}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 bg-white"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = riderIconImg;
+>>>>>>> Stashed changes
                         }}
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shadow-xs">
@@ -619,6 +672,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
+<<<<<<< Updated upstream
                         <h4 className="font-black text-sm text-white truncate">
                           {currentOrder.rider_name || 'Assigned Rider'}
                         </h4>
@@ -628,6 +682,17 @@ export const LiveOrderTrackerModal: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-gray-300 font-medium mt-0.5 truncate">
                         {currentOrder.rider_vehicle || 'SnapIt Fleet Hero'}
+=======
+                        <h4 className="font-black text-sm text-white">
+                          {riderInfo?.name || currentOrder.rider_name || 'Delivery Partner'}
+                        </h4>
+                        <span className="bg-emerald-500/30 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                          ⭐ {riderInfo?.rating ? riderInfo.rating.toFixed(1) : '5.0'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-300 font-medium mt-0.5">
+                        SnapIt Fleet Hero • {riderInfo?.vehicleType || 'Bike'}{riderInfo?.vehicleNumber ? ` (${riderInfo.vehicleNumber})` : ''}
+>>>>>>> Stashed changes
                       </p>
                       {currentOrder.rider_phone && (
                         <p className="text-[10px] text-emerald-400 font-mono font-semibold truncate">
@@ -639,6 +704,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
                   {/* Call and WhatsApp Buttons */}
                   <div className="flex items-center gap-2 shrink-0">
+<<<<<<< Updated upstream
                     {currentOrder.rider_phone ? (
                       <>
                         <a
@@ -663,6 +729,24 @@ export const LiveOrderTrackerModal: React.FC = () => {
                         <Phone className="w-4 h-4" />
                       </div>
                     )}
+=======
+                    <a
+                      href={`tel:+91${riderInfo?.phone || currentOrder.rider_phone || '8217649688'}`}
+                      className="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-emerald-600/30"
+                      aria-label="Call Rider"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </a>
+                    <a
+                      href={`https://wa.me/91${riderInfo?.phone || currentOrder.rider_phone || '8217649688'}?text=Hi%20${encodeURIComponent(riderInfo?.name || 'Rider')},%20checking%20on%20my%20SnapIt%20order%20${currentOrder.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-teal-600/30"
+                      aria-label="WhatsApp Rider"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </a>
+>>>>>>> Stashed changes
                   </div>
                 </div>
 
@@ -683,7 +767,11 @@ export const LiveOrderTrackerModal: React.FC = () => {
                     ))}
                   </div>
                   <p className="text-[11px] text-emerald-100/90 font-medium">
+<<<<<<< Updated upstream
                     Share this 4-digit PIN with {currentOrder.rider_name || 'the delivery rider'} upon delivery to complete verification.
+=======
+                    Share this 4-digit PIN with {riderInfo?.name || 'the delivery rider'} upon delivery to complete verification.
+>>>>>>> Stashed changes
                   </p>
                 </div>
               </motion.div>
