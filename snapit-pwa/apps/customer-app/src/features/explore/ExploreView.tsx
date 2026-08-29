@@ -262,16 +262,16 @@ export const ExploreView: React.FC = () => {
         
         {/* CATEGORIES / FOOD TAB */}
         {activeTab === 'categories' && (
-          <div className="grid grid-cols-1 gap-3.5">
+          <div className="grid grid-cols-1 gap-2.5">
             {categories.map((category) => (
               <motion.div 
                 key={category.id} 
                 whileTap={{ scale: 0.97 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 onClick={() => handleCategoryClick(category)}
-                className="relative h-36 md:h-40 rounded-3xl overflow-hidden shadow-sm border border-gray-100/90 cursor-pointer group active:scale-[0.98] transition-all bg-white"
+                className="relative h-26 sm:h-28 rounded-2xl overflow-hidden shadow-xs border border-gray-100/90 cursor-pointer group active:scale-[0.98] transition-all bg-white"
               >
-                {/* 100% Original, Clean & Natural Image */}
+                {/* Clean & Natural Image */}
                 <img 
                   src={category.imageUrl} 
                   alt={category.title}
@@ -284,14 +284,14 @@ export const ExploreView: React.FC = () => {
                   className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
                 />
 
-                {/* Gentle bottom-only gradient for high text legibility without hiding photo */}
-                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-end justify-between p-4 z-10">
-                  <h3 className="font-black text-white text-lg tracking-tight drop-shadow-md">
+                {/* Bottom gradient for crisp text legibility */}
+                <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-end justify-between p-3.5 z-10">
+                  <h3 className="font-black text-white text-base tracking-tight drop-shadow-md">
                     {category.title}
                   </h3>
 
-                  <div className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white group-hover:bg-white group-hover:text-gray-900 group-hover:scale-110 transition-all shadow-sm shrink-0">
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white group-hover:bg-white group-hover:text-gray-900 group-hover:scale-110 transition-all shadow-xs shrink-0">
+                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
               </motion.div>
