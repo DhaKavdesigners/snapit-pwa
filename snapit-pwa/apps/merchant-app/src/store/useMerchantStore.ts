@@ -622,9 +622,18 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
                 };
               }
 
-              // Otherwise (e.g. status changed to OUT_OF_SHOP), keep live and update state
+              // Otherwise (e.g. status changed to OUT_OF_SHOP or rider assigned), keep live and update state
               return {
-                orders: state.orders.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)),
+                orders: state.orders.map((o) =>
+                  o.id === updated.id
+                    ? {
+                        ...o,
+                        ...updated,
+                        riderId: updated.rider_id ?? o.riderId,
+                        riderAssignment: updated.rider_assignment ?? o.riderAssignment,
+                      }
+                    : o
+                ),
               };
             });
 
@@ -1043,7 +1052,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
   acknowledgedLowStockIds: [],
   dismissLowStockAlert: () => {
     const currentLowIds = get().products
-      .filter((p) => p.stockCount > 0 && p.stockCount <= 3 && p.availability === 'AVAILABLE' && p.inStock !== false)
+      .filter((p) => p.stockCount > 0 && p.stockCount <= 5 && p.availability === 'AVAILABLE' && p.inStock !== false)
       .map((p) => p.id);
     set((state) => ({
       acknowledgedLowStockIds: Array.from(new Set([...state.acknowledgedLowStockIds, ...currentLowIds])),
@@ -1073,7 +1082,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
             }
           : p
       ),
-      acknowledgedLowStockIds: nextStockCount > 3 || nextStockCount === 0
+      acknowledgedLowStockIds: nextStockCount > 5 || nextStockCount === 0
         ? state.acknowledgedLowStockIds.filter((id) => id !== productId)
         : state.acknowledgedLowStockIds,
     }));
@@ -1123,8 +1132,8 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
             }
           : p
       ),
-      // If stock is replenished (> 3) or set to 0, clear it from acknowledged list
-      acknowledgedLowStockIds: safeCount > 3 || safeCount === 0
+      // If stock is replenished (> 5) or set to 0, clear it from acknowledged list
+      acknowledgedLowStockIds: safeCount > 5 || safeCount === 0
         ? state.acknowledgedLowStockIds.filter((id) => id !== productId)
         : state.acknowledgedLowStockIds,
     }));

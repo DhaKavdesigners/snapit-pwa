@@ -24,7 +24,6 @@ export interface LiveOrder {
   created_at: string;
   customer_id: string;
   store_id: string;
-  rider_id?: string;
   status: string;
   estimated_total: number;
   total_amount_paise?: number;

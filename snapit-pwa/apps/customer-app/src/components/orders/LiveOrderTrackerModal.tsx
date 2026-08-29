@@ -260,13 +260,8 @@ export const LiveOrderTrackerModal: React.FC = () => {
         return {
           step: 3.5,
           pathRatio: 0.500,
-<<<<<<< Updated upstream
-          title: `Rider Picked Up & Out of Shop 🛵`,
-          subtitle: `Package handed over to ${currentOrder.rider_name || 'the rider'}. Rider is starting the trip to your address.`,
-=======
           title: 'Rider Picked Up & Out of Shop 🛵',
-          subtitle: `Package handed over to ${riderInfo?.name || 'delivery rider'}. Rider is starting the trip to your address.`,
->>>>>>> Stashed changes
+          subtitle: `Package handed over to ${riderInfo?.name || currentOrder.rider_name || 'delivery rider'}. Rider is starting the trip to your address.`,
           badge: 'OUT OF SHOP',
           badgeColor: 'bg-emerald-500 text-white border-emerald-600',
           eta: '~4-6 mins',
@@ -276,11 +271,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
         return {
           step: 4,
           pathRatio: 0.810,
-<<<<<<< Updated upstream
-          title: `Rider ${currentOrder.rider_name || 'Partner'} is Rushing to Your Door! 🛵`,
-=======
-          title: `Rider ${riderInfo?.name ? riderInfo.name + ' ' : ''}is Rushing to Your Door! 🛵`,
->>>>>>> Stashed changes
+          title: `Rider ${riderInfo?.name || currentOrder.rider_name ? (riderInfo?.name || currentOrder.rider_name) + ' ' : ''}is Rushing to Your Door! 🛵`,
           subtitle: 'Package is on the way! Rider is approaching your registered address.',
           badge: 'OUT FOR DELIVERY',
           badgeColor: 'bg-emerald-500 text-white border-emerald-600',
@@ -650,20 +641,11 @@ export const LiveOrderTrackerModal: React.FC = () => {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative shrink-0">
                       <img
-<<<<<<< Updated upstream
-                        src={currentOrder.rider_avatar || riderIconImg}
-                        alt={currentOrder.rider_name || 'SnapIt Rider'}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 bg-white"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          if (target.src !== riderIconImg) target.src = riderIconImg;
-=======
-                        src={riderInfo?.avatarUrl || riderIconImg}
-                        alt={riderInfo?.name || 'Delivery Partner'}
+                        src={riderInfo?.avatarUrl || currentOrder.rider_avatar || riderIconImg}
+                        alt={riderInfo?.name || currentOrder.rider_name || 'Delivery Partner'}
                         className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 bg-white"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = riderIconImg;
->>>>>>> Stashed changes
                         }}
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shadow-xs">
@@ -672,31 +654,19 @@ export const LiveOrderTrackerModal: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-<<<<<<< Updated upstream
                         <h4 className="font-black text-sm text-white truncate">
-                          {currentOrder.rider_name || 'Assigned Rider'}
+                          {riderInfo?.name || currentOrder.rider_name || 'Delivery Partner'}
                         </h4>
                         <span className="bg-emerald-500/30 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0">
-                          ⭐ {currentOrder.rider_rating || 4.9}
+                          ⭐ {riderInfo?.rating ? riderInfo.rating.toFixed(1) : (currentOrder.rider_rating ? Number(currentOrder.rider_rating).toFixed(1) : '5.0')}
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-300 font-medium mt-0.5 truncate">
-                        {currentOrder.rider_vehicle || 'SnapIt Fleet Hero'}
-=======
-                        <h4 className="font-black text-sm text-white">
-                          {riderInfo?.name || currentOrder.rider_name || 'Delivery Partner'}
-                        </h4>
-                        <span className="bg-emerald-500/30 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                          ⭐ {riderInfo?.rating ? riderInfo.rating.toFixed(1) : '5.0'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-gray-300 font-medium mt-0.5">
-                        SnapIt Fleet Hero • {riderInfo?.vehicleType || 'Bike'}{riderInfo?.vehicleNumber ? ` (${riderInfo.vehicleNumber})` : ''}
->>>>>>> Stashed changes
+                        SnapIt Fleet Hero • {riderInfo?.vehicleType || currentOrder.rider_vehicle || 'Bike'}{riderInfo?.vehicleNumber ? ` (${riderInfo.vehicleNumber})` : ''}
                       </p>
-                      {currentOrder.rider_phone && (
+                      {(riderInfo?.phone || currentOrder.rider_phone) && (
                         <p className="text-[10px] text-emerald-400 font-mono font-semibold truncate">
-                          +91 {currentOrder.rider_phone.replace(/\D/g, '').slice(-10)}
+                          +91 {String(riderInfo?.phone || currentOrder.rider_phone).replace(/\D/g, '').slice(-10)}
                         </p>
                       )}
                     </div>
@@ -704,49 +674,22 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
                   {/* Call and WhatsApp Buttons */}
                   <div className="flex items-center gap-2 shrink-0">
-<<<<<<< Updated upstream
-                    {currentOrder.rider_phone ? (
-                      <>
-                        <a
-                          href={`tel:${currentOrder.rider_phone}`}
-                          className="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-emerald-600/30 cursor-pointer"
-                          aria-label="Call Rider"
-                        >
-                          <Phone className="w-4 h-4" />
-                        </a>
-                        <a
-                          href={`https://wa.me/91${currentOrder.rider_phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hi ${currentOrder.rider_name || 'Rider'}, checking on my SnapIt order ${currentOrder.id}`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-teal-600/30 cursor-pointer"
-                          aria-label="WhatsApp Rider"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </a>
-                      </>
-                    ) : (
-                      <div className="w-9 h-9 rounded-xl bg-white/10 text-gray-400 flex items-center justify-center">
-                        <Phone className="w-4 h-4" />
-                      </div>
-                    )}
-=======
                     <a
-                      href={`tel:+91${riderInfo?.phone || currentOrder.rider_phone || '8217649688'}`}
-                      className="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-emerald-600/30"
+                      href={`tel:+91${String(riderInfo?.phone || currentOrder.rider_phone || '8217649688').replace(/\D/g, '').slice(-10)}`}
+                      className="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-emerald-600/30 cursor-pointer"
                       aria-label="Call Rider"
                     >
                       <Phone className="w-4 h-4" />
                     </a>
                     <a
-                      href={`https://wa.me/91${riderInfo?.phone || currentOrder.rider_phone || '8217649688'}?text=Hi%20${encodeURIComponent(riderInfo?.name || 'Rider')},%20checking%20on%20my%20SnapIt%20order%20${currentOrder.id}`}
+                      href={`https://wa.me/91${String(riderInfo?.phone || currentOrder.rider_phone || '8217649688').replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hi ${riderInfo?.name || currentOrder.rider_name || 'Rider'}, checking on my SnapIt order ${currentOrder.id}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-teal-600/30"
+                      className="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-teal-600/30 cursor-pointer"
                       aria-label="WhatsApp Rider"
                     >
                       <MessageSquare className="w-4 h-4" />
                     </a>
->>>>>>> Stashed changes
                   </div>
                 </div>
 
@@ -767,11 +710,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
                     ))}
                   </div>
                   <p className="text-[11px] text-emerald-100/90 font-medium">
-<<<<<<< Updated upstream
-                    Share this 4-digit PIN with {currentOrder.rider_name || 'the delivery rider'} upon delivery to complete verification.
-=======
-                    Share this 4-digit PIN with {riderInfo?.name || 'the delivery rider'} upon delivery to complete verification.
->>>>>>> Stashed changes
+                    Share this 4-digit PIN with {riderInfo?.name || currentOrder.rider_name || 'the delivery rider'} upon delivery to complete verification.
                   </p>
                 </div>
               </motion.div>

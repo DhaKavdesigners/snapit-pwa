@@ -389,46 +389,6 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
           </div>
         </div>
 
-        {/* 4.5 Assigned Delivery Rider Information */}
-        {(order.riderId || order.riderAssignment === 'ASSIGNED' || isRiderAssigned) && (() => {
-          const cleanRiderId = order.riderId ? String(order.riderId).replace(/[^0-9]/g, '').slice(-10) : '';
-          const rider = cleanRiderId ? (ridersMap[cleanRiderId] || ridersMap[order.riderId || '']) : null;
-          return (
-            <div className="p-3.5 bg-purple-50/80 border border-purple-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-2xs">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center text-base font-black shrink-0 shadow-xs">
-                  🛵
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-slate-900 truncate text-sm">
-                      {rider?.name || 'Rider Assigned'}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-200 text-purple-900 uppercase font-mono">
-                      ASSIGNED
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-600 truncate font-medium mt-0.5">
-                    {rider?.phone ? `+91 ${rider.phone}` : (cleanRiderId ? `+91 ${cleanRiderId}` : 'Assigned')}
-                    {rider?.vehicle_type ? ` • ${rider.vehicle_type}` : ''}
-                    {rider?.vehicle_number ? ` (${rider.vehicle_number})` : ''}
-                  </div>
-                </div>
-              </div>
-
-              {(rider?.phone || cleanRiderId) && (
-                <a
-                  href={`tel:+91${rider?.phone || cleanRiderId}`}
-                  className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-xs font-bold shrink-0 flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>Call</span>
-                </a>
-              )}
-            </div>
-          );
-        })()}
-
         {/* 5. Kitchen Action Buttons */}
         <div className="pt-2">
           {isPlaced && (
@@ -464,22 +424,146 @@ export const LiveOrderCard: React.FC<LiveOrderCardProps> = ({ order }) => {
             </button>
           )}
 
-          {isReady && (
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl bg-emerald-50 text-center text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5">
-                <Bike className="w-4 h-4 text-emerald-600 animate-pulse" />
-                <span>Rider Suresh Approaching Counter</span>
+          {isReady && (() => {
+            const cleanRiderId = order.riderId ? String(order.riderId).replace(/[^0-9]/g, '').slice(-10) : '';
+            const rider = cleanRiderId ? (ridersMap[cleanRiderId] || ridersMap[order.riderId || '']) : null;
+            const isAssigned = Boolean(order.riderId || order.riderAssignment === 'ASSIGNED' || rider);
+            const riderPhone = rider?.phone || cleanRiderId;
+            const photoUrl = rider?.avatar_url || rider?.selfie_url;
+
+            return (
+              <div className="space-y-3">
+                {isAssigned ? (
+                  <div className="px-4 py-3 bg-purple-50/90 border border-purple-200/90 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
+                    {/* Left: Prominent Rider Photo & Larger Name */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt={rider?.name || 'Rider'}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-purple-300 shrink-0 bg-white shadow-xs"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-black shrink-0 shadow-xs">
+                          🛵
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <span className="font-black text-slate-900 text-base sm:text-lg truncate block leading-tight">
+                          {rider?.name || 'Delivery Partner'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Larger Phone Number pushed before Call Icon */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {riderPhone && (
+                        <span className="text-slate-800 font-extrabold font-mono text-sm sm:text-base tracking-tight">
+                          +91 {riderPhone}
+                        </span>
+                      )}
+                      {riderPhone && (
+                        <a
+                          href={`tel:+91${riderPhone}`}
+                          className="w-9 h-9 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-90 text-white flex items-center justify-center shrink-0 shadow-sm transition-transform cursor-pointer"
+                          aria-label="Call Rider"
+                          title={`Call ${rider?.name || 'Rider'}`}
+                        >
+                          <Phone className="w-4 h-4 fill-current" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-2xl text-center text-xs font-bold text-amber-900 flex items-center justify-center gap-2 shadow-2xs">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                    <span className="font-extrabold uppercase tracking-wider text-amber-950">
+                      WAITING FOR RIDER ASSIGNMENT...
+                    </span>
+                  </div>
+                )}
+
+                {/* Handover Button: Dimmed purple & non-functional until Rider is Assigned */}
+                <button
+                  type="button"
+                  disabled={!isAssigned}
+                  onClick={() => isAssigned && handoverToRider(order.id)}
+                  className={`w-full h-12 sm:h-14 rounded-xl font-black text-sm sm:text-base tracking-wide transition-all flex items-center justify-center gap-2 ${
+                    isAssigned
+                      ? 'bg-purple-600 hover:bg-purple-700 active:scale-95 text-white shadow-lg shadow-purple-600/25 cursor-pointer'
+                      : 'bg-purple-600/50 text-white/80 cursor-not-allowed opacity-75 shadow-none select-none'
+                  }`}
+                >
+                  <Bike className={`w-5 h-5 ${isAssigned ? '' : 'opacity-80'}`} />
+                  <span>Handover to Delivery Rider</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handoverToRider(order.id)}
-                className="w-full h-12 sm:h-14 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-purple-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Bike className="w-5 h-5" />
-                <span>Handover to Delivery Rider</span>
-              </button>
-            </div>
-          )}
+            );
+          })()}
+
+          {isOutOfShop && (() => {
+            const cleanRiderId = order.riderId ? String(order.riderId).replace(/[^0-9]/g, '').slice(-10) : '';
+            const rider = cleanRiderId ? (ridersMap[cleanRiderId] || ridersMap[order.riderId || '']) : null;
+            const riderPhone = rider?.phone || cleanRiderId;
+            const photoUrl = rider?.avatar_url || rider?.selfie_url;
+
+            return (
+              <div className="space-y-3">
+                {rider && (
+                  <div className="px-4 py-3 bg-purple-50/90 border border-purple-200/90 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
+                    {/* Left: Prominent Rider Photo & Larger Name */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt={rider?.name || 'Rider'}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-purple-300 shrink-0 bg-white shadow-xs"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-black shrink-0 shadow-xs">
+                          🛵
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <span className="font-black text-slate-900 text-base sm:text-lg truncate block leading-tight">
+                          {rider.name || 'Delivery Partner'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Larger Phone Number pushed before Call Icon */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {riderPhone && (
+                        <span className="text-slate-800 font-extrabold font-mono text-sm sm:text-base tracking-tight">
+                          +91 {riderPhone}
+                        </span>
+                      )}
+                      {riderPhone && (
+                        <a
+                          href={`tel:+91${riderPhone}`}
+                          className="w-9 h-9 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-90 text-white flex items-center justify-center shrink-0 shadow-sm transition-transform cursor-pointer"
+                          aria-label="Call Rider"
+                          title={`Call ${rider?.name || 'Rider'}`}
+                        >
+                          <Phone className="w-4 h-4 fill-current" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-center text-xs font-bold text-amber-900 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
+                  <span>Handed Over &bull; Awaiting Rider Confirmation to Start Delivery</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

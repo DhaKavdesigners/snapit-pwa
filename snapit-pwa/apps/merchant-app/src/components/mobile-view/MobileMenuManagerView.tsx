@@ -32,7 +32,7 @@ export const MobileMenuManagerView: React.FC = () => {
     (p) => p.stockCount === 0 || p.availability === 'OUT OF STOCK' || !p.inStock
   ).length;
   const lowStockCount = products.filter(
-    (p) => p.stockCount > 0 && p.stockCount <= 3 && p.availability === 'AVAILABLE' && p.inStock !== false
+    (p) => p.stockCount > 0 && p.stockCount <= 5 && p.availability === 'AVAILABLE' && p.inStock !== false
   ).length;
 
   const filteredProducts = products.filter((prod) => {
@@ -42,7 +42,7 @@ export const MobileMenuManagerView: React.FC = () => {
     } else if (selectedCategory === 'OUT_OF_STOCK') {
       matchesCategory = prod.stockCount === 0 || prod.availability === 'OUT OF STOCK' || !prod.inStock;
     } else if (selectedCategory === 'LOW_STOCK') {
-      matchesCategory = prod.stockCount > 0 && prod.stockCount <= 3 && prod.availability === 'AVAILABLE' && prod.inStock !== false;
+      matchesCategory = prod.stockCount > 0 && prod.stockCount <= 5 && prod.availability === 'AVAILABLE' && prod.inStock !== false;
     } else {
       matchesCategory = prod.category.toLowerCase() === selectedCategory.toLowerCase();
     }
@@ -55,7 +55,7 @@ export const MobileMenuManagerView: React.FC = () => {
   });
 
   const getAvailabilityBadge = (item: ProductInventoryItem) => {
-    if (item.availability === 'AVAILABLE' && item.stockCount > 3) {
+    if (item.availability === 'AVAILABLE' && item.stockCount > 5) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800">
           <CheckCircle className="w-2.5 h-2.5 text-emerald-600" />
@@ -63,7 +63,7 @@ export const MobileMenuManagerView: React.FC = () => {
         </span>
       );
     }
-    if (item.availability === 'AVAILABLE' && item.stockCount > 0 && item.stockCount <= 3) {
+    if (item.availability === 'AVAILABLE' && item.stockCount > 0 && item.stockCount <= 5) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
           <Package className="w-2.5 h-2.5 text-amber-700" />
@@ -149,7 +149,7 @@ export const MobileMenuManagerView: React.FC = () => {
           )}
         </button>
 
-        {/* LOW STOCK (≤3) Special Tab */}
+        {/* LOW STOCK (≤5) Special Tab */}
         <button
           type="button"
           onClick={() => setSelectedCategory('LOW_STOCK')}
@@ -161,7 +161,7 @@ export const MobileMenuManagerView: React.FC = () => {
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
-          <span>LOW STOCK (≤3)</span>
+          <span>LOW STOCK (≤5)</span>
           {lowStockCount > 0 && (
             <span
               className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-extrabold ${
