@@ -23,17 +23,22 @@ export const FloatingRiderBubble: React.FC = () => {
 
   // Progress and ETA
   const getStatusInfo = (st: string) => {
-    switch (st) {
+    const upper = (st || '').toUpperCase();
+    switch (upper) {
       case 'PLACED':
       case 'PENDING':
         return { label: 'Placed', eta: '15m', progress: 20 };
       case 'ACCEPTED':
       case 'PREPARING':
+      case 'PACKING':
         return { 
           label: isFood ? 'Cooking' : 'Packing', 
           eta: `${topOrder.prep_time_minutes || 10}m`, 
           progress: 40 
         };
+      case 'RIDER_ARRIVING_TO_STORE':
+      case 'RIDER_ASSIGNED':
+        return { label: 'Rider on Way', eta: '10m', progress: 50 };
       case 'READY':
       case 'READY_FOR_PICKUP':
         return { label: 'Ready', eta: '8m', progress: 60 };
@@ -42,6 +47,14 @@ export const FloatingRiderBubble: React.FC = () => {
       case 'PICKED_UP':
       case 'OUT_FOR_DELIVERY':
         return { label: 'On Way', eta: '4m', progress: 85 };
+      case 'RIDER_AT_LOC':
+      case 'RIDER_AT_LOCATION':
+      case 'ARRIVED_AT_CUSTOMER':
+      case 'ARRIVED':
+      case 'RIDER_ARRIVED':
+      case 'ARRIVED_AT_DROPOFF':
+      case 'AT_LOCATION':
+        return { label: 'Arrived 🔔', eta: '0m', progress: 95 };
       case 'DELIVERED':
         return { label: 'Delivered', eta: '0m', progress: 100 };
       default:

@@ -155,9 +155,29 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
 // Helper selector to get top active order
 export const getActiveOrders = (orders: LiveOrder[]) => {
-  return orders.filter((o) =>
-    ['PLACED', 'PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'READY_FOR_PICKUP', 'OUT_OF_SHOP', 'HANDED_OVER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(
-      o.status
-    )
-  );
+  return orders.filter((o) => {
+    const s = (o.status || '').toUpperCase();
+    return [
+      'PLACED',
+      'PENDING',
+      'ACCEPTED',
+      'PREPARING',
+      'PACKING',
+      'RIDER_ARRIVING_TO_STORE',
+      'RIDER_ASSIGNED',
+      'READY',
+      'READY_FOR_PICKUP',
+      'OUT_OF_SHOP',
+      'HANDED_OVER',
+      'PICKED_UP',
+      'OUT_FOR_DELIVERY',
+      'RIDER_AT_LOC',
+      'RIDER_AT_LOCATION',
+      'ARRIVED_AT_CUSTOMER',
+      'ARRIVED',
+      'RIDER_ARRIVED',
+      'ARRIVED_AT_DROPOFF',
+      'AT_LOCATION',
+    ].includes(s);
+  });
 };

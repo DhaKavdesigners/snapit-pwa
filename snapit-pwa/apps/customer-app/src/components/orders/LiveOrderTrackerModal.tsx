@@ -147,7 +147,8 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
   // Exact Granular Path Length Math (657.08px total in 380x200 canvas):
   const getProgressState = (st: string) => {
-    switch (st) {
+    const upper = (st || '').toUpperCase();
+    switch (upper) {
       case 'PLACED':
       case 'PENDING':
         return {
@@ -242,7 +243,12 @@ export const LiveOrderTrackerModal: React.FC = () => {
           isOutForDelivery: true,
         };
       case 'RIDER_AT_LOC':
+      case 'RIDER_AT_LOCATION':
       case 'ARRIVED_AT_CUSTOMER':
+      case 'ARRIVED':
+      case 'RIDER_ARRIVED':
+      case 'ARRIVED_AT_DROPOFF':
+      case 'AT_LOCATION':
         return {
           step: 4.5,
           pathRatio: 0.920,
