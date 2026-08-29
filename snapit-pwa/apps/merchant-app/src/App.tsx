@@ -9,6 +9,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useMerchantStore } from './store/useMerchantStore';
+import { useIsDesktop } from './hooks/useIsDesktop';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { OfflineBanner } from './components/common/OfflineBanner';
 import { AudioAlertBanner } from './components/common/AudioAlertBanner';
@@ -17,6 +18,7 @@ import { LiveOrdersQueue } from './components/orders/LiveOrdersQueue';
 import { LiveMenuManager } from './components/menu/LiveMenuManager';
 import { MobileHistoryView } from './components/mobile-view/MobileHistoryView';
 import { MobileStoreSettingsView } from './components/mobile-view/MobileStoreSettingsView';
+import { PcMerchantDashboard } from './components/pc-view/PcMerchantDashboard';
 import { PrepTimeModal } from './components/orders/PrepTimeModal';
 import { RejectModal } from './components/orders/RejectModal';
 import { AddEditProductModal } from './components/menu/AddEditProductModal';
@@ -27,6 +29,7 @@ import { ConfirmModal } from './components/common/ConfirmModal';
 type MobileTab = 'orders' | 'menu' | 'settlement' | 'store';
 
 export const App: React.FC = () => {
+  const isDesktop = useIsDesktop(1024);
   const {
     isAuthenticated,
     orders,
@@ -119,11 +122,16 @@ export const App: React.FC = () => {
   const pendingOrdersCount = orders.filter((o) => o.status === 'PLACED').length;
 
   return (
-    <div className="min-h-screen bg-slate-100 flex justify-center selection:bg-brand-100 selection:text-brand-700">
-      {/* Mobile-First PWA Smartphone Container (Matches SnapIt Customer & Rider Apps) */}
-      <div className="w-full max-w-md min-h-screen bg-canvas flex flex-col pb-24 shadow-2xl relative border-x border-slate-300">
-        {/* 1. Mobile Sticky Top Header with Real-time Clock */}
-        <header className="sticky top-0 z-30 bg-slate-950 text-white px-4 py-3 shadow-md border-b border-slate-800">
+    <>
+      {isDesktop ? (
+        /* Laptop / Desktop POS Counter View (>= 1024px) */
+        <PcMerchantDashboard onOpenSettlement={() => setIsSettlementOpen(true)} />
+      ) : (
+        /* Mobile-First Smartphone Container (< 1024px) */
+        <div className="min-h-screen bg-slate-100 flex justify-center selection:bg-brand-100 selection:text-brand-700">
+          <div className="w-full max-w-md min-h-screen bg-canvas flex flex-col pb-24 shadow-2xl relative border-x border-slate-300">
+            {/* 1. Mobile Sticky Top Header with Real-time Clock */}
+            <header className="sticky top-0 z-30 bg-slate-950 text-white px-4 py-3 shadow-md border-b border-slate-800">
           <div className="flex items-center justify-between gap-2">
             {/* Store Identity + Realtime Clock */}
             <div className="flex items-center gap-2.5 min-w-0">
@@ -317,8 +325,10 @@ export const App: React.FC = () => {
           </div>
         </nav>
       </div>
+    </div>
+  )}
 
-      {/* Shared Modals (Centered over Mobile View) */}
+      {/* Global Shared Modals (Rendered once for both Mobile & Desktop) */}
       <PrepTimeModal />
       <RejectModal />
       <AddEditProductModal />
@@ -338,7 +348,7 @@ export const App: React.FC = () => {
         onConfirm={toggleStoreStatus}
         onClose={() => setIsHeaderOfflineConfirmOpen(false)}
       />
-    </div>
+    </>
   );
 };
 
