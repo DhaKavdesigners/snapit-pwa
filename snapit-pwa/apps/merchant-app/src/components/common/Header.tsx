@@ -1,41 +1,26 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
-  Volume2,
-  VolumeX,
   Zap,
   LogOut,
   Clock,
-  Store,
-  ChevronDown,
-  BellRing,
-  Smartphone,
+  Power,
+  Flame,
 } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
-import { counterAudio } from '../../lib/audio';
-import { mockStores } from '../../lib/mockData';
 import { ConfirmModal } from './ConfirmModal';
 
-interface HeaderProps {
-  isSimulatorMode?: boolean;
-  onToggleSimulatorMode?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulatorMode }) => {
+export const Header: React.FC = () => {
   const {
     activeStore,
+    merchantUser,
     isOnline,
     toggleStoreStatus,
     rushMode,
     toggleRushMode,
-    isMuted,
-    toggleMute,
-    merchantUser,
     logout,
-    switchStoreOutlet,
   } = useMerchantStore();
 
   const [currentTime, setCurrentTime] = useState<string>('');
-  const [isStoreMenuOpen, setIsStoreMenuOpen] = useState(false);
   const [isOfflineConfirmOpen, setIsOfflineConfirmOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
@@ -43,12 +28,12 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
     const updateClock = () => {
       const now = new Date();
       setCurrentTime(
-        now.toLocaleTimeString('en-IN', {
+        now.toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
           hour12: true,
-        })
+        }).toLowerCase()
       );
     };
     updateClock();
@@ -56,98 +41,63 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
     return () => clearInterval(interval);
   }, []);
 
-  const handleTestSound = () => {
-    counterAudio.playReadyDispatchChime();
-  };
-
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 shadow-sm">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 shadow-sm py-2 sm:py-2.5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20 gap-3">
-          {/* Left: Brand & Store Selector */}
+        <div className="flex items-center justify-between gap-3">
+          {/* Left: Brand & Store Identity Synced with Database & Mobile UI */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             {/* Store Avatar */}
             <div className="relative flex-shrink-0">
               <img
                 src={activeStore.logoUrl}
                 alt={activeStore.name}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border-2 border-slate-100 shadow-sm"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-slate-100 shadow-sm"
               />
               <div
-                className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
                   isOnline ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-rose-500 ring-2 ring-rose-500/20'
                 }`}
               />
             </div>
 
-            {/* Store Info & Switcher */}
-            <div className="relative min-w-0">
-              <button
-                type="button"
-                onClick={() => setIsStoreMenuOpen(!isStoreMenuOpen)}
-                className="group flex items-center gap-1.5 text-left focus:outline-none"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate leading-tight group-hover:text-emerald-700 transition-colors">
-                      {activeStore.name}
-                    </h1>
-                    <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider">
-                      {activeStore.category}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-slate-600 group-hover:text-slate-700 transition-colors flex-shrink-0" />
-                  </div>
-                  <p className="text-xs text-slate-600 truncate font-medium">
-                    {merchantUser?.name || 'Counter Staff'} &bull; KGF Outlet
-                  </p>
-                </div>
-              </button>
-
-              {/* Outlet Dropdown */}
-              {isStoreMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-20"
-                    onClick={() => setIsStoreMenuOpen(false)}
-                  />
-                  <div className="absolute left-0 mt-2 w-64 rounded-2xl bg-white shadow-2xl border border-slate-200 py-2 z-30 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                      Switch Outlet Counter
-                    </div>
-                    {mockStores.map((store) => (
-                      <button
-                        key={store.id}
-                        type="button"
-                        onClick={() => {
-                          switchStoreOutlet(store.id);
-                          setIsStoreMenuOpen(false);
-                        }}
-                        className={`w-full px-3.5 py-2.5 text-left flex items-center gap-3 hover:bg-slate-50 transition-colors ${
-                          store.id === activeStore.id ? 'bg-emerald-50 text-emerald-950 font-bold' : 'text-slate-700'
-                        }`}
-                      >
-                        <img
-                          src={store.logoUrl}
-                          alt={store.name}
-                          className="w-7 h-7 rounded-lg object-cover border border-slate-200"
-                        />
-                        <div className="truncate">
-                          <div className="text-xs truncate">{store.name}</div>
-                          <div className="text-[10px] text-slate-600 font-mono uppercase">{store.category}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+            {/* Store Details Synced with Database & Mobile UI */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 truncate leading-tight">
+                  {activeStore.name}
+                </h1>
+                {rushMode && (
+                  <Flame className="w-4 h-4 text-amber-500 animate-pulse flex-shrink-0" />
+                )}
+              </div>
+              <p className="text-xs text-slate-500 font-medium leading-tight mt-0.5">
+                Merchant: <strong className="text-slate-800 font-bold">{merchantUser?.name || 'Authorized Merchant'}</strong>
+              </p>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                {/* 1. Category */}
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 uppercase font-mono">
+                  {activeStore.category || 'GROCERY'}
+                </span>
+                <span className="text-slate-300 font-bold">&bull;</span>
+                {/* 2. Address */}
+                <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {activeStore.address || 'Robertsonpet, KGF'}
+                </span>
+                <span className="text-slate-300 font-bold">&bull;</span>
+                {/* 3. Dark Store Badge */}
+                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                  KGF Dark Store
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Center / Right: Live Status Controls & Actions */}
+          {/* Right: Live Status Controls & Actions */}
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Live Counter Clock */}
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-mono text-xs font-semibold">
-              <Clock className="w-3.5 h-3.5 text-slate-600" />
+              <Clock className="w-3.5 h-3.5 text-emerald-600" />
               <span>{currentTime}</span>
             </div>
 
@@ -169,26 +119,7 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
               <span>{rushMode && isOnline ? '⚡ Rush Active' : 'Rush Mode'}</span>
             </button>
 
-
-
-            {/* Laptop vs Mobile Phone Simulator Toggle */}
-            {onToggleSimulatorMode && (
-              <button
-                type="button"
-                onClick={onToggleSimulatorMode}
-                title={isSimulatorMode ? 'Switch to Full Laptop Counter' : 'Simulate Mobile Phone Screen'}
-                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                  isSimulatorMode
-                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm shadow-emerald-600/20'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>{isSimulatorMode ? 'Phone Simulator (Active)' : 'Phone Simulator'}</span>
-              </button>
-            )}
-
-            {/* CRITICAL STORE ONLINE / OFFLINE TOGGLE */}
+            {/* STORE ONLINE / OFFLINE TOGGLE */}
             <div className="flex items-center">
               <button
                 type="button"
@@ -205,11 +136,7 @@ export const Header: React.FC<HeaderProps> = ({ isSimulatorMode, onToggleSimulat
                     : 'bg-rose-600 hover:bg-rose-700 text-white border-rose-500 shadow-rose-600/20'
                 }`}
               >
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    isOnline ? 'bg-emerald-200 animate-pulse' : 'bg-rose-200'
-                  }`}
-                />
+                <Power className="w-3.5 h-3.5 stroke-[3]" />
                 <span className="uppercase font-extrabold">
                   {isOnline ? 'ONLINE' : 'OFFLINE'}
                 </span>
