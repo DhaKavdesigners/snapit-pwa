@@ -25,6 +25,7 @@ export const LiveMenuManager: React.FC = () => {
   } = useMerchantStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [localStockEdits, setLocalStockEdits] = useState<Record<string, string>>({});
 
   // Dynamically compute category filters based on current store products
   const productCategories = Array.from(new Set(products.map((p) => p.category))).filter(Boolean);
@@ -151,7 +152,7 @@ export const LiveMenuManager: React.FC = () => {
             <span>OUT OF STOCK</span>
             {outOfStockCount > 0 && (
               <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-extrabold ${
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                   selectedCategory === 'OUT_OF_STOCK' ? 'bg-white text-rose-700' : 'bg-rose-600 text-white'
                 }`}
               >
@@ -175,7 +176,7 @@ export const LiveMenuManager: React.FC = () => {
             <span>LOW STOCK (≤5)</span>
             {lowStockCount > 0 && (
               <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-extrabold ${
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
                   selectedCategory === 'LOW_STOCK' ? 'bg-white text-amber-800' : 'bg-amber-500 text-white'
                 }`}
               >
@@ -282,10 +283,26 @@ export const LiveMenuManager: React.FC = () => {
                     <input
                       type="number"
                       min="0"
-                      value={product.stockCount}
+                      value={localStockEdits[product.id] ?? product.stockCount}
                       onChange={(e) =>
-                        updateProductStockCount(product.id, parseInt(e.target.value) || 0)
+                        setLocalStockEdits((prev) => ({ ...prev, [product.id]: e.target.value }))
                       }
+                      onBlur={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val) && val >= 0) {
+                          updateProductStockCount(product.id, val);
+                        }
+                        setLocalStockEdits((prev) => {
+                          const next = { ...prev };
+                          delete next[product.id];
+                          return next;
+                        });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
                       className="w-12 text-center text-xs font-black text-slate-900 bg-white border border-slate-300 rounded-md py-0.5 outline-none shadow-2xs"
                       placeholder="0"
                     />

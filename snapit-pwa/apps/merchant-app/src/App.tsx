@@ -139,7 +139,15 @@ export const App: React.FC = () => {
                 src={activeStore.logoUrl}
                 alt={activeStore.name}
                 className="w-9 h-9 rounded-xl object-cover border border-slate-700 flex-shrink-0 shadow-2xs"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                  if (fallback?.dataset.fallback) fallback.style.display = 'flex';
+                }}
               />
+              <div data-fallback="true" style={{ display: 'none' }} className="w-9 h-9 rounded-xl bg-emerald-600 text-white items-center justify-center text-sm font-black flex-shrink-0">
+                {activeStore.name?.charAt(0) || '🏪'}
+              </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h1 className="text-xs sm:text-sm font-black text-white truncate tracking-tight">
@@ -187,7 +195,7 @@ export const App: React.FC = () => {
         {/* 2. Context Banners */}
         <OfflineBanner />
         <AudioAlertBanner />
-        {activeTab === 'orders' && <LowStockWarningBanner />}
+        {(activeTab === 'orders' || activeTab === 'menu') && <LowStockWarningBanner />}
 
         {/* 3. Main Dynamic Mobile View Body */}
         <main className="flex-1 p-3.5 space-y-4">

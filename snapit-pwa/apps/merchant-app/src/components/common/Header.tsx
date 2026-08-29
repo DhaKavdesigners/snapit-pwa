@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Zap,
   LogOut,
@@ -53,7 +53,15 @@ export const Header: React.FC = () => {
                 src={activeStore.logoUrl}
                 alt={activeStore.name}
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-slate-100 shadow-sm"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                  if (fallback?.dataset.fallback) fallback.style.display = 'flex';
+                }}
               />
+              <div data-fallback="true" style={{ display: 'none' }} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 text-white items-center justify-center text-xl font-black">
+                {activeStore.name?.charAt(0) || '🏪'}
+              </div>
               <div
                 className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
                   isOnline ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-rose-500 ring-2 ring-rose-500/20'
