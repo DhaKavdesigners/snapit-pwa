@@ -77,16 +77,17 @@ export function generateDailySlots(
   const date = dateStr || getTodayDateString();
   const slots: RiderSlot[] = [];
   const now = getNow();
+  const durationHours = Math.max(1, Math.round((config.slotDurationMinutes || 120) / 60));
 
-  for (let h = config.operatingHourStart; h < config.operatingHourEnd; h++) {
+  for (let h = config.operatingHourStart; h < config.operatingHourEnd; h += durationHours) {
     const startHourStr = h.toString().padStart(2, '0');
-    const endHourStr = ((h + 1) % 24).toString().padStart(2, '0');
+    const endH = (h + durationHours) % 24;
+    const endHourStr = endH.toString().padStart(2, '0');
     const startTs = timeToTodayMs(`${startHourStr}:00`, date);
-    const endTs = startTs + config.slotDurationMinutes * 60 * 1000;
+    const endTs = startTs + (config.slotDurationMinutes || 120) * 60 * 1000;
     const slotId = `slot-${date}-${h}`;
 
     const isBooked = bookedSlotIds.includes(slotId);
-    const cutoffTs = startTs - config.bookingCutoffMinutes * 60 * 1000;
     const capacity = mockCapacityForHour(h);
     const bookedCount = isBooked
       ? mockBookedForHour(h, slotId, bookedSlotIds)

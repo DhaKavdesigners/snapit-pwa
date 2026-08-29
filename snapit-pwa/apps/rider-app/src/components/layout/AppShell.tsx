@@ -28,12 +28,12 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start selection:bg-emerald-100 selection:text-emerald-900">
-      {/* Mobile container - perfectly centered with no horizontal shift */}
+      {/* Mobile container - perfectly centered with no horizontal shift or clipping */}
       <div
-        className={`w-full max-w-md min-h-screen bg-white relative flex flex-col shadow-lg border-x border-slate-200/70 overflow-x-hidden ${
+        className={`w-full max-w-md min-h-screen bg-white relative flex flex-col shadow-xl border-x border-slate-200/80 ${
           desktopFrame
             ? 'md:rounded-[36px] md:shadow-2xl md:border-[8px] md:border-slate-800 md:my-4 md:overflow-hidden md:h-[884px]'
-            : 'md:my-4 md:rounded-[28px] md:shadow-xl md:border md:border-slate-200 md:overflow-hidden'
+            : ''
         }`}
       >
         {/* Top App Header */}

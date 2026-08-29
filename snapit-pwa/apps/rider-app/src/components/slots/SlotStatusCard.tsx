@@ -151,8 +151,8 @@ export const SlotStatusCard: React.FC = () => {
 
     if (endingSoon) {
       return (
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-5 shadow-lg border border-amber-300">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-4 sm:p-5 shadow-lg border border-amber-300">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <span className="text-[10px] font-extrabold uppercase tracking-wider bg-black/20 px-2.5 py-0.5 rounded-full">
                 ⚠️ Ending Soon
@@ -165,10 +165,10 @@ export const SlotStatusCard: React.FC = () => {
             {nextSlot && (
               <button
                 onClick={() => extendSlot(activeSlot.id, nextSlot.id)}
-                className="bg-white text-orange-600 font-black text-xs px-4 py-3 rounded-2xl shadow-lg active:scale-95 transition-all shrink-0 ml-2 flex items-center gap-1.5"
+                className="bg-white text-orange-600 font-black text-xs px-4 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-all shrink-0 flex items-center gap-1.5"
               >
                 <Zap className="w-4 h-4 fill-orange-500" />
-                Extend 1 Hr
+                Extend 2 Hrs
               </button>
             )}
           </div>
@@ -182,12 +182,12 @@ export const SlotStatusCard: React.FC = () => {
 
     return (
       <div
-        className={`rounded-3xl border-2 shadow-lg p-5 transition-all ${
+        className={`rounded-3xl border-2 shadow-lg p-4 sm:p-5 transition-all ${
           !isOnline && !onlineGate.canGo ? 'bg-amber-50 border-amber-300' : 'bg-white border-emerald-500/30'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -205,9 +205,9 @@ export const SlotStatusCard: React.FC = () => {
         </div>
 
         {/* Slot details */}
-        <div className="flex items-baseline justify-between mb-2">
+        <div className="flex items-baseline justify-between flex-wrap gap-1 mb-2">
           <div>
-            <h2 className="text-2xl font-black text-slate-900 font-mono leading-none">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-mono leading-none">
               {formatTimeAMPM(activeSlot.startTimestamp)} – {formatTimeAMPM(activeSlot.endTimestamp)}
             </h2>
             <p className="text-xs text-slate-500 font-semibold flex items-center gap-1 mt-1">

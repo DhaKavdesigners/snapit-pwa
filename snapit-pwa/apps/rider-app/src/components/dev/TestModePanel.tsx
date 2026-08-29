@@ -50,11 +50,6 @@ export const TestModePanel: React.FC = () => {
     resetTestEnvironment,
   } = useRider();
 
-  // If in Driver mode, do not render the tester panel
-  if (testMode !== 'tester') {
-    return null;
-  }
-
   const [isMinimized, setIsMinimized] = useState(false);
 
   // Form State
@@ -63,6 +58,11 @@ export const TestModePanel: React.FC = () => {
   const [selectedDateStr, setSelectedDateStr] = useState<string>(
     initialTimeConfig.simulatedDateStr || new Date().toISOString().split('T')[0]
   );
+
+  // If in Driver mode, do not render the tester panel
+  if (testMode !== 'tester') {
+    return null;
+  }
 
   const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
   const activeOrBookedZoneId = rider.selectedZoneId || 'zone-1';

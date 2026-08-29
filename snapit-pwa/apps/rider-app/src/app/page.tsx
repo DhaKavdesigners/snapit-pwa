@@ -199,7 +199,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-            <span>{displaySlot ? 'Change' : 'Book 1h'}</span>
+            <span>{displaySlot ? 'Change' : 'Book 2h'}</span>
             <ChevronRight className="w-4 h-4" />
           </div>
         </Link>
@@ -490,7 +490,7 @@ export default function DashboardPage() {
                 href="/slots"
                 className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1 transition-colors"
               >
-                <span>Pick / Change 1-Hour Duty Slot</span>
+                <span>Pick / Change 2-Hour Duty Slot</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -513,12 +513,21 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="w-full max-w-[260px] pt-1">
+            <div className="w-full max-w-[260px] pt-1 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={toggleOnline}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Power className="w-4 h-4" />
+                <span>Go Online Now</span>
+              </button>
+
               <Link
                 href="/slots"
-                className="block w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all text-center shadow-sm"
+                className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
               >
-                📅 View & Book 1-Hour Slots
+                📅 View & Book 2-Hour Slots
               </Link>
             </div>
           </div>

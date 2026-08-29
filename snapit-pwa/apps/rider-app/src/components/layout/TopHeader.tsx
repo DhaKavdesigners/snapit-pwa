@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRider } from '@/context/RiderContext';
 import { Bell, Power, X, AlertCircle, MapPin, ChevronDown } from 'lucide-react';
@@ -32,6 +33,31 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
   } = useRider();
 
   const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock scroll & listen for Escape key when modal is open
+  useEffect(() => {
+    if (showOfflineModal) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setShowOfflineModal(false);
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [showOfflineModal]);
 
   const unreadCount = alerts?.filter((a) => !a.read).length || 0;
   const isBreakActive = riderBreak && !riderBreak.endedAt;
@@ -109,25 +135,53 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
 
         {/* Right: Online toggle + Bell */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Online toggle */}
-          <div
+          {/* Professional Online/Offline toggle button */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isOnline}
+            aria-label={isOnline ? 'Go Offline' : 'Go Online'}
             onClick={handleToggleClick}
-            className="flex items-center gap-1.5 select-none cursor-pointer bg-slate-50 border border-slate-200/90 px-2.5 py-1 rounded-full shadow-2xs hover:bg-slate-100 transition-all active:scale-95"
-            title={isOnline ? 'Go Offline' : 'Go Online'}
+            className={`flex items-center gap-2 select-none cursor-pointer px-3 py-1.5 rounded-full border shadow-2xs transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 ${
+              isBreakActive
+                ? 'bg-amber-50 hover:bg-amber-100/90 border-amber-300 text-amber-900 ring-2 ring-amber-500/15 focus-visible:ring-amber-500'
+                : isOnline
+                ? 'bg-emerald-50/90 hover:bg-emerald-100/90 border-emerald-300/90 text-emerald-950 ring-2 ring-emerald-500/15 focus-visible:ring-emerald-500'
+                : 'bg-slate-100/90 hover:bg-slate-200/80 border-slate-200 text-slate-600 focus-visible:ring-slate-400'
+            }`}
+            title={isOnline ? 'Switch to Offline' : 'Switch to Online'}
           >
+            {/* Status dot / live radar beacon */}
+            {isBreakActive ? (
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+              </span>
+            ) : isOnline ? (
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+            )}
+
+            {/* Label text */}
             <span
               className={`text-[11px] font-black uppercase tracking-wider ${
                 isBreakActive
-                  ? 'text-amber-600'
+                  ? 'text-amber-800'
                   : isOnline
-                  ? 'text-emerald-700'
-                  : 'text-slate-500'
+                  ? 'text-emerald-800'
+                  : 'text-slate-600'
               }`}
             >
               {onlineLabel}
             </span>
+
+            {/* Switch pill slider */}
             <div
-              className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-300 relative ${
+              className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-300 relative flex items-center shrink-0 ${
                 isBreakActive
                   ? 'bg-amber-400'
                   : isOnline
@@ -136,15 +190,25 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
               }`}
             >
               <div
-                className={`w-3.5 h-3.5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${
-                  isOnline ? 'translate-x-[14px]' : 'translate-x-0'
+                className={`w-3.5 h-3.5 rounded-full bg-white shadow-md transform transition-transform duration-300 flex items-center justify-center ${
+                  isOnline || isBreakActive ? 'translate-x-[14px]' : 'translate-x-0'
                 }`}
-              />
+              >
+                <div
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                    isBreakActive
+                      ? 'bg-amber-500'
+                      : isOnline
+                      ? 'bg-emerald-500'
+                      : 'bg-slate-400'
+                  }`}
+                />
+              </div>
             </div>
-          </div>
+          </button>
 
           {/* Bell icon with unread badge */}
-          <Link href="/alerts" className="relative w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors shrink-0">
+          <Link href="/alerts" className="relative w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors shrink-0" aria-label="Notifications">
             <Bell className="w-4.5 h-4.5 text-slate-600" />
             {unreadCount > 0 && (
               <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">
@@ -155,19 +219,21 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
         </div>
       </div>
 
-      {/* ── SIMPLE & SHORT GO OFFLINE CONFIRMATION MODAL ── */}
-      {showOfflineModal && (
+      {/* ── SIMPLE, SHORT & CENTERED GO OFFLINE CONFIRMATION MODAL ── */}
+      {mounted && showOfflineModal && createPortal(
         <div
-          className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-[99999] w-screen h-screen min-h-[100dvh] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in"
           onClick={() => setShowOfflineModal(false)}
+          aria-modal="true"
+          role="dialog"
         >
           <div
-            className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 animate-scale-up text-center space-y-3.5 relative"
+            className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 animate-scale-up text-center space-y-3.5 relative mx-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Red Power Icon */}
-            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center mx-auto shadow-sm">
-              <Power className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center mx-auto shadow-xs">
+              <Power className="w-6 h-6 stroke-[2.5]" />
             </div>
 
             {/* Short Title & Prompt */}
@@ -185,7 +251,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
               <button
                 type="button"
                 onClick={() => setShowOfflineModal(false)}
-                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl active:scale-95 transition-all"
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl active:scale-95 transition-all cursor-pointer"
               >
                 No
               </button>
@@ -196,13 +262,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
                   setOnlineStatus(false);
                   setShowOfflineModal(false);
                 }}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm active:scale-95 transition-all"
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Yes
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );

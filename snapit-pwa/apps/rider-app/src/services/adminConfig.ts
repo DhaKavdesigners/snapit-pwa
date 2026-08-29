@@ -15,7 +15,7 @@ const ALL_EXCEPTION_REASONS: OrderAcceptanceExceptionReason[] = [
 
 export const DEFAULT_ADMIN_CONFIG: AdminConfig = {
   slot: {
-    slotDurationMinutes: 60,
+    slotDurationMinutes: 120,
     operatingHourStart: 0,
     operatingHourEnd: 24,
     bookingCutoffMinutes: 60,
