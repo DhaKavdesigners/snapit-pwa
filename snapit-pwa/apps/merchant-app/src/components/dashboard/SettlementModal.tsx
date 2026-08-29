@@ -17,17 +17,48 @@ interface SettlementModalProps {
 }
 
 export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClose }) => {
-  const { historicalGroups, activeStore } = useMerchantStore();
+  const { historicalGroups, products, activeStore } = useMerchantStore();
   const [isSettled, setIsSettled] = useState(false);
 
   if (!isOpen) return null;
 
+  const getProductInfo = (it: any) => {
+    if (it.name) {
+      return {
+        name: it.name,
+        price: it.price || 0,
+        quantity: it.quantity || 1,
+      };
+    }
+    const found = products.find((p) => p.id === (it.productId || it.id));
+    return {
+      name: found ? found.name : `Item ${it.productId || it.id || ''}`,
+      price: found ? found.price : it.price || 0,
+      quantity: it.quantity || 1,
+    };
+  };
+
+  const getOrderItemsTotal = (order: any) => {
+    if (!order.items || order.items.length === 0) return order.estimatedTotal || 0;
+    const subtotal = order.items.reduce((sum: number, it: any) => {
+      const p = getProductInfo(it);
+      return sum + p.price * p.quantity;
+    }, 0);
+    return subtotal > 0 ? subtotal : order.estimatedTotal || 0;
+  };
+
   const todayGroup = historicalGroups[0];
-  const allDeliveredOrders = todayGroup?.orders.filter((o) => o.status === 'DELIVERED') || [];
-  const totalGrossPaise = todayGroup?.collectedPaise || 0;
-  const platformFeePaise = Math.round(totalGrossPaise * 0.05); // 5% platform commission
-  const netPayablePaise = totalGrossPaise - platformFeePaise;
-  const totalLostPaise = todayGroup?.lostPaise || 0;
+  const allFulfilledOrders = todayGroup?.orders.filter((o) => o.status !== 'CANCELLED' && (o.status as any) !== 'REJECTED') || [];
+  const totalGrossPaise = allFulfilledOrders.length > 0
+    ? allFulfilledOrders.reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
+    : todayGroup?.collectedPaise || 0;
+  const platformFeePaise = 0; // 0% FREE platform fee
+  const netPayablePaise = totalGrossPaise;
+  const totalLostPaise = todayGroup?.orders
+    ? todayGroup.orders
+        .filter((o) => (o.status as any) === 'REJECTED' || o.status === 'CANCELLED')
+        .reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
+    : todayGroup?.lostPaise || 0;
 
   const handleSettleLedger = () => {
     setIsSettled(true);
@@ -80,7 +111,7 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
               {formatCurrency(netPayablePaise)}
             </div>
             <p className="text-[11px] text-emerald-800/90 mt-1 font-medium">
-              Calculated from {allDeliveredOrders.length} delivered orders (100% Prepaid Online via UPI) after 5% platform fee.
+              Calculated from {allFulfilledOrders.length} fulfilled orders (100% Prepaid Online via UPI) with 0% platform fee (FREE).
             </p>
           </div>
 
@@ -102,7 +133,7 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
                       100% Prepaid Online via UPI
                     </div>
                     <div className="text-[10px] text-emerald-700 font-bold font-mono">
-                      {allDeliveredOrders.length} Completed Orders &bull; Direct Digital Payment
+                      {allFulfilledOrders.length} Fulfilled Orders &bull; Direct Digital Payment
                     </div>
                   </div>
                 </div>
@@ -113,11 +144,12 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({ isOpen, onClos
 
               {/* Platform Deduction */}
               <div className="p-3 flex items-center justify-between bg-slate-100/60">
-                <div className="text-slate-600 font-semibold text-xs">
-                  SnapIt Platform Fee (5%)
+                <div className="text-slate-600 font-semibold text-xs flex items-center gap-1.5">
+                  <span>SnapIt Platform Fee (0%)</span>
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 font-mono">FREE</span>
                 </div>
-                <span className="font-bold text-slate-600 font-sans text-xs">
-                  - {formatCurrency(platformFeePaise)}
+                <span className="font-black text-emerald-700 font-sans text-xs uppercase tracking-wider">
+                  FREE
                 </span>
               </div>
 

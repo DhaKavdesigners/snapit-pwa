@@ -72,15 +72,15 @@ export const MobileHistoryView: React.FC<MobileHistoryViewProps> = ({ onOpenSett
 
   const activeOrdersCount = orders.length;
   const completedOrdersCount = todayGroup.orderCount || 0;
-  const todayDeliveredOrders = todayGroup.orders.filter((o) => o.status === 'DELIVERED');
-  const collectedPaise = todayDeliveredOrders.length > 0
-    ? todayDeliveredOrders.reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
+  const todayFulfilledOrders = todayGroup.orders.filter((o) => o.status !== 'CANCELLED' && (o.status as any) !== 'REJECTED');
+  const collectedPaise = todayFulfilledOrders.length > 0
+    ? todayFulfilledOrders.reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
     : todayGroup.collectedPaise || 0;
   const lostPaise = todayGroup.lostPaise || 0;
   const totalOrdersCount = activeOrdersCount + completedOrdersCount + (todayGroup.rejectedCount || 0);
 
-  const platformFeePaise = Math.round(collectedPaise * 0.05);
-  const netPayoutPaise = collectedPaise - platformFeePaise;
+  const platformFeePaise = 0; // 0% FREE platform fee
+  const netPayoutPaise = collectedPaise;
 
   return (
     <div className="space-y-4 pb-8">
@@ -229,9 +229,9 @@ export const MobileHistoryView: React.FC<MobileHistoryViewProps> = ({ onOpenSett
 
         {historicalGroups.map((group) => {
           const isExpanded = Boolean(expandedDates[group.dateKey]);
-          const groupDelivered = group.orders.filter((o) => o.status === 'DELIVERED');
-          const groupCollected = groupDelivered.length > 0
-            ? groupDelivered.reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
+          const groupFulfilled = group.orders.filter((o) => o.status !== 'CANCELLED' && (o.status as any) !== 'REJECTED');
+          const groupCollected = groupFulfilled.length > 0
+            ? groupFulfilled.reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
             : group.collectedPaise;
 
           return (
@@ -304,7 +304,7 @@ export const MobileHistoryView: React.FC<MobileHistoryViewProps> = ({ onOpenSett
                                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                     {formatCurrency(orderItemsTotal)}
                                   </span>
-                                ) : order.status === 'OUT_FOR_DELIVERY' || order.status === 'PICKED_UP' ? (
+                                ) : order.status === 'OUT_FOR_DELIVERY' || order.status === 'PICKED_UP' || order.status === 'RIDER_AT_LOC' ? (
                                   <span className="text-blue-700 flex items-center gap-1 text-[11px] font-black">
                                     <Bike className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
                                     <span>ON WAY &bull; {formatCurrency(orderItemsTotal)}</span>

@@ -77,9 +77,9 @@ export const OrderHistory: React.FC = () => {
       <div className="space-y-6">
         {historicalGroups.map((group, groupIdx) => {
           const isGroupExpanded = Boolean(expandedDates[group.dateKey]);
-          const groupDelivered = group.orders.filter((o) => o.status === 'DELIVERED');
-          const groupCollected = groupDelivered.length > 0
-            ? groupDelivered.reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
+          const groupFulfilled = group.orders.filter((o) => o.status !== 'CANCELLED' && (o.status as any) !== 'REJECTED');
+          const groupCollected = groupFulfilled.length > 0
+            ? groupFulfilled.reduce((sum, o) => sum + getOrderItemsTotal(o), 0)
             : group.collectedPaise;
 
           return (
@@ -159,10 +159,10 @@ export const OrderHistory: React.FC = () => {
                                   <XCircle className="w-3 h-3" />
                                   REJECTED
                                 </span>
-                              ) : order.status === 'OUT_FOR_DELIVERY' || order.status === 'PICKED_UP' ? (
+                              ) : order.status === 'OUT_FOR_DELIVERY' || order.status === 'PICKED_UP' || order.status === 'RIDER_AT_LOC' ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-800">
                                   <Bike className="w-3 h-3 text-blue-600 animate-pulse" />
-                                  OUT FOR DELIVERY
+                                  ON WAY
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800">

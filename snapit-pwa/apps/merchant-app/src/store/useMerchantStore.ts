@@ -65,6 +65,8 @@ interface MerchantState {
   updateProduct: (productId: string, updates: Partial<ProductInventoryItem>) => Promise<void>;
   addProduct: (product: Omit<ProductInventoryItem, 'id' | 'storeId'>) => Promise<void>;
   removeProduct: (productId: string) => Promise<void>;
+  acknowledgedLowStockIds: string[];
+  dismissLowStockAlert: () => void;
 
   // Operational Toggles (Synced with Supabase stores table)
   isOnline: boolean;
@@ -98,6 +100,19 @@ interface MerchantState {
 // Global active realtime channel and polling references
 let realtimeChannel: any = null;
 let pollInterval: any = null;
+
+// Helper to compute pure goods/products sales value for an order (excludes customer delivery/service fees)
+const computeOrderItemsTotal = (order: Order, prods: ProductInventoryItem[]) => {
+  if (!order.items || order.items.length === 0) return order.estimatedTotal || 0;
+  const subtotal = order.items.reduce((sum: number, it: any) => {
+    if (it.name && it.price) {
+      return sum + (it.price || 0) * (it.quantity || 1);
+    }
+    const p = prods.find((prod) => prod.id === (it.productId || it.id));
+    return sum + (p ? p.price : it.price || 0) * (it.quantity || 1);
+  }, 0);
+  return subtotal > 0 ? subtotal : order.estimatedTotal || 0;
+};
 
 export const useMerchantStore = create<MerchantState>((set, get) => ({
   // Auth state — Default starts on login screen
@@ -354,8 +369,16 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         // Check if any incoming orders need alarm
         const hasPending = formattedOrders.some((o) => o.status === 'PLACED');
         if (hasPending && get().isOnline) {
-          counterAudio.playPendingOrderAlarm();
-          set({ isAlarmPlaying: true });
+          if (!get().isAlarmPlaying) {
+            counterAudio.playPendingOrderAlarm();
+            set({ isAlarmPlaying: true });
+          }
+        } else {
+          // If NO pending placed orders remain, guarantee the alarm is stopped!
+          counterAudio.stopPendingOrderAlarm();
+          if (get().isAlarmPlaying) {
+            set({ isAlarmPlaying: false });
+          }
         }
       }
 
@@ -364,7 +387,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         .from('orders')
         .select('*')
         .eq('store_id', storeId)
-        .in('status', ['OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED', 'REJECTED', 'CANCELLED'])
+        .in('status', ['OUT_FOR_DELIVERY', 'PICKED_UP', 'RIDER_AT_LOC', 'DELIVERED', 'REJECTED', 'CANCELLED'])
         .order('created_at', { ascending: false });
 
       if (dbCompletedOrders) {
@@ -417,29 +440,30 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         const formattedGroups: HistoricalDateGroup[] = [];
         // Ensure "Today (Live Activity)" is always first
         const todayOrders = groupsMap.get('Today (Live Activity)') || [];
-        const todayDelivered = todayOrders.filter((o) => o.status === 'DELIVERED');
+        const todayFulfilled = todayOrders.filter((o) => o.status !== 'CANCELLED' && (o.status as any) !== 'REJECTED');
         const todayRejected = todayOrders.filter((o) => (o.status as any) === 'REJECTED' || o.status === 'CANCELLED');
 
+        const currentProds = get().products;
         formattedGroups.push({
           dateKey: 'Today (Live Activity)',
-          orderCount: todayDelivered.length,
-          collectedPaise: todayDelivered.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+          orderCount: todayFulfilled.length,
+          collectedPaise: todayFulfilled.reduce((sum, o) => sum + computeOrderItemsTotal(o, currentProds), 0),
           rejectedCount: todayRejected.length,
-          lostPaise: todayRejected.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+          lostPaise: todayRejected.reduce((sum, o) => sum + computeOrderItemsTotal(o, currentProds), 0),
           orders: todayOrders,
         });
 
         // Add all previous day groups
         for (const [key, ords] of groupsMap.entries()) {
           if (key === 'Today (Live Activity)') continue;
-          const delivered = ords.filter((o) => o.status === 'DELIVERED');
+          const fulfilled = ords.filter((o) => o.status !== 'CANCELLED' && (o.status as any) !== 'REJECTED');
           const rejected = ords.filter((o) => (o.status as any) === 'REJECTED' || o.status === 'CANCELLED');
           formattedGroups.push({
             dateKey: key,
-            orderCount: delivered.length,
-            collectedPaise: delivered.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+            orderCount: fulfilled.length,
+            collectedPaise: fulfilled.reduce((sum, o) => sum + computeOrderItemsTotal(o, currentProds), 0),
             rejectedCount: rejected.length,
-            lostPaise: rejected.reduce((sum, o) => sum + (o.estimatedTotal || 0), 0),
+            lostPaise: rejected.reduce((sum, o) => sum + computeOrderItemsTotal(o, currentProds), 0),
             orders: ords,
           });
         }
@@ -504,11 +528,12 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
             set((state) => {
-              // If status becomes OUT_FOR_DELIVERY, DELIVERED, REJECTED, or CANCELLED,
+              // If status becomes OUT_FOR_DELIVERY, PICKED_UP, RIDER_AT_LOC, DELIVERED, REJECTED, or CANCELLED,
               // the merchant counter task is officially complete -> remove from live orders and move to history!
               if (
                 updated.status === 'OUT_FOR_DELIVERY' ||
                 updated.status === 'PICKED_UP' ||
+                updated.status === 'RIDER_AT_LOC' ||
                 updated.status === 'DELIVERED' ||
                 updated.status === 'REJECTED' ||
                 updated.status === 'CANCELLED'
@@ -529,20 +554,43 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
                     orders: remaining,
                     historicalGroups: state.historicalGroups.map((group, idx) => {
                       if (idx === 0) {
-                        const isDeliveredOrTransit = updated.status === 'OUT_FOR_DELIVERY' || updated.status === 'DELIVERED' || updated.status === 'PICKED_UP';
+                        const isDeliveredOrTransit =
+                          updated.status === 'OUT_FOR_DELIVERY' ||
+                          updated.status === 'PICKED_UP' ||
+                          updated.status === 'RIDER_AT_LOC' ||
+                          updated.status === 'DELIVERED';
+                        
+                        const alreadyExists = group.orders.some((o) => o.id === completedOrder.id);
+                        const updatedOrders = alreadyExists
+                          ? group.orders.map((o) => (o.id === completedOrder.id ? completedOrder : o))
+                          : [completedOrder, ...group.orders];
+
                         return {
                           ...group,
-                          orderCount: isDeliveredOrTransit ? group.orderCount + 1 : group.orderCount,
-                          collectedPaise: isDeliveredOrTransit ? group.collectedPaise + completedOrder.estimatedTotal : group.collectedPaise,
-                          rejectedCount: !isDeliveredOrTransit ? (group.rejectedCount || 0) + 1 : group.rejectedCount,
-                          orders: [completedOrder, ...group.orders.filter((o) => o.id !== completedOrder.id)],
+                          orderCount: alreadyExists ? group.orderCount : (isDeliveredOrTransit ? group.orderCount + 1 : group.orderCount),
+                          collectedPaise: alreadyExists ? group.collectedPaise : (isDeliveredOrTransit ? group.collectedPaise + computeOrderItemsTotal(completedOrder, state.products) : group.collectedPaise),
+                          rejectedCount: alreadyExists ? group.rejectedCount : (!isDeliveredOrTransit ? (group.rejectedCount || 0) + 1 : group.rejectedCount),
+                          lostPaise: alreadyExists ? (group.lostPaise || 0) : (!isDeliveredOrTransit ? (group.lostPaise || 0) + computeOrderItemsTotal(completedOrder, state.products) : (group.lostPaise || 0)),
+                          orders: updatedOrders,
                         };
                       }
                       return group;
                     }),
                   };
                 }
-                return { orders: remaining };
+
+                // If order was already moved to historical groups, update its status there
+                return {
+                  orders: remaining,
+                  historicalGroups: state.historicalGroups.map((group) => ({
+                    ...group,
+                    orders: group.orders.map((o) =>
+                      o.id === updated.id
+                        ? { ...o, status: updated.status, updatedAt: updated.updated_at || new Date().toISOString() }
+                        : o
+                    ),
+                  })),
+                };
               }
 
               // Otherwise (e.g. status changed to OUT_OF_SHOP), keep live and update state
@@ -550,6 +598,18 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
                 orders: state.orders.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)),
               };
             });
+
+            // Ensure pending order alarm stops if no PLACED orders remain after realtime update
+            setTimeout(() => {
+              const liveOrders = get().orders;
+              const hasPlaced = liveOrders.some((o) => o.status === 'PLACED');
+              if (!hasPlaced) {
+                counterAudio.stopPendingOrderAlarm();
+                if (get().isAlarmPlaying) {
+                  set({ isAlarmPlaying: false });
+                }
+              }
+            }, 10);
           }
         }
       )
@@ -857,12 +917,12 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         orders: remainingLiveOrders,
         historicalGroups: state.historicalGroups.map((group, idx) => {
           if (idx === 0) {
-            return {
-              ...group,
-              orderCount: group.orderCount + 1,
-              collectedPaise: group.collectedPaise + outForDeliveryOrder.estimatedTotal,
-              orders: [outForDeliveryOrder, ...group.orders.filter((o) => o.id !== outForDeliveryOrder.id)],
-            };
+              return {
+                ...group,
+                orderCount: group.orderCount + 1,
+                collectedPaise: group.collectedPaise + computeOrderItemsTotal(outForDeliveryOrder, state.products),
+                orders: [outForDeliveryOrder, ...group.orders.filter((o) => o.id !== outForDeliveryOrder.id)],
+              };
           }
           return group;
         }),
@@ -932,6 +992,16 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     }));
   },
 
+  acknowledgedLowStockIds: [],
+  dismissLowStockAlert: () => {
+    const currentLowIds = get().products
+      .filter((p) => p.stockCount > 0 && p.stockCount <= 3 && p.availability === 'AVAILABLE' && p.inStock !== false)
+      .map((p) => p.id);
+    set((state) => ({
+      acknowledgedLowStockIds: Array.from(new Set([...state.acknowledgedLowStockIds, ...currentLowIds])),
+    }));
+  },
+
   toggleProductStock: async (productId: string) => {
     await get().toggleProductAvailability(productId);
   },
@@ -955,6 +1025,9 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
             }
           : p
       ),
+      acknowledgedLowStockIds: nextStockCount > 3 || nextStockCount === 0
+        ? state.acknowledgedLowStockIds.filter((id) => id !== productId)
+        : state.acknowledgedLowStockIds,
     }));
     counterAudio.playActionChime();
 
@@ -1002,6 +1075,10 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
             }
           : p
       ),
+      // If stock is replenished (> 3) or set to 0, clear it from acknowledged list
+      acknowledgedLowStockIds: safeCount > 3 || safeCount === 0
+        ? state.acknowledgedLowStockIds.filter((id) => id !== productId)
+        : state.acknowledgedLowStockIds,
     }));
 
     if (isSupabaseConfigured) {
@@ -1188,9 +1265,31 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
   // Modals
   prepModalOrderId: null,
-  setPrepModalOrderId: (id) => set({ prepModalOrderId: id }),
+  setPrepModalOrderId: (id) => {
+    if (id) {
+      const remainingPlaced = get().orders.filter((o) => o.id !== id && o.status === 'PLACED');
+      if (remainingPlaced.length === 0) {
+        counterAudio.stopPendingOrderAlarm();
+        if (get().isAlarmPlaying) {
+          set({ isAlarmPlaying: false });
+        }
+      }
+    }
+    set({ prepModalOrderId: id });
+  },
   rejectModalOrderId: null,
-  setRejectModalOrderId: (id) => set({ rejectModalOrderId: id }),
+  setRejectModalOrderId: (id) => {
+    if (id) {
+      const remainingPlaced = get().orders.filter((o) => o.id !== id && o.status === 'PLACED');
+      if (remainingPlaced.length === 0) {
+        counterAudio.stopPendingOrderAlarm();
+        if (get().isAlarmPlaying) {
+          set({ isAlarmPlaying: false });
+        }
+      }
+    }
+    set({ rejectModalOrderId: id });
+  },
   editingProduct: null,
   setEditingProduct: (prod) => set({ editingProduct: prod }),
   isAddProductOpen: false,

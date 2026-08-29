@@ -48,7 +48,10 @@ class CounterAudioManager {
    * Continuous looping chime for incoming pending orders (PLACED)
    */
   public playPendingOrderAlarm(): void {
-    if (this.isMuted || this.isAlarmRunning) return;
+    if (this.isMuted) return;
+    if (this.isAlarmRunning && this.alarmInterval !== null) return;
+
+    this.stopPendingOrderAlarm();
     this.isAlarmRunning = true;
 
     const playTone = () => {

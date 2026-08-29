@@ -12,6 +12,7 @@ import { useMerchantStore } from './store/useMerchantStore';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { OfflineBanner } from './components/common/OfflineBanner';
 import { AudioAlertBanner } from './components/common/AudioAlertBanner';
+import { LowStockWarningBanner } from './components/common/LowStockWarningBanner';
 import { LiveOrdersQueue } from './components/orders/LiveOrdersQueue';
 import { LiveMenuManager } from './components/menu/LiveMenuManager';
 import { MobileHistoryView } from './components/mobile-view/MobileHistoryView';
@@ -178,6 +179,7 @@ export const App: React.FC = () => {
         {/* 2. Context Banners */}
         <OfflineBanner />
         <AudioAlertBanner />
+        {activeTab === 'orders' && <LowStockWarningBanner />}
 
         {/* 3. Main Dynamic Mobile View Body */}
         <main className="flex-1 p-3.5 space-y-4">

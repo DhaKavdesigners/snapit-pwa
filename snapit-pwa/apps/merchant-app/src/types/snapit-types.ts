@@ -54,6 +54,7 @@ export type OrderStatus =
   | 'OUT_OF_SHOP'       // Merchant handed order to rider, waiting for rider ack
   | 'PICKED_UP'         // Alias for OUT_FOR_DELIVERY
   | 'OUT_FOR_DELIVERY'  // Rider confirmed receipt, en-route to customer
+  | 'RIDER_AT_LOC'      // Rider reached customer delivery location
   | 'DELIVERED'         // Order delivered — requires 4-digit PIN handshake
   | 'CANCELLED';        // Order cancelled
 

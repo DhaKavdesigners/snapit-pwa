@@ -58,8 +58,9 @@ export const getOrderStatusDisplay = (
     READY: { label: 'Ready for Pickup', colorClass: 'text-emerald-800 bg-emerald-100' },
     READY_FOR_PICKUP: { label: 'Ready for Pickup', colorClass: 'text-emerald-800 bg-emerald-100' },
     RIDER_ASSIGNED: { label: 'Rider Assigned', colorClass: 'text-purple-800 bg-purple-100' },
-    PICKED_UP: { label: 'Picked Up', colorClass: 'text-purple-800 bg-purple-100' },
-    OUT_FOR_DELIVERY: { label: 'En Route', colorClass: 'text-purple-800 bg-purple-100' },
+    PICKED_UP: { label: 'On Way', colorClass: 'text-blue-800 bg-blue-100' },
+    OUT_FOR_DELIVERY: { label: 'On Way', colorClass: 'text-blue-800 bg-blue-100' },
+    RIDER_AT_LOC: { label: 'On Way', colorClass: 'text-blue-800 bg-blue-100' },
     DELIVERED: { label: 'Delivered', colorClass: 'text-emerald-800 bg-emerald-100' },
     CANCELLED: { label: 'Cancelled', colorClass: 'text-rose-800 bg-rose-100' },
   };
