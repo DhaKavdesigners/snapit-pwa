@@ -149,22 +149,19 @@ export const App: React.FC = () => {
                 {activeStore.name?.charAt(0) || '🏪'}
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1.5">
                   <h1 className="text-xs sm:text-sm font-black text-white truncate tracking-tight">
                     {activeStore.name}
                   </h1>
-                  {/* Live Realtime Clock next to Shop Name */}
-                  <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 px-1.5 py-0.5 rounded-md text-[10px] font-mono text-emerald-400 flex-shrink-0">
-                    <Clock className="w-2.5 h-2.5 text-emerald-400" />
-                    <span>{currentTime}</span>
-                  </div>
                   {rushMode && (
                     <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse flex-shrink-0" />
                   )}
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium block truncate">
-                  {activeStore.address || 'Robertsonpet, KGF'}
-                </span>
+                {/* Live Realtime Clock below Shop Name */}
+                <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 font-medium mt-0.5">
+                  <Clock className="w-2.5 h-2.5 text-emerald-400" />
+                  <span>{currentTime}</span>
+                </div>
               </div>
             </div>
 
