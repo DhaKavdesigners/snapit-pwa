@@ -165,13 +165,13 @@ export const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Center: Brand Identity (minnit) */}
+            {/* Center: Brand Identity (Minnit) */}
             <div className="flex items-center justify-center flex-shrink-0">
-              <div className="bg-white px-2.5 py-1 rounded-xl shadow-xs border border-slate-700/50 flex items-center justify-center">
+              <div className="bg-white px-2.5 py-1 rounded-xl shadow-xs border border-slate-700/60 flex items-center justify-center">
                 <img
-                  src="/images/minnit.jpg"
-                  alt="minnit"
-                  className="h-4 sm:h-5 w-auto object-contain"
+                  src="/images/minnit_cart_nd_logo.png"
+                  alt="Minnit"
+                  className="h-5 sm:h-6 w-auto object-contain"
                 />
               </div>
             </div>

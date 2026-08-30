@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User, Eye, EyeOff, ArrowRight, Store, ShieldCheck } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 
 export const LoginScreen: React.FC = () => {
@@ -43,43 +43,51 @@ export const LoginScreen: React.FC = () => {
       {/* Subtle Dot Grid */}
       <div className="absolute inset-0 bg-[radial-gradient(#05966912_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
-      <div className="w-full max-w-sm z-10 my-auto">
-        {/* ⭕ Brand Emblem & Header */}
-        <div className="text-center mb-6">
-          <div className="relative inline-flex items-center justify-center mb-3 group">
-            {/* Ambient Halo */}
-            <div className="absolute -inset-2 bg-gradient-to-r from-emerald-400/30 to-teal-400/30 rounded-3xl blur-md" />
-            <div className="relative w-16 h-16 rounded-2xl bg-white border border-emerald-100 shadow-[0_8px_25px_rgba(5,150,105,0.15)] flex items-center justify-center text-emerald-600">
-              <Store className="w-8 h-8 stroke-[2.2] text-emerald-600" />
+      <div className="w-full max-w-md z-10 my-auto">
+        {/* ⭕ Minnit Brand Header */}
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="relative inline-flex flex-col items-center justify-center group">
+            {/* Glowing Ambient Halo */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-emerald-400/30 via-teal-400/25 to-emerald-400/30 rounded-3xl blur-2xl animate-pulse" />
+            
+            {/* White Emblem Container with Large Logo */}
+            <div className="relative px-7 py-4 rounded-3xl bg-white border border-emerald-100/90 shadow-[0_12px_35px_rgba(5,150,105,0.14)] flex items-center justify-center transition-transform group-hover:scale-[1.02] duration-300">
+              <img
+                src="/images/logo_with_tag.png"
+                alt="Minnit - Everything You Need in Minutes"
+                className="h-16 sm:h-20 w-auto object-contain drop-shadow-xs"
+              />
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 font-sans">
-              SnapIt
+          {/* Prominent Minnit Typography & Merchant OS Tag */}
+          <div className="flex items-center justify-center gap-2.5 mt-4">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 font-sans">
+              Minnit
             </h1>
-            <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200/80 px-2.5 py-0.5 rounded-full font-mono shadow-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300/80 px-3 py-1 rounded-full font-mono shadow-xs">
               MERCHANT OS
             </span>
           </div>
-          <p className="text-xs text-slate-500 font-medium">
-            KGF Hyperlocal Dark Store & Partner Counter
+
+          <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-1.5">
+            Everything You Need in Minutes &bull; Partner Counter Terminal
           </p>
         </div>
 
-        {/* 🧊 Crisp White Card */}
-        <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-[0_20px_50px_rgba(15,23,42,0.08)] relative overflow-hidden">
+        {/* 🧊 Crisp Elevated Glass Card */}
+        <div className="bg-white/95 backdrop-blur-2xl border border-slate-200/90 rounded-3xl p-7 sm:p-8 shadow-[0_25px_60px_rgba(15,23,42,0.09)] relative overflow-hidden">
           {/* Top Emerald Gradient Accent */}
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />
 
           {errorMessage && (
-            <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
-              <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2.5 animate-in fade-in duration-200 shadow-2xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0 animate-ping" />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
             {/* Merchant User ID */}
             <div>
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
@@ -94,7 +102,7 @@ export const LoginScreen: React.FC = () => {
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   placeholder="Enter Merchant User ID"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50/80 border border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 transition-all outline-none"
+                  className="w-full pl-10 pr-4 py-3 sm:py-3.5 bg-slate-50/80 border border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 transition-all outline-none"
                   required
                   autoFocus
                 />
@@ -115,7 +123,7 @@ export const LoginScreen: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter Password"
-                  className="w-full pl-10 pr-11 py-3 bg-slate-50/80 border border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 transition-all outline-none"
+                  className="w-full pl-10 pr-11 py-3 sm:py-3.5 bg-slate-50/80 border border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 transition-all outline-none"
                   required
                 />
                 <button
@@ -132,14 +140,14 @@ export const LoginScreen: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 h-12 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] text-white font-black rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/35 flex items-center justify-center gap-2 transition-all disabled:opacity-50 text-sm tracking-wide cursor-pointer"
+              className="w-full mt-2 h-12 sm:h-14 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] text-white font-black rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/35 flex items-center justify-center gap-2.5 transition-all disabled:opacity-50 text-sm sm:text-base tracking-wide cursor-pointer"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
                   <span>Open Store Counter</span>
-                  <ArrowRight className="w-4 h-4 stroke-[3]" />
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3]" />
                 </>
               )}
             </button>
@@ -147,9 +155,9 @@ export const LoginScreen: React.FC = () => {
         </div>
 
         {/* Clean Footer */}
-        <div className="mt-6 text-center flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-medium">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>SnapIt Secure Counter OS &bull; KGF Region</span>
+        <div className="mt-6 sm:mt-7 text-center flex items-center justify-center gap-1.5 text-xs text-slate-500 font-semibold">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Minnit Secure Counter Terminal &bull; KGF Region</span>
         </div>
       </div>
     </div>
