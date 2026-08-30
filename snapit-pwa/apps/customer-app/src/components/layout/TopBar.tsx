@@ -63,7 +63,7 @@ export const TopBar: React.FC = () => {
       {/* Left: Minnit horizontal logo */}
       <Link to="/" className="shrink-0 group">
         <img
-          src="/images/minnit_length_logo.png"
+          src="/images/minnit_cart_nd_name.png"
           alt="Minnit"
           className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
           onError={(e) => {
