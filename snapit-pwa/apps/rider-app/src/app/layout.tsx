@@ -3,7 +3,7 @@ import { RiderProvider } from "@/context/RiderContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Snapit Rider - Real-time Delivery Cockpit & Dashboard",
+  title: "Minnit Rider - Real-time Delivery Cockpit & Dashboard",
   description: "High-performance logistics & rider partner dashboard built from Stitch UI/UX design.",
   icons: {
     icon: "/favicon.ico",

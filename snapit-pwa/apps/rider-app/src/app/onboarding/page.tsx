@@ -189,17 +189,17 @@ export default function OnboardingPage() {
         {/* SCREEN 1: SPLASH SCREEN (CLEAN LOGO WITHOUT BORDER CONTAINER) */}
         {step === 'splash' && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-4 animate-scale-up">
-            {/* Clean logo without border/box container */}
+            {/* Clean Minnit Logo */}
             <div className="relative mb-6">
               <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPs4EKMmSJfF7OZSE5QvxHYkaQaxGyznsl93usjdUGjJQphBYmThXZMDlfS1l8AwYuPWUE4qX0gkE60fAGllfy4wdkfrujyUY85wKfg-mGJ3BwDvRKDqgrbSzaIDDAhc-esOo7mJ_0USaxHKVhpPBU79y5XhxKAxASCLi60ie3f9_23-SZGoV-pJDoCqpgzO2PqNh5bAq0lpS5HV1lLgCgErhB8Yj9IGvQA2_5IOHspw03F6vxeh86gSeNslB-03KgMW4"
-                alt="Snapit Logo"
-                className="w-32 h-32 object-contain animate-pulse-soft filter drop-shadow-md"
+                src="/images/logo_with_tag.png"
+                alt="Minnit Logo"
+                className="w-56 h-auto object-contain animate-pulse-soft filter drop-shadow-md"
               />
             </div>
 
             <h1 className="text-3xl font-black text-on-surface tracking-tight mb-2">
-              Welcome to <span className="text-primary">Snapit</span>
+              Welcome to <span className="text-primary">Minnit</span>
             </h1>
             <p className="text-sm font-medium text-secondary mb-8">
               Deliver smarter. Earn better.
@@ -207,7 +207,7 @@ export default function OnboardingPage() {
 
             <button
               onClick={() => setStep('signin')}
-              className="w-full max-w-xs py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm rounded-2xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2"
+              className="w-full max-w-xs py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm rounded-2xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Get Started</span>
               <ArrowRight className="w-4 h-4" />
@@ -226,18 +226,18 @@ export default function OnboardingPage() {
             </button>
 
             <div className="flex flex-col items-center text-center my-auto">
-              {/* Clean logo without border */}
+              {/* Clean Minnit logo */}
               <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3o2HLR5AwM4kEN-GFzCeYN6ugvib12tBSzgQvSssqWepsW5UG1Mk1n26XeuZkEgFYBOqco542A-bidGKq_qBnAEiiR4U0rzTE4hdThRqoxGnsYG2W46yjEK4XRS204lXuY77EI-IbL01aB6B8hlGEx-PA4EbyQrdhFackL14_ky7P8WfFpApftaUsjlUntFDyD_DCK7-AhicpaOlG5L0VI_tHbbyJc6-y1NAdCZw9Pm-efJEL3jJsFdg-hnzSs_xclPg"
-                alt="Snapit Rider"
-                className="w-24 h-24 object-contain mb-5"
+                src="/images/minnit_cart_nd_logo.png"
+                alt="Minnit Rider"
+                className="w-36 h-auto object-contain mb-5"
               />
 
               <h2 className="text-2xl font-black text-on-surface mb-1.5">
                 Sign in to your account
               </h2>
               <p className="text-xs text-secondary mb-4">
-                Start delivering in your city today
+                Start delivering with Minnit in your city today
               </p>
 
               {/* Login Form */}
@@ -297,7 +297,7 @@ export default function OnboardingPage() {
               <div className="w-full text-center">
                 <div className="relative flex py-2 items-center">
                   <div className="flex-grow border-t border-slate-200"></div>
-                  <span className="flex-shrink mx-3 text-[11px] font-bold text-slate-400 uppercase">New to Snapit?</span>
+                  <span className="flex-shrink mx-3 text-[11px] font-bold text-slate-400 uppercase">New to Minnit?</span>
                   <div className="flex-grow border-t border-slate-200"></div>
                 </div>
 
@@ -312,7 +312,7 @@ export default function OnboardingPage() {
             </div>
 
             <p className="text-[11px] text-secondary text-center leading-relaxed">
-              By continuing, you agree to Snapit&apos;s{' '}
+              By continuing, you agree to Minnit&apos;s{' '}
               <a href="#" className="text-primary underline">Terms of Service</a> and{' '}
               <a href="#" className="text-primary underline">Privacy Policy</a>
             </p>
@@ -730,7 +730,7 @@ export default function OnboardingPage() {
                 Application Submitted!
               </h1>
               <p className="text-xs text-secondary mt-1 max-w-[280px]">
-                Your selfie, Aadhaar, PAN, and DL are currently being verified by the Snapit onboarding team.
+                Your selfie, Aadhaar, PAN, and DL are currently being verified by the Minnit onboarding team.
               </p>
             </div>
 
@@ -821,7 +821,7 @@ export default function OnboardingPage() {
               <div>
                 <h3 className="text-base font-black text-slate-900">Forgot your MPIN?</h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  Direct SMS OTP reset will be configured soon. For now, please contact Snapit Rider Support to reset your MPIN.
+                  Direct SMS OTP reset will be configured soon. For now, please contact Minnit Rider Support to reset your MPIN.
                 </p>
               </div>
 
@@ -832,7 +832,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-bold">Support Email:</span>
-                  <span className="text-primary font-bold">riders@snapit.in</span>
+                  <span className="text-primary font-bold">riders@minnit.in</span>
                 </div>
               </div>
 

@@ -56,7 +56,7 @@ export const CashoutModal: React.FC<CashoutModalProps> = ({ onClose }) => {
             </div>
             <h3 className="font-bold text-lg text-on-surface">Transfer Successful!</h3>
             <p className="text-xs text-secondary max-w-[280px]">
-              ₹{amount.toLocaleString()} was transferred from your Snapit Wallet to <br />
+              ₹{amount.toLocaleString()} was transferred from your Minnit Wallet to <br />
               <strong className="font-mono text-on-surface">{rider.upiId}</strong> ({rider.bankName || 'HDFC Bank'})
             </p>
 

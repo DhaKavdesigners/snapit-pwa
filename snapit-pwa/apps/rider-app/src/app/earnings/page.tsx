@@ -37,7 +37,7 @@ export default function EarningsPage() {
               </div>
               <div>
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Snapit Rider Wallet
+                  Minnit Rider Wallet
                 </span>
                 <span className="text-[10px] text-primary-fixed font-semibold flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" /> Auto-Credited from Trips

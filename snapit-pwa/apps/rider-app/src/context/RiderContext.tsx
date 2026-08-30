@@ -1246,7 +1246,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     const newAlert: AlertNotification = {
       id: `alert-${Date.now()}`,
       title: '💰 Wallet Credited: ₹' + orderEarnings,
-      message: `Order #${activeOrder.orderNumber} delivered. ₹${orderEarnings} added to your Snapit Wallet.`,
+      message: `Order #${activeOrder.orderNumber} delivered. ₹${orderEarnings} added to your Minnit Wallet.`,
       time: 'Just now',
       type: 'payout',
       read: false,

@@ -87,7 +87,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             </button>
             <div className="min-w-0">
-              <h1 className="text-sm font-black text-slate-900 truncate">{title || 'Snapit Rider'}</h1>
+              <h1 className="text-sm font-black text-slate-900 truncate">{title || 'Minnit Rider'}</h1>
               {subtitle && <p className="text-[11px] text-slate-500 truncate">{subtitle}</p>}
             </div>
           </div>
