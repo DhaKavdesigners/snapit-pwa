@@ -24,7 +24,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
   const isStoreClosed = product.storeIsOpen === false;
   const isOutOfStock = !product.inStock || stock <= 0;
   const isAvailable = !isStoreClosed && !isOutOfStock;
-  const isLowStock = isAvailable && stock > 0 && stock <= 3;
+  const isLowStock = isAvailable && stock > 0 && stock <= 5;
   const isReachedMax = quantity >= stock;
 
   const handleImgError = () => {

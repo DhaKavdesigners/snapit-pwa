@@ -89,7 +89,7 @@ export const CartView: React.FC = () => {
           {cartItemsWithDetails.map((item) => {
             const isItemStoreClosed = item.product?.storeIsOpen === false;
             const stock = item.product!.stockCount !== undefined ? item.product!.stockCount : 99;
-            const isLowStock = stock > 0 && stock <= 3;
+            const isLowStock = stock > 0 && stock <= 5;
             const isMaxReached = item.quantity >= stock;
             const isExceedingStock = item.quantity > stock;
 

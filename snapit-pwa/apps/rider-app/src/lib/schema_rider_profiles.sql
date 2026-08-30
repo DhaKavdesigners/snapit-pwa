@@ -7,8 +7,8 @@ DROP TABLE IF EXISTS public.rider_profiles CASCADE;
 
 -- 2. Create rider_profiles table with ALL registration data
 CREATE TABLE public.rider_profiles (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  user_id UUID,
+  id TEXT PRIMARY KEY, -- 10-digit Phone Number (e.g. '9876543210')
+  user_id TEXT,        -- 10-digit Phone Number (e.g. '9876543210')
   name TEXT NOT NULL,
   phone TEXT NOT NULL UNIQUE,
   mpin TEXT NOT NULL,

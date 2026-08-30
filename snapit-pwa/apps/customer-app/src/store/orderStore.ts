@@ -24,7 +24,6 @@ export interface LiveOrder {
   created_at: string;
   customer_id: string;
   store_id: string;
-  rider_id?: string;
   status: string;
   estimated_total: number;
   total_amount_paise?: number;
@@ -32,6 +31,8 @@ export interface LiveOrder {
   items: LiveOrderItem[];
   prep_time_minutes?: number;
   delivery_pin?: string;
+  rider_id?: string;
+  rider_assignment?: string;
   rider_name?: string;
   rider_phone?: string;
   rider_vehicle?: string;

@@ -5,11 +5,11 @@ import { useMerchantStore } from '../../store/useMerchantStore';
 export const LowStockWarningBanner: React.FC = () => {
   const { products, acknowledgedLowStockIds, dismissLowStockAlert } = useMerchantStore();
 
-  // Find active products with stock <= 3 and > 0 that haven't been acknowledged yet
+  // Find active products with stock <= 5 and > 0 that haven't been acknowledged yet
   const unacknowledgedLowStock = products.filter(
     (p) =>
       p.stockCount > 0 &&
-      p.stockCount <= 3 &&
+      p.stockCount <= 5 &&
       p.availability === 'AVAILABLE' &&
       p.inStock !== false &&
       !acknowledgedLowStockIds.includes(p.id)

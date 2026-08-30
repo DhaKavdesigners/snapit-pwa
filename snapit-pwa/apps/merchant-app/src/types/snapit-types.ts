@@ -65,6 +65,7 @@ export interface Order {
   customerId: string;       // Links to user UID
   storeId: string;
   riderId?: string;         // Assigned after RIDER_ASSIGNED
+  riderAssignment?: string; // e.g. 'ASSIGNED'
   status: OrderStatus;
   items: CartItem[];
   estimatedTotal: number;   // Integer Paise

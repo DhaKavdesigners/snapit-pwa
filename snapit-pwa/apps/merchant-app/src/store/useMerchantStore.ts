@@ -83,6 +83,7 @@ interface MerchantState {
 
   // History & Ledger
   historicalGroups: HistoricalDateGroup[];
+  ridersMap: Record<string, any>;
 
   // Modals
   prepModalOrderId: string | null;
@@ -351,6 +352,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
           customerId: o.customer_id || 'cust_guest',
           storeId: o.store_id,
           riderId: o.rider_id,
+          riderAssignment: o.rider_assignment,
           status: o.status,
           items: Array.isArray(o.items) ? o.items : [],
           estimatedTotal: o.estimated_total,
@@ -365,6 +367,33 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         }));
 
         set({ orders: formattedOrders });
+
+        // Query rider profiles for assigned riders
+        const uniqueRiderIds = Array.from(
+          new Set(
+            dbOrders
+              .map((o) => o.rider_id)
+              .filter((id): id is string => Boolean(id))
+              .map((id) => id.replace(/[^0-9]/g, '').slice(-10))
+          )
+        );
+
+        if (uniqueRiderIds.length > 0) {
+          supabase
+            .from('rider_profiles')
+            .select('id, name, phone, vehicle_type, vehicle_number, avatar_url, selfie_url, rating')
+            .in('id', uniqueRiderIds)
+            .then(({ data: ridersData }) => {
+              if (ridersData && ridersData.length > 0) {
+                const rMap: Record<string, any> = { ...get().ridersMap };
+                ridersData.forEach((r) => {
+                  rMap[r.id] = r;
+                  if (r.phone) rMap[r.phone] = r;
+                });
+                set({ ridersMap: rMap });
+              }
+            });
+        }
 
         // Check if any incoming orders need alarm
         const hasPending = formattedOrders.some((o) => o.status === 'PLACED');
@@ -593,11 +622,39 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
                 };
               }
 
-              // Otherwise (e.g. status changed to OUT_OF_SHOP), keep live and update state
+              // Otherwise (e.g. status changed to OUT_OF_SHOP or rider assigned), keep live and update state
               return {
-                orders: state.orders.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)),
+                orders: state.orders.map((o) =>
+                  o.id === updated.id
+                    ? {
+                        ...o,
+                        ...updated,
+                        riderId: updated.rider_id ?? o.riderId,
+                        riderAssignment: updated.rider_assignment ?? o.riderAssignment,
+                      }
+                    : o
+                ),
               };
             });
+
+            // If order has an assigned rider, fetch rider profile if not cached
+            if (updated.rider_id) {
+              const cleanRiderId = String(updated.rider_id).replace(/[^0-9]/g, '').slice(-10);
+              if (!get().ridersMap[cleanRiderId]) {
+                supabase
+                  .from('rider_profiles')
+                  .select('id, name, phone, vehicle_type, vehicle_number, avatar_url, selfie_url, rating')
+                  .or(`id.eq.${cleanRiderId},phone.eq.${cleanRiderId}`)
+                  .maybeSingle()
+                  .then(({ data }) => {
+                    if (data) {
+                      set((s) => ({
+                        ridersMap: { ...s.ridersMap, [data.id]: data, [data.phone]: data },
+                      }));
+                    }
+                  });
+              }
+            }
 
             // Ensure pending order alarm stops if no PLACED orders remain after realtime update
             setTimeout(() => {
@@ -995,7 +1052,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
   acknowledgedLowStockIds: [],
   dismissLowStockAlert: () => {
     const currentLowIds = get().products
-      .filter((p) => p.stockCount > 0 && p.stockCount <= 3 && p.availability === 'AVAILABLE' && p.inStock !== false)
+      .filter((p) => p.stockCount > 0 && p.stockCount <= 5 && p.availability === 'AVAILABLE' && p.inStock !== false)
       .map((p) => p.id);
     set((state) => ({
       acknowledgedLowStockIds: Array.from(new Set([...state.acknowledgedLowStockIds, ...currentLowIds])),
@@ -1025,7 +1082,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
             }
           : p
       ),
-      acknowledgedLowStockIds: nextStockCount > 3 || nextStockCount === 0
+      acknowledgedLowStockIds: nextStockCount > 5 || nextStockCount === 0
         ? state.acknowledgedLowStockIds.filter((id) => id !== productId)
         : state.acknowledgedLowStockIds,
     }));
@@ -1075,8 +1132,8 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
             }
           : p
       ),
-      // If stock is replenished (> 3) or set to 0, clear it from acknowledged list
-      acknowledgedLowStockIds: safeCount > 3 || safeCount === 0
+      // If stock is replenished (> 5) or set to 0, clear it from acknowledged list
+      acknowledgedLowStockIds: safeCount > 5 || safeCount === 0
         ? state.acknowledgedLowStockIds.filter((id) => id !== productId)
         : state.acknowledgedLowStockIds,
     }));
@@ -1262,6 +1319,7 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
 
   // History & Ledger
   historicalGroups: initialHistoricalGroups,
+  ridersMap: {},
 
   // Modals
   prepModalOrderId: null,

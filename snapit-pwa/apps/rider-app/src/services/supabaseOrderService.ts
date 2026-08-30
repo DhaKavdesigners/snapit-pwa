@@ -160,9 +160,10 @@ export async function fetchLiveOrders(): Promise<DbOrder[]> {
 /** Assign rider to order without modifying merchant status */
 export async function assignRiderToOrder(orderId: string, riderId: string) {
   try {
+    const cleanRiderId = riderId.replace(/[^0-9]/g, '').slice(-10) || riderId;
     const updatePayload: any = {
-      rider_assignment: 'assigned',
-      rider_id: riderId,
+      rider_assignment: 'ASSIGNED',
+      rider_id: cleanRiderId,
       updated_at: new Date().toISOString(),
     };
 
@@ -312,9 +313,10 @@ export async function registerRiderInDb(riderData: {
   selfie_url?: string;
 }): Promise<{ profile?: DbRiderProfile; error?: string }> {
   try {
-    const cleanPhone = riderData.phone.replace(/[^0-9+]/g, '');
+    const cleanPhone = riderData.phone.replace(/[^0-9]/g, '').slice(-10);
     const newRecord: any = {
-      id: 'rider_' + Date.now(),
+      id: cleanPhone,
+      user_id: cleanPhone,
       name: riderData.name,
       phone: cleanPhone,
       mpin: riderData.mpin,
@@ -348,11 +350,24 @@ export async function registerRiderInDb(riderData: {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('rider_profiles')
       .upsert(newRecord, { onConflict: 'phone' })
       .select()
       .single();
+
+    if (error && error.code === '22P02') {
+      // Fallback if user_id column in database is still typed as UUID
+      const fallbackRecord = { ...newRecord };
+      delete fallbackRecord.user_id;
+      const res = await supabase
+        .from('rider_profiles')
+        .upsert(fallbackRecord, { onConflict: 'phone' })
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error) {
       console.warn('Error saving rider to Supabase:', error);
