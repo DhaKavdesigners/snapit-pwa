@@ -165,7 +165,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
           rider_phone: rider?.phone || o.rider_phone || (o.rider_id ? String(o.rider_id) : undefined),
           rider_vehicle: rider 
             ? `${rider.vehicle_type || 'Bike'} (${rider.vehicle_number || 'KA-08'})` 
-            : o.rider_vehicle || (o.rider_id ? 'SnapIt Fleet Partner' : undefined),
+            : o.rider_vehicle || (o.rider_id ? 'Minnit Fleet Partner' : undefined),
           rider_avatar: rider?.selfie_url || rider?.avatar_url || o.rider_avatar,
           rider_rating: 4.9,
         };

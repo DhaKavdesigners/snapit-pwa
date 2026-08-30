@@ -21,12 +21,12 @@ export const TopBar: React.FC = () => {
   // Session-consistent dynamic prompt (changes on new session/login)
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem('snapit_session_prompt');
+      const stored = sessionStorage.getItem('minnit_session_prompt');
       if (stored) {
         setWelcomePrompt(stored);
       } else {
         const randomChoice = WELCOME_PROMPTS[Math.floor(Math.random() * WELCOME_PROMPTS.length)];
-        sessionStorage.setItem('snapit_session_prompt', randomChoice);
+        sessionStorage.setItem('minnit_session_prompt', randomChoice);
         setWelcomePrompt(randomChoice);
       }
     } catch {
@@ -59,47 +59,37 @@ export const TopBar: React.FC = () => {
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-white px-5 pt-4 pb-2.5 flex items-center justify-between gap-3">
-      {/* Left: SnapIt Brand + Round Logo + KGF */}
-      <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-        <div className="w-10 h-10 rounded-full bg-emerald-50/70 border border-emerald-200/60 p-1 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform overflow-hidden">
-          <img
-            src="/images/snapit_logo.png"
-            alt="SnapIt"
-            className="w-full h-full object-contain rounded-full"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-black text-2xl tracking-tight text-gray-900 leading-none">
-            Snap<span className="text-emerald-500">It</span>
-          </span>
-          <span className="text-sm font-black text-emerald-600 tracking-wider">
-            KGF
-          </span>
-        </div>
+    <header className="sticky top-0 z-40 bg-white px-3 py-2 flex items-center justify-between gap-2">
+      {/* Left: Minnit horizontal logo */}
+      <Link to="/" className="shrink-0 group">
+        <img
+          src="/images/minnit_length_logo.png"
+          alt="Minnit"
+          className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
       </Link>
 
-      {/* Right: Welcoming Greeting + Inset Profile Avatar */}
+      {/* Right: Welcoming Greeting + Profile Avatar */}
       {isLoggedIn ? (
         <Link
           to="/profile"
-          className="flex items-center gap-3 hover:opacity-85 transition-opacity active:scale-95 group shrink-0 pr-1"
+          className="flex items-center gap-2 hover:opacity-85 transition-opacity active:scale-95 group min-w-0 flex-1 justify-end"
           aria-label="My Profile"
         >
-          <div className="flex flex-col text-right leading-tight">
-            <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-700 transition-colors whitespace-nowrap">
+          <div className="flex flex-col text-right leading-tight min-w-0">
+            <span className="text-[12px] font-bold text-gray-900 group-hover:text-emerald-700 transition-colors truncate block">
               {getGreeting()}
             </span>
-            <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+            <span className="text-[10px] font-medium text-gray-500 truncate block">
               {welcomePrompt}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-xs ring-2 ring-emerald-100 group-hover:ring-emerald-300 transition-all relative shrink-0">
-            <User className="w-4.5 h-4.5 fill-white" />
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-sm ring-2 ring-emerald-100 group-hover:ring-emerald-300 transition-all relative shrink-0">
+            <User className="w-4 h-4 fill-white" />
+            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-white" />
           </div>
         </Link>
       ) : (

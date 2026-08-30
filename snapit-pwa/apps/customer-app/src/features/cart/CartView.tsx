@@ -124,7 +124,7 @@ export const CartView: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`text-[9px] font-bold uppercase tracking-wider ${isItemStoreClosed ? 'text-red-600' : 'text-emerald-700'}`}>
-                      {item.product!.storeName || 'SnapIt Store'}
+                      {item.product!.storeName || 'Minnit Store'}
                     </span>
                     {isItemStoreClosed ? (
                       <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase">Offline</span>

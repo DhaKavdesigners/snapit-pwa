@@ -334,11 +334,11 @@ export const CheckoutView: React.FC = () => {
               </span>
             </div>
 
-            {/* SnapIt Guarantee banner */}
+            {/* Minnit Guarantee banner */}
             <div className="bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 rounded-2xl p-3 border border-emerald-100 flex items-center gap-2.5">
               <Gift className="w-4 h-4 text-emerald-600 shrink-0" />
               <p className="text-[11px] font-bold text-emerald-900 leading-tight">
-                SnapIt Promise: 100% Fresh &amp; Quality Guaranteed on delivery!
+                Minnit Promise: 100% Fresh &amp; Quality Guaranteed on delivery!
               </p>
             </div>
 
