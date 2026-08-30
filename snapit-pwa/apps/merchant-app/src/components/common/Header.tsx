@@ -101,6 +101,17 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
+          {/* Center: Brand Identity (minnit) */}
+          <div className="hidden md:flex items-center justify-center">
+            <div className="flex items-center px-4 py-1.5 rounded-2xl bg-slate-50 border border-slate-200/90 shadow-2xs hover:bg-slate-100/80 transition-all">
+              <img
+                src="/images/minnit.jpg"
+                alt="minnit"
+                className="h-6 sm:h-7 w-auto object-contain"
+              />
+            </div>
+          </div>
+
           {/* Right: Live Status Controls & Actions */}
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Live Counter Clock */}

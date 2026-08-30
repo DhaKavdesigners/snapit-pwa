@@ -165,6 +165,17 @@ export const App: React.FC = () => {
               </div>
             </div>
 
+            {/* Center: Brand Identity (minnit) */}
+            <div className="flex items-center justify-center flex-shrink-0">
+              <div className="bg-white px-2.5 py-1 rounded-xl shadow-xs border border-slate-700/50 flex items-center justify-center">
+                <img
+                  src="/images/minnit.jpg"
+                  alt="minnit"
+                  className="h-4 sm:h-5 w-auto object-contain"
+                />
+              </div>
+            </div>
+
             {/* ONLINE / OFFLINE Status Button (Sound is Always ON by default) */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
