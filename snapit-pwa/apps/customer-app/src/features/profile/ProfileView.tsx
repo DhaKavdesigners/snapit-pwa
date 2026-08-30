@@ -139,6 +139,105 @@ export const ProfileView: React.FC = () => {
   const [ordersTab, setOrdersTab] = useState<'active' | 'history'>('active');
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
+  // Saved Addresses State
+  const [addressesModal, setAddressesModal] = useState(false);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [newAddressForm, setNewAddressForm] = useState({
+    title: 'Home',
+    line1: '',
+    line2: '',
+    landmark: '',
+    pincode: '563122',
+  });
+
+  const getInitialAddresses = () => {
+    try {
+      const stored = localStorage.getItem('minnit_saved_addresses_v1');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {}
+
+    const primary = {
+      id: 'addr-primary',
+      title: 'Home (Registered)',
+      line1: userProfile?.addressLine1 || formData.addressLine1 || '#450, Maariyaman temple street',
+      line2: userProfile?.addressLine2 || formData.addressLine2 || 'Bowrilalpet, Robertsonpet',
+      landmark: userProfile?.landmark || formData.landmark || 'Near temple',
+      pincode: userProfile?.pincode || formData.pincode || '563122',
+      isDefault: true,
+    };
+
+    const college = {
+      id: 'addr-college',
+      title: 'DTTIT College',
+      line1: 'DTTIT Campus, Oorgaum Post',
+      line2: 'Oorgaum',
+      landmark: 'Near College Gate',
+      pincode: '563120',
+      isDefault: false,
+    };
+
+    return [primary, college];
+  };
+
+  const [savedAddresses, setSavedAddresses] = useState<any[]>(getInitialAddresses);
+
+  const saveAddressesToStorage = (list: any[]) => {
+    setSavedAddresses(list);
+    try {
+      localStorage.setItem('minnit_saved_addresses_v1', JSON.stringify(list));
+    } catch {}
+  };
+
+  const handleSetDefaultAddress = (id: string) => {
+    const updated = savedAddresses.map((a: any) => ({
+      ...a,
+      isDefault: a.id === id,
+    }));
+    saveAddressesToStorage(updated);
+    playSound('tap');
+  };
+
+  const handleDeleteAddress = (id: string) => {
+    if (savedAddresses.length <= 1) {
+      alert('You must have at least one saved delivery address.');
+      return;
+    }
+    const updated = savedAddresses.filter((a: any) => a.id !== id);
+    if (!updated.some((a: any) => a.isDefault) && updated.length > 0) {
+      updated[0].isDefault = true;
+    }
+    saveAddressesToStorage(updated);
+    playSound('tap');
+  };
+
+  const handleSaveNewAddress = () => {
+    if (!newAddressForm.line1.trim() || !newAddressForm.pincode.trim()) {
+      alert('Please enter street address and pincode.');
+      return;
+    }
+    const newAddr = {
+      id: `addr-${Date.now()}`,
+      title: newAddressForm.title.trim() || 'Other',
+      line1: newAddressForm.line1.trim(),
+      line2: newAddressForm.line2.trim() || 'KGF',
+      landmark: newAddressForm.landmark.trim(),
+      pincode: newAddressForm.pincode.trim(),
+      isDefault: false,
+    };
+    saveAddressesToStorage([...savedAddresses, newAddr]);
+    setIsAddingNewAddress(false);
+    setNewAddressForm({
+      title: 'Home',
+      line1: '',
+      line2: '',
+      landmark: '',
+      pincode: '563122',
+    });
+    playSound('success');
+  };
+
   // Live Orders State
   const [orders, setOrders] = useState<any[]>([]);
   const [storesMap, setStoresMap] = useState<Record<string, string>>({
@@ -432,7 +531,7 @@ export const ProfileView: React.FC = () => {
           <User className="w-8 h-8 text-brand" />
         </div>
         <h2 className="font-black text-2xl text-text-primary mb-1 tracking-tight">Profile Registration</h2>
-        <p className="text-text-secondary text-sm">Create your SnapIt account</p>
+        <p className="text-text-secondary text-sm">Create your Minnit account</p>
       </div>
 
       <div className="space-y-4 bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
@@ -540,7 +639,7 @@ export const ProfileView: React.FC = () => {
       
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="w-full">
         <h2 className="font-black text-3xl text-text-primary tracking-tight mb-1">Welcome aboard!</h2>
-        <p className="text-text-secondary text-sm mb-8 font-medium">Your SnapIt account is all set 🎉</p>
+        <p className="text-text-secondary text-sm mb-8 font-medium">Your Minnit account is all set 🎉</p>
 
         <div className="bg-white rounded-3xl p-6 shadow-[0_8px_32px_rgba(5,150,105,0.08)] border border-emerald-100 w-full mb-6 text-left relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full blur-2xl -mr-6 -mt-6" />
@@ -568,15 +667,81 @@ export const ProfileView: React.FC = () => {
   const policyContent = {
     privacy: {
       title: 'Privacy Policy',
-      body: 'SnapIt KGF collects your name, phone number, and delivery address solely to facilitate order delivery. We do not share your data with third parties. Your location is used only for real-time delivery tracking. Data is stored securely and you may request deletion at any time by contacting support.',
+      badge: '🔒 100% Data Protection',
+      sections: [
+        {
+          heading: '1. Information We Collect',
+          content: 'We collect your name, 10-digit mobile number, and delivery address solely to facilitate instant local order delivery and authentication in KGF.',
+        },
+        {
+          heading: '2. Live Location & Order Tracking',
+          content: 'Your delivery location and optional GPS coordinates are accessed only while an order is active to calculate delivery routes and guide your delivery rider.',
+        },
+        {
+          heading: '3. Zero Third-Party Sharing',
+          content: 'Minnit never sells, rents, or shares your personal data with third-party advertisers or marketing agencies. Data is strictly used for hyperlocal order fulfillment.',
+        },
+        {
+          heading: '4. Delivery PIN Security',
+          content: 'Delivery handshake PINs ensure that only you can authorize and complete the collection of your order at your doorstep.',
+        },
+        {
+          heading: '5. Account & Data Rights',
+          content: 'You can update your address anytime or contact support@minnitkgf.in to request full account data deletion.',
+        },
+      ],
     },
     terms: {
       title: 'Terms of Service',
-      body: 'By using SnapIt, you agree to place orders only for lawful goods available on the platform. Orders once confirmed cannot be cancelled after preparation begins. SnapIt reserves the right to refuse service to accounts with fraudulent activity. Prices are inclusive of applicable taxes.',
+      badge: '⚖️ Platform Guidelines',
+      sections: [
+        {
+          heading: '1. Platform Scope',
+          content: 'Minnit KGF provides an online hyperlocal marketplace connecting customers in KGF with verified local merchant stores and independent fleet delivery riders.',
+        },
+        {
+          heading: '2. Order Confirmation & Fulfillment',
+          content: 'Placing an order sends an immediate request to the selected store counter. Orders are subject to item stock availability at store partner premises.',
+        },
+        {
+          heading: '3. Doorstep Delivery & Handshake',
+          content: 'Customers agree to be available at the specified delivery address and share the 4-digit PIN with the delivery rider to complete handover.',
+        },
+        {
+          heading: '4. Fair Pricing & Delivery Charges',
+          content: 'All item prices reflect local store counter prices with transparent hyperlocal delivery fee calculation and zero hidden surge markups.',
+        },
+        {
+          heading: '5. Genuine Usage Policy',
+          content: 'Minnit reserves the right to suspend or restrict accounts engaging in fraudulent orders, abusive behavior, or policy violations.',
+        },
+      ],
     },
     refund: {
-      title: 'Refund Policy',
-      body: 'Refunds are processed within 5–7 business days for eligible orders. A refund is applicable if: (1) the wrong item was delivered, (2) the item was damaged upon delivery, or (3) the order was not delivered. Refund requests must be raised within 24 hours of delivery via Help & Support.',
+      title: 'Refund & Cancellation Policy',
+      badge: '💸 100% Fair Guarantee',
+      sections: [
+        {
+          heading: '1. Order Cancellation',
+          content: 'Free cancellation with full instant refund is available before the merchant begins packing or preparing your items. Once out for delivery, cancellation is not permissible.',
+        },
+        {
+          heading: '2. Wrong or Missing Items',
+          content: 'If an item is missing or an incorrect product was delivered, report via WhatsApp within 24 hours for an instant item refund or replacement.',
+        },
+        {
+          heading: '3. Damaged or Expired Goods',
+          content: 'If any groceries, food, or dairy products arrive damaged or past their expiry, we provide a 100% full refund upon photo verification.',
+        },
+        {
+          heading: '4. Non-Delivery Protection',
+          content: 'If an order fails to reach your doorstep due to rider or store issues, a 100% immediate full refund is credited to your payment source.',
+        },
+        {
+          heading: '5. Refund Processing Timelines',
+          content: 'UPI / Online refunds are processed within 2–24 hours to your original bank account. For instant assistance, reach out directly to support on WhatsApp (+91 82176 49688).',
+        },
+      ],
     },
   };
 
@@ -754,10 +919,10 @@ export const ProfileView: React.FC = () => {
         id: 'addresses',
         icon: MapPin,
         label: 'Saved Addresses',
-        sublabel: 'Manage delivery spots',
+        sublabel: `${savedAddresses.length} ${savedAddresses.length === 1 ? 'spot' : 'spots'} saved`,
         bg: 'bg-blue-50',
         iconColor: 'text-blue-600',
-        action: () => playSound('tap'),
+        action: () => { playSound('tap'); setAddressesModal(true); },
         isLive: false,
       },
       {
@@ -767,13 +932,13 @@ export const ProfileView: React.FC = () => {
         sublabel: 'Chat on WhatsApp',
         bg: 'bg-green-50',
         iconColor: 'text-green-600',
-        action: () => window.open('https://wa.me/918217649688', '_blank'),
+        action: () => window.open('https://wa.me/918217649688?text=Hi%20Minnit,%20I%20need%20help%20with%20my%20account', '_blank'),
         isLive: false,
       },
       {
         id: 'about',
         icon: Info,
-        label: 'About SnapIt',
+        label: 'About Minnit',
         sublabel: 'App info & version',
         bg: 'bg-gray-50',
         iconColor: 'text-gray-500',
@@ -1060,7 +1225,7 @@ export const ProfileView: React.FC = () => {
                                 <span className="font-mono font-black text-base text-brand">{formatCurrency(order.estimated_total)}</span>
                               </div>
                               <button
-                                onClick={() => window.open(`https://wa.me/918217649688?text=Hi%20SnapIt,%20need%20help%20with%20order%20${order.id}`, '_blank')}
+                                onClick={() => window.open(`https://wa.me/918217649688?text=Hi%20Minnit,%20need%20help%20with%20order%20${order.id}`, '_blank')}
                                 className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors"
                               >
                                 Need Help?
@@ -1138,7 +1303,200 @@ export const ProfileView: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* ── About SnapIt Modal ── */}
+        {/* ── Saved Addresses Modal (bottom-sheet) ── */}
+        <AnimatePresence>
+          {addressesModal && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => { setAddressesModal(false); setIsAddingNewAddress(false); }}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: '100%' }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: '100%' }}
+                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                className="relative bg-slate-50 rounded-t-[2.5rem] shadow-2xl px-5 pt-4 pb-8 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
+              >
+                {/* Grab Handle */}
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-lg text-gray-900 leading-tight">Saved Addresses</h3>
+                      <p className="text-xs text-gray-500 font-medium">Manage your KGF delivery locations</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setAddressesModal(false); setIsAddingNewAddress(false); }}
+                    className="w-8 h-8 bg-gray-200/70 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Body Content (Scrollable) */}
+                <div className="overflow-y-auto py-4 space-y-3.5 flex-1 pr-0.5">
+                  {/* List of Saved Addresses */}
+                  {savedAddresses.map((addr: any) => (
+                    <div
+                      key={addr.id}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        addr.isDefault
+                          ? 'bg-emerald-50/70 border-emerald-300 shadow-sm ring-1 ring-emerald-300'
+                          : 'bg-white border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-sm text-gray-900">{addr.title}</span>
+                          {addr.isDefault && (
+                            <span className="bg-emerald-600 text-white text-[9.5px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              Default
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1.5">
+                          {!addr.isDefault && (
+                            <button
+                              onClick={() => handleSetDefaultAddress(addr.id)}
+                              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-lg transition-colors"
+                            >
+                              Set Default
+                            </button>
+                          )}
+                          {savedAddresses.length > 1 && (
+                            <button
+                              onClick={() => handleDeleteAddress(addr.id)}
+                              className="text-[11px] font-bold text-red-500 hover:text-red-700 bg-red-50 px-2 py-1 rounded-lg transition-colors"
+                              title="Delete address"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-700 font-medium leading-snug">
+                        {addr.line1}
+                        {addr.line2 ? `, ${addr.line2}` : ''}
+                      </p>
+                      {addr.landmark && (
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          📍 Landmark: <span className="text-gray-700 font-medium">{addr.landmark}</span>
+                        </p>
+                      )}
+                      <p className="text-[11px] text-gray-500 mt-0.5 font-mono">
+                        PIN: <span className="text-gray-800 font-bold">{addr.pincode}</span>
+                      </p>
+                    </div>
+                  ))}
+
+                  {/* Add New Address Form / Trigger */}
+                  {!isAddingNewAddress ? (
+                    <button
+                      onClick={() => { playSound('tap'); setIsAddingNewAddress(true); }}
+                      className="w-full py-3.5 bg-white border-2 border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/40 text-emerald-700 font-black text-xs rounded-2xl transition-all flex items-center justify-center gap-2 active:scale-98 shadow-2xs"
+                    >
+                      <span className="text-base leading-none font-black">+</span>
+                      <span>Add New Delivery Address</span>
+                    </button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="bg-white p-4 rounded-2xl border-2 border-emerald-400 shadow-md space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                          New Address Details
+                        </span>
+                        <button
+                          onClick={() => setIsAddingNewAddress(false)}
+                          className="text-xs text-gray-400 hover:text-gray-600 font-bold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      {/* Title selector */}
+                      <div className="flex gap-2">
+                        {['Home', 'Work', 'College', 'Other'].map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setNewAddressForm({ ...newAddressForm, title: t })}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                              newAddressForm.title === t
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="House / Flat / Street Name *"
+                        value={newAddressForm.line1}
+                        onChange={(e) => setNewAddressForm({ ...newAddressForm, line1: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-medium focus:border-emerald-500 focus:bg-white outline-none"
+                      />
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Area / Locality (e.g. Robertsonpet)"
+                          value={newAddressForm.line2}
+                          onChange={(e) => setNewAddressForm({ ...newAddressForm, line2: e.target.value })}
+                          className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-medium focus:border-emerald-500 focus:bg-white outline-none"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Landmark"
+                          value={newAddressForm.landmark}
+                          onChange={(e) => setNewAddressForm({ ...newAddressForm, landmark: e.target.value })}
+                          className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-medium focus:border-emerald-500 focus:bg-white outline-none"
+                        />
+                      </div>
+
+                      <input
+                        type="tel"
+                        maxLength={6}
+                        placeholder="PIN Code (e.g. 563122) *"
+                        value={newAddressForm.pincode}
+                        onChange={(e) => setNewAddressForm({ ...newAddressForm, pincode: e.target.value.replace(/\D/g, '') })}
+                        className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold text-center tracking-widest focus:border-emerald-500 focus:bg-white outline-none"
+                      />
+
+                      <button
+                        onClick={handleSaveNewAddress}
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-transform active:scale-95 uppercase tracking-wider"
+                      >
+                        Save Address
+                      </button>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* ── About Minnit Modal ── */}
         <AnimatePresence>
           {aboutModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1152,17 +1510,17 @@ export const ProfileView: React.FC = () => {
                   className="absolute top-4 right-4 w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
                   <X className="w-4 h-4" />
                 </button>
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-brand rounded-2xl flex items-center justify-center mb-4 shadow-[0_8px_20px_rgba(5,150,105,0.3)]">
-                  <ShoppingBag className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-white border border-emerald-200 rounded-2xl flex items-center justify-center mb-3 p-1.5 shadow-[0_8px_20px_rgba(5,150,105,0.15)] overflow-hidden">
+                  <img src="/images/minnit_logo.jpg" alt="Minnit Logo" className="w-full h-full object-contain rounded-xl" />
                 </div>
-                <h3 className="font-black text-xl text-text-primary mb-1">SnapIt KGF</h3>
-                <p className="text-text-secondary text-sm mb-1">Version 1.0.0 · Phase 1</p>
-                <p className="text-brand text-xs font-bold mb-5">Built by Dhakav Designers</p>
-                <div className="bg-gray-50 rounded-2xl p-4 w-full text-left text-xs text-gray-500 space-y-2">
-                  <p>🏠 <strong className="text-gray-700">Region:</strong> KGF, Karnataka</p>
-                  <p>📦 <strong className="text-gray-700">Focus:</strong> Grocery &amp; Local Food Delivery</p>
-                  <p>📞 <strong className="text-gray-700">Support:</strong> +91 82176 49688</p>
-                  <p>✉️ <strong className="text-gray-700">Email:</strong> support@snapitkgf.in</p>
+                <img src="/images/minnit_wordmark.jpg" alt="Minnit" className="h-7 w-auto object-contain mb-1" />
+                <p className="text-text-secondary text-xs mb-1">Instant Hyperlocal Delivery · Version 1.0.0</p>
+                <p className="text-emerald-700 text-xs font-bold mb-5">Built by Dhakav Designers</p>
+                <div className="bg-gray-50 rounded-2xl p-4 w-full text-left text-xs text-gray-600 space-y-2 border border-gray-100">
+                  <p>🏠 <strong className="text-gray-900">Region:</strong> Kolar Gold Fields (KGF), Karnataka</p>
+                  <p>📦 <strong className="text-gray-900">Services:</strong> Groceries, Essentials &amp; Restaurant Food</p>
+                  <p>📞 <strong className="text-gray-900">Support:</strong> +91 82176 49688</p>
+                  <p>✉️ <strong className="text-gray-900">Email:</strong> support@minnitkgf.in</p>
                 </div>
               </motion.div>
             </div>
@@ -1174,19 +1532,42 @@ export const ProfileView: React.FC = () => {
           {policyModal && (
             <div className="fixed inset-0 z-50 flex items-end justify-center">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPolicyModal(null)} />
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPolicyModal(null)} />
               <motion.div
                 initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }}
                 transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                className="relative bg-white rounded-t-[2.5rem] shadow-2xl px-6 pt-5 pb-10 w-full max-w-sm flex flex-col"
+                className="relative bg-white rounded-t-[2.5rem] shadow-2xl px-6 pt-5 pb-8 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
               >
-                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4" />
                 <button onClick={() => setPolicyModal(null)}
-                  className="absolute top-5 right-5 w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                  className="absolute top-5 right-5 w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
                   <X className="w-4 h-4" />
                 </button>
-                <h3 className="font-black text-lg text-text-primary mb-3">{policyContent[policyModal].title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{policyContent[policyModal].body}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-black text-xl text-text-primary">{policyContent[policyModal].title}</h3>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md w-fit mb-4">
+                  {policyContent[policyModal].badge}
+                </span>
+                
+                {/* Scrollable Policy Sections */}
+                <div className="overflow-y-auto space-y-4 pr-1 text-left flex-1">
+                  {policyContent[policyModal].sections.map((sec, idx) => (
+                    <div key={idx} className="bg-gray-50/80 rounded-2xl p-3.5 border border-gray-100">
+                      <h4 className="font-black text-xs text-gray-900 mb-1">{sec.heading}</h4>
+                      <p className="text-xs text-gray-600 leading-relaxed font-medium">{sec.content}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 mt-2">
+                  <button
+                    onClick={() => setPolicyModal(null)}
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-transform active:scale-95 uppercase tracking-wider"
+                  >
+                    Got It, Close
+                  </button>
+                </div>
               </motion.div>
             </div>
           )}
@@ -1218,7 +1599,7 @@ export const ProfileView: React.FC = () => {
                 <Smartphone className="w-5 h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black tracking-wider uppercase text-emerald-400">SnapIt Security • Just Now</p>
+                <p className="text-[10px] font-black tracking-wider uppercase text-emerald-400">Minnit Security • Just Now</p>
                 <p className="text-xs font-semibold text-gray-200 truncate">
                   OTP is <span className="font-mono font-black text-white tracking-widest bg-white/10 px-1.5 py-0.5 rounded">{generatedOtp}</span>
                 </p>
@@ -1234,7 +1615,7 @@ export const ProfileView: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* SnapIt Phone Verification Modal */}
+      {/* Minnit Phone Verification Modal */}
       <AnimatePresence>
         {showOtpModal && (
           <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -1247,7 +1628,7 @@ export const ProfileView: React.FC = () => {
               onClick={() => setShowOtpModal(false)}
             />
             
-            {/* Bottom-sheet modal — Modern SnapIt style */}
+            {/* Bottom-sheet modal — Modern Minnit style */}
             <motion.div 
               initial={{ opacity: 0, y: '100%' }} 
               animate={{ opacity: 1, y: 0 }} 

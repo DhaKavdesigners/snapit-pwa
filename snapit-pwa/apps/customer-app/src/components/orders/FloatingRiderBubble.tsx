@@ -14,7 +14,7 @@ export const FloatingRiderBubble: React.FC = () => {
   if (activeOrders.length === 0) return null;
 
   const topOrder = activeOrders[0];
-  const storeName = storesMap[topOrder.store_id] || 'SnapIt Store';
+  const storeName = storesMap[topOrder.store_id] || 'Minnit Store';
 
   // Check if store is Food or Grocery
   const isFood = (topOrder.store_id || '').toLowerCase().startsWith('f') || 
@@ -100,7 +100,7 @@ export const FloatingRiderBubble: React.FC = () => {
             {/* Rider Image prominently displayed */}
             <img
               src={riderIconImg}
-              alt="SnapIt Rider"
+              alt="Minnit Rider"
               className="w-full h-full object-contain rounded-full pointer-events-none"
             />
 

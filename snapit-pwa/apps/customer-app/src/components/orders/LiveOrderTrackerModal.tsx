@@ -115,7 +115,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
   if (!isTrackerOpen || !currentOrder) return null;
 
-  const storeName = storesMap[currentOrder.store_id] || 'SnapIt Partner Store';
+  const storeName = storesMap[currentOrder.store_id] || 'Minnit Partner Store';
 
   // Check if store is Food or Grocery
   const isFood = (currentOrder.store_id || '').toLowerCase().startsWith('f') || 
@@ -642,7 +642,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
                     <div className="relative shrink-0">
                       <img
                         src={riderInfo?.avatarUrl || currentOrder.rider_avatar || riderIconImg}
-                        alt={riderInfo?.name || currentOrder.rider_name || 'Delivery Partner'}
+                        alt={riderInfo?.name || currentOrder.rider_name || 'Minnit Rider'}
                         className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 bg-white"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = riderIconImg;
@@ -662,7 +662,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-300 font-medium mt-0.5 truncate">
-                        SnapIt Fleet Hero • {riderInfo?.vehicleType || currentOrder.rider_vehicle || 'Bike'}{riderInfo?.vehicleNumber ? ` (${riderInfo.vehicleNumber})` : ''}
+                        {riderInfo?.vehicleType || currentOrder.rider_vehicle || 'Minnit Fleet Hero'}{riderInfo?.vehicleNumber ? ` (${riderInfo.vehicleNumber})` : ''}
                       </p>
                       {(riderInfo?.phone || currentOrder.rider_phone) && (
                         <p className="text-[10px] text-emerald-400 font-mono font-semibold truncate">
@@ -674,22 +674,30 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
                   {/* Call and WhatsApp Buttons */}
                   <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={`tel:+91${String(riderInfo?.phone || currentOrder.rider_phone || '8217649688').replace(/\D/g, '').slice(-10)}`}
-                      className="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-emerald-600/30 cursor-pointer"
-                      aria-label="Call Rider"
-                    >
-                      <Phone className="w-4 h-4" />
-                    </a>
-                    <a
-                      href={`https://wa.me/91${String(riderInfo?.phone || currentOrder.rider_phone || '8217649688').replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hi ${riderInfo?.name || currentOrder.rider_name || 'Rider'}, checking on my SnapIt order ${currentOrder.id}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-teal-600/30 cursor-pointer"
-                      aria-label="WhatsApp Rider"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                    </a>
+                    {(riderInfo?.phone || currentOrder.rider_phone) ? (
+                      <>
+                        <a
+                          href={`tel:+91${String(riderInfo?.phone || currentOrder.rider_phone).replace(/\D/g, '').slice(-10)}`}
+                          className="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-emerald-600/30 cursor-pointer"
+                          aria-label="Call Rider"
+                        >
+                          <Phone className="w-4 h-4" />
+                        </a>
+                        <a
+                          href={`https://wa.me/91${String(riderInfo?.phone || currentOrder.rider_phone).replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hi ${riderInfo?.name || currentOrder.rider_name || 'Rider'}, checking on my Minnit order ${currentOrder.id}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center transition-transform active:scale-95 shadow-md shadow-teal-600/30 cursor-pointer"
+                          aria-label="WhatsApp Rider"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </a>
+                      </>
+                    ) : (
+                      <div className="w-9 h-9 rounded-xl bg-white/10 text-gray-400 flex items-center justify-center">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -764,7 +772,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
             <div className="pt-2 flex gap-2">
               <button
                 onClick={() => {
-                  window.open(`https://wa.me/918217649688?text=Hi%20SnapIt,%20need%20help%20with%20live%20order%20${currentOrder.id}`, '_blank');
+                  window.open(`https://wa.me/918217649688?text=Hi%20Minnit,%20need%20help%20with%20live%20order%20${currentOrder.id}`, '_blank');
                 }}
                 className="w-full py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black text-xs rounded-2xl border border-emerald-200 transition-colors flex items-center justify-center gap-1.5 active:scale-95"
               >
