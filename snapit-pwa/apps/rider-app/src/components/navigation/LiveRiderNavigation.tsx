@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Order, LocationPoint } from '@/types';
+import { useDeviceGps } from '@/hooks/useDeviceGps';
+import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
 
 interface LiveRiderNavigationProps {
   order: Order;
@@ -495,21 +497,27 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
       {/* ═══════════════════════════════════════════════
           GOOGLE MAPS LINK
       ═══════════════════════════════════════════════ */}
-      <a
-        href={googleMapsUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bg-slate-50 border-t border-slate-100 px-4 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 transition-colors active:opacity-80"
+      <button
+        type="button"
+        onClick={() => {
+          openTurnByTurnNavigation({
+            lat: targetCoords.lat,
+            lng: targetCoords.lng,
+            label: isToShop ? order.restaurantName : order.customerName,
+            address: isToShop ? order.restaurantAddress : order.deliveryAddress,
+          });
+        }}
+        className="w-full bg-slate-50 border-t border-slate-100 px-4 py-2.5 flex items-center justify-center gap-1.5 text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-colors active:opacity-80 cursor-pointer"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
-        Open in Google Maps for live navigation
+        <span>Open in Google Maps for turn-by-turn navigation</span>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>
-      </a>
+      </button>
     </div>
   );
 };

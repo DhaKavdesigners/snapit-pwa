@@ -7,6 +7,8 @@ import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatTimeAMPM } from '@/services/slotService';
+import { LiveMap } from '@/components/dashboard/LiveMap';
+import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
 import {
   ShieldCheck,
   Check,
@@ -28,6 +30,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Truck,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -204,6 +207,9 @@ export default function DashboardPage() {
           </div>
         </Link>
 
+        {/* ── 3.5. LIVE INTERACTIVE MINI-MAP WINDOW ($0 Free Embedded Preview) ── */}
+        <LiveMap className="my-0.5" defaultHeight="h-[210px]" />
+
         {/* ── 4. MAIN INTERACTIVE ORDER COCKPIT ── */}
 
         {/* ─── SCENARIO A: INCOMING ORDER ALERT ─── */}
@@ -347,15 +353,23 @@ export default function DashboardPage() {
                     <Phone className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Call Store</span>
                   </a>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeOrder.restaurantName + ' ' + activeOrder.restaurantAddress)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs hover:bg-slate-800 active:scale-95"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const lat = activeOrder.shopLocation?.lat ?? 12.9602;
+                      const lng = activeOrder.shopLocation?.lng ?? 78.2711;
+                      openTurnByTurnNavigation({
+                        lat,
+                        lng,
+                        label: activeOrder.restaurantName,
+                        address: activeOrder.restaurantAddress,
+                      });
+                    }}
+                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
                   >
                     <Navigation className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Google Maps</span>
-                  </a>
+                  </button>
                 </div>
 
                 {/* Items in order */}
@@ -406,15 +420,23 @@ export default function DashboardPage() {
                     <Phone className="w-3.5 h-3.5 text-blue-600" />
                     <span>Call Customer</span>
                   </a>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeOrder.deliveryAddress)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs hover:bg-slate-800 active:scale-95"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const lat = activeOrder.customerLocation?.lat ?? 12.9602;
+                      const lng = activeOrder.customerLocation?.lng ?? 78.2711;
+                      openTurnByTurnNavigation({
+                        lat,
+                        lng,
+                        label: activeOrder.customerName,
+                        address: activeOrder.deliveryAddress,
+                      });
+                    }}
+                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
                   >
                     <Navigation className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Google Maps</span>
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
