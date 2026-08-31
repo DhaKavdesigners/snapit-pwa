@@ -7,9 +7,6 @@ import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatTimeAMPM } from '@/services/slotService';
-import { SnapitMap } from '@/components/SnapitMap';
-import { useRiderLocation } from '@/hooks/useRiderLocation';
-import { syncRiderLocationToDb } from '@/services/locationService';
 import {
   ShieldCheck,
   Check,
@@ -52,16 +49,6 @@ export default function DashboardPage() {
   } = useRider();
   const router = useRouter();
 
-  // ── High-Accuracy Live Device GPS Tracking ──
-  const {
-    location: riderGpsLocation,
-    status: gpsStatus,
-    error: gpsError,
-    accuracyClassification,
-    isStale: isGpsStale,
-    retryPermission: retryGpsPermission,
-  } = useRiderLocation({ autoStart: true });
-
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
 
   // Greeting by time of day
@@ -79,17 +66,6 @@ export default function DashboardPage() {
       router.push('/onboarding');
     }
   }, [isHydrated, rider.phone, router]);
-
-  // ── Sync GPS Location to Supabase rider_profiles when online ──
-  useEffect(() => {
-    if (isOnline && riderGpsLocation && rider.phone) {
-      syncRiderLocationToDb(
-        rider.phone,
-        riderGpsLocation.latitude,
-        riderGpsLocation.longitude
-      );
-    }
-  }, [isOnline, riderGpsLocation, rider.phone]);
 
   // Online timer calculation
   const [onlineSeconds, setOnlineSeconds] = useState(0);
@@ -227,36 +203,6 @@ export default function DashboardPage() {
             <ChevronRight className="w-4 h-4" />
           </div>
         </Link>
-
-        {/* ── 3.5. LIVE DELIVERY MAP WINDOW (Phase 2 Real High-Accuracy GPS) ── */}
-        <SnapitMap
-          riderLocation={riderGpsLocation}
-          gpsStatus={gpsStatus}
-          accuracyClassification={accuracyClassification}
-          isStale={isGpsStale}
-          errorMessage={gpsError}
-          onRetryPermission={retryGpsPermission}
-          shopLocation={
-            activeOrder?.shopLocation
-              ? {
-                  latitude: activeOrder.shopLocation.lat,
-                  longitude: activeOrder.shopLocation.lng,
-                  name: activeOrder.restaurantName,
-                  address: activeOrder.restaurantAddress,
-                }
-              : null
-          }
-          customerLocation={
-            activeOrder?.customerLocation
-              ? {
-                  latitude: activeOrder.customerLocation.lat,
-                  longitude: activeOrder.customerLocation.lng,
-                  name: activeOrder.customerName,
-                  address: activeOrder.deliveryAddress,
-                }
-              : null
-          }
-        />
 
         {/* ── 4. MAIN INTERACTIVE ORDER COCKPIT ── */}
 

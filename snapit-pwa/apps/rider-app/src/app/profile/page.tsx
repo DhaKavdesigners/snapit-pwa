@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   AlertCircle,
   FileCheck2,
-  LifeBuoy,
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -237,23 +236,6 @@ export default function ProfilePage() {
             />
           </div>
         </div>
-
-        {/* Support & Help Link */}
-        <Link
-          href="/support"
-          className="bg-white rounded-3xl p-4 shadow-soft border border-slate-200/80 flex items-center justify-between group active:scale-98 transition-transform"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-              <LifeBuoy className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-900">Rider Support & Helpdesk</p>
-              <p className="text-[10px] text-slate-500 font-medium">Raise tickets, report order or wallet issues</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-        </Link>
 
         {/* Log Out / Switch Account */}
         <button
