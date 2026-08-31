@@ -4,7 +4,8 @@ import {
   Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, 
   MessageCircle, Info, Copy, Check, RefreshCw, ShieldCheck, 
   Sparkles, AlertCircle, Smartphone, ChefHat, Bike, Clock, 
-  ArrowRight, ChevronRight, Store, FileText, ChevronDown, ChevronUp, History
+  ArrowRight, ChevronRight, Store, FileText, ChevronDown, ChevronUp, History,
+  Receipt, Printer, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -138,6 +139,49 @@ export const ProfileView: React.FC = () => {
   const [ordersModal, setOrdersModal] = useState(false);
   const [ordersTab, setOrdersTab] = useState<'active' | 'history'>('active');
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [billModalOrder, setBillModalOrder] = useState<any | null>(null);
+  const [copiedBillId, setCopiedBillId] = useState(false);
+
+  const formatOrderDateTime = (dateStr?: string) => {
+    if (!dateStr) return 'Recent Order';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const handleRequestBill = async (orderId: string) => {
+    playSound('modal-pop');
+    // First check in already loaded orders state
+    const found = orders.find((o: any) => o.id === orderId);
+    if (found) {
+      setBillModalOrder(found);
+      return;
+    }
+    // Fetch directly on-demand from Supabase by orderId
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+      if (data && !error) {
+        setBillModalOrder(data);
+      }
+    } catch (err) {
+      console.warn('Error fetching order bill on-demand:', err);
+    }
+  };
 
   // Saved Addresses State
   const [addressesModal, setAddressesModal] = useState(false);
@@ -1068,7 +1112,7 @@ export const ProfileView: React.FC = () => {
         {/* ── MY ORDERS & LIVE TRACKING MODAL ── */}
         <AnimatePresence>
           {ordersModal && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center">
+            <div className="fixed inset-0 z-[60] flex items-end justify-center">
               <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
@@ -1107,7 +1151,7 @@ export const ProfileView: React.FC = () => {
                 </div>
 
                 {/* Orders Content */}
-                <div className="p-4 overflow-y-auto space-y-4 flex-1 pb-10">
+                <div className="p-4 overflow-y-auto space-y-4 flex-1 pb-16">
                   {/* 1. LIVE ACTIVE ORDERS SECTION */}
                   {activeOrders.length > 0 && (
                     <div className="space-y-3">
@@ -1218,18 +1262,27 @@ export const ProfileView: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* Total and Help */}
+                            {/* Total and Actions */}
                             <div className="border-t border-dashed border-gray-200 pt-3 flex items-center justify-between">
                               <div>
                                 <span className="text-[10px] text-gray-400 font-bold block">Paid via UPI</span>
                                 <span className="font-mono font-black text-base text-brand">{formatCurrency(order.estimated_total)}</span>
                               </div>
-                              <button
-                                onClick={() => window.open(`https://wa.me/918217649688?text=Hi%20Minnit,%20need%20help%20with%20order%20${order.id}`, '_blank')}
-                                className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors"
-                              >
-                                Need Help?
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleRequestBill(order.id)}
+                                  className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-2xs"
+                                >
+                                  <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>View Bill</span>
+                                </button>
+                                <button
+                                  onClick={() => window.open(`https://wa.me/918217649688?text=Hi%20Minnit,%20need%20help%20with%20order%20${order.id}`, '_blank')}
+                                  className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                  Need Help?
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
@@ -1263,34 +1316,57 @@ export const ProfileView: React.FC = () => {
                     ) : (
                       pastOrders.map((order) => {
                         const isDelivered = order.status === 'DELIVERED';
-                        const storeName = storesMap[order.store_id] || 'Partner Store';
+                        const isCancelled = order.status === 'CANCELLED' || order.status === 'REJECTED';
+                        const storeName = storesMap[order.store_id] || (order.store_id === 'g1' || order.store_id === 's1' ? 'Mhetha Stores' : order.store_id === 'd1' || order.store_id === 's4' ? 'Nandhini KGF' : 'Partner Store');
 
                         return (
                           <div key={order.id} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm space-y-3">
                             <div className="flex items-center justify-between">
                               <div>
-                                <h4 className="font-black text-sm text-gray-900">{storeName}</h4>
-                                <p className="text-[10px] font-mono text-gray-400">{order.id} • {new Date(order.created_at).toLocaleDateString()}</p>
+                                <h4 className="font-black text-sm text-gray-900 flex items-center gap-1.5">
+                                  <Store className="w-3.5 h-3.5 text-brand" />
+                                  {storeName}
+                                </h4>
+                                <p className="text-[10px] font-mono text-gray-400">
+                                  {order.id} • {new Date(order.created_at).toLocaleDateString()}
+                                </p>
                               </div>
                               <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${
-                                isDelivered ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
+                                isDelivered 
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                                  : isCancelled
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200'
                               }`}>
-                                {isDelivered ? 'Delivered ✓' : 'Cancelled'}
+                                {isDelivered ? 'Delivered ✓' : isCancelled ? 'Cancelled' : order.status}
                               </span>
                             </div>
 
-                            <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl">
-                              {order.items?.map((it: any) => `${it.quantity}x ${it.name}`).join(', ')}
+                            <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl font-medium">
+                              {order.items?.map((it: any) => `${it.quantity}x ${it.name}`).join(', ') || 'Groceries & Essentials'}
                             </div>
 
-                            <div className="flex justify-between items-center pt-1 text-xs">
-                              <span className="font-mono font-black text-gray-900">{formatCurrency(order.estimated_total)}</span>
-                              <button
-                                onClick={() => { setOrdersModal(false); navigate('/'); }}
-                                className="text-[11px] font-black text-brand uppercase tracking-wider hover:underline"
-                              >
-                                Reorder Items →
-                              </button>
+                            <div className="flex justify-between items-center pt-1 border-t border-gray-100/80">
+                              <div>
+                                <span className="text-[10px] text-gray-400 font-bold block">Total Paid</span>
+                                <span className="font-mono font-black text-sm text-gray-900">{formatCurrency(order.estimated_total)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleRequestBill(order.id)}
+                                  className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2.5 py-1.5 rounded-xl transition-all active:scale-95 shadow-2xs"
+                                  title="View detailed tax bill & receipt"
+                                >
+                                  <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Request Bill</span>
+                                </button>
+                                <button
+                                  onClick={() => { setOrdersModal(false); navigate('/'); }}
+                                  className="text-[11px] font-black text-brand uppercase tracking-wider hover:underline px-1 py-1"
+                                >
+                                  Reorder →
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
@@ -1306,7 +1382,7 @@ export const ProfileView: React.FC = () => {
         {/* ── Saved Addresses Modal (bottom-sheet) ── */}
         <AnimatePresence>
           {addressesModal && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center">
+            <div className="fixed inset-0 z-[60] flex items-end justify-center">
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -1319,13 +1395,13 @@ export const ProfileView: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: '100%' }}
                 transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                className="relative bg-slate-50 rounded-t-[2.5rem] shadow-2xl px-5 pt-4 pb-8 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
+                className="relative bg-slate-50 rounded-t-[2.5rem] shadow-2xl px-5 pt-4 pb-12 w-full max-w-md max-h-[88vh] flex flex-col overflow-hidden"
               >
                 {/* Grab Handle */}
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" />
 
                 {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-200 shrink-0">
                   <div className="flex items-center gap-2">
                     <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                       <MapPin className="w-5 h-5" />
@@ -1343,8 +1419,8 @@ export const ProfileView: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Body Content (Scrollable) */}
-                <div className="overflow-y-auto py-4 space-y-3.5 flex-1 pr-0.5">
+                {/* Body Content (Scrollable with generous bottom clearance) */}
+                <div className="overflow-y-auto py-4 space-y-3.5 flex-1 pr-0.5 pb-28">
                   {/* List of Saved Addresses */}
                   {savedAddresses.map((addr: any) => (
                     <div
@@ -1406,7 +1482,7 @@ export const ProfileView: React.FC = () => {
                   {!isAddingNewAddress ? (
                     <button
                       onClick={() => { playSound('tap'); setIsAddingNewAddress(true); }}
-                      className="w-full py-3.5 bg-white border-2 border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/40 text-emerald-700 font-black text-xs rounded-2xl transition-all flex items-center justify-center gap-2 active:scale-98 shadow-2xs"
+                      className="w-full py-3.5 bg-white border-2 border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/40 text-emerald-700 font-black text-xs rounded-2xl transition-all flex items-center justify-center gap-2 active:scale-98 shadow-2xs cursor-pointer"
                     >
                       <span className="text-base leading-none font-black">+</span>
                       <span>Add New Delivery Address</span>
@@ -1416,7 +1492,7 @@ export const ProfileView: React.FC = () => {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="bg-white p-4 rounded-2xl border-2 border-emerald-400 shadow-md space-y-3"
+                      className="bg-white p-4 rounded-2xl border-2 border-emerald-400 shadow-md space-y-3 mb-6"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-gray-900 uppercase tracking-wider">
@@ -1484,7 +1560,7 @@ export const ProfileView: React.FC = () => {
 
                       <button
                         onClick={handleSaveNewAddress}
-                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-transform active:scale-95 uppercase tracking-wider"
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-transform active:scale-95 uppercase tracking-wider cursor-pointer"
                       >
                         Save Address
                       </button>
@@ -1496,18 +1572,211 @@ export const ProfileView: React.FC = () => {
           )}
         </AnimatePresence>
 
+        {/* ── DIGITAL BILL / TAX INVOICE MODAL (On-Demand) ── */}
+        <AnimatePresence>
+          {billModalOrder && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setBillModalOrder(null)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 z-10"
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-emerald-600 to-brand px-5 py-4 text-white flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                      <Receipt className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-base leading-tight">Tax Invoice &amp; Bill</h3>
+                      <p className="text-[10px] text-emerald-100 font-medium">Minnit Quick Delivery • KGF</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setBillModalOrder(null)}
+                    className="w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 text-white flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Printable / Viewable Receipt Content */}
+                <div className="overflow-y-auto p-5 space-y-4 flex-1 text-gray-800 text-xs">
+                  {/* Store & Order Meta Box */}
+                  <div className="bg-slate-50 rounded-2xl p-3.5 border border-gray-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-sm text-gray-900 flex items-center gap-1.5">
+                        <Store className="w-4 h-4 text-emerald-600" />
+                        {storesMap[billModalOrder.store_id] || (billModalOrder.store_id === 'g1' || billModalOrder.store_id === 's1' ? 'Mhetha Stores' : billModalOrder.store_id === 'd1' || billModalOrder.store_id === 's4' ? 'Nandhini KGF' : 'Minnit Partner Store')}
+                      </span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                        billModalOrder.status === 'DELIVERED'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : billModalOrder.status === 'CANCELLED' || billModalOrder.status === 'REJECTED'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {billModalOrder.status === 'DELIVERED' ? 'Delivered ✓' : billModalOrder.status === 'CANCELLED' ? 'Cancelled' : billModalOrder.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-200/60 text-[11px]">
+                      <div>
+                        <span className="text-gray-400 font-bold block text-[9.5px] uppercase tracking-wider">Order ID</span>
+                        <div className="flex items-center gap-1 font-mono font-bold text-gray-800">
+                          <span>{billModalOrder.id}</span>
+                          <button
+                            onClick={() => {
+                              try {
+                                if (navigator.clipboard) {
+                                  navigator.clipboard.writeText(billModalOrder.id).catch(() => {});
+                                }
+                              } catch {}
+                              setCopiedBillId(true);
+                              setTimeout(() => setCopiedBillId(false), 2000);
+                            }}
+                            className="text-gray-400 hover:text-emerald-700 p-0.5"
+                            title="Copy Order ID"
+                          >
+                            {copiedBillId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold block text-[9.5px] uppercase tracking-wider">Date &amp; Time</span>
+                        <span className="font-medium text-gray-700">{formatOrderDateTime(billModalOrder.created_at)}</span>
+                      </div>
+                    </div>
+
+                    {/* Delivery Destination */}
+                    <div className="pt-1.5 border-t border-gray-200/60 text-[11px]">
+                      <span className="text-gray-400 font-bold block text-[9.5px] uppercase tracking-wider">Delivered To</span>
+                      <p className="text-gray-700 font-medium leading-snug">
+                        {billModalOrder.recipient_name || userProfile?.name || formData.name || 'Customer'} • +91 {String(billModalOrder.recipient_phone || billModalOrder.customer_id || formData.phone || '8217649688').replace(/\D/g, '').slice(-10)}
+                      </p>
+                      <p className="text-gray-500 text-[10.5px] mt-0.5">
+                        📍 {billModalOrder.delivery_address?.line1 || billModalOrder.delivery_address?.addressLine1 || formData.addressLine1 || '#450, Maariyaman temple street'}, {billModalOrder.delivery_address?.line2 || billModalOrder.delivery_address?.addressLine2 || formData.addressLine2 || 'Bowrilalpet, KGF'} (PIN: {billModalOrder.delivery_address?.pincode || formData.pincode || '563122'})
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Itemized Table */}
+                  <div>
+                    <h4 className="font-black text-xs text-gray-900 uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>Items Ordered</span>
+                      <span className="text-[10px] text-gray-500 font-bold">{billModalOrder.items?.length || 1} Item(s)</span>
+                    </h4>
+                    <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-100 bg-white shadow-2xs">
+                      {billModalOrder.items?.map((it: any, idx: number) => {
+                        const itemPricePaise = it.price_paise !== undefined ? it.price_paise : (it.price ? (it.price > 1000 ? it.price : it.price * 100) : 0);
+                        const lineTotal = itemPricePaise * (it.quantity || 1);
+                        return (
+                          <div key={idx} className="p-3 flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-gray-900 text-xs truncate">{it.name}</p>
+                              <p className="text-[10px] text-gray-400 font-medium">
+                                Qty: <span className="text-gray-700 font-bold">{it.quantity || 1}</span> × {formatCurrency(itemPricePaise)}
+                              </p>
+                            </div>
+                            <span className="font-mono font-black text-gray-900 text-xs shrink-0">
+                              {formatCurrency(lineTotal)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Bill Details Breakdown */}
+                  <div className="bg-slate-50 rounded-2xl p-3.5 border border-gray-200/80 space-y-2 font-medium text-xs">
+                    <h4 className="font-black text-xs text-gray-900 uppercase tracking-wider pb-1 border-b border-gray-200">
+                      Bill Details
+                    </h4>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Item Total</span>
+                      <span className="font-mono font-bold text-gray-900">
+                        {formatCurrency(billModalOrder.items?.reduce((acc: number, it: any) => {
+                          const p = it.price_paise !== undefined ? it.price_paise : (it.price ? (it.price > 1000 ? it.price : it.price * 100) : 0);
+                          return acc + (p * (it.quantity || 1));
+                        }, 0) || billModalOrder.estimated_total)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Delivery Fee (KGF Fast Drop)</span>
+                      <span className="font-bold text-emerald-700">₹0 FREE</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Taxes &amp; Platform Fee</span>
+                      <span className="font-bold text-emerald-700">₹0 FREE</span>
+                    </div>
+                    <div className="border-t border-dashed border-gray-300 pt-2 flex justify-between items-center text-sm font-black">
+                      <span className="text-gray-900">Total Paid</span>
+                      <span className="font-mono text-base text-emerald-700">{formatCurrency(billModalOrder.estimated_total)}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Verification Proof */}
+                  <div className="flex items-center justify-between p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-emerald-900 text-xs">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="font-bold leading-none">Paid Online via UPI</p>
+                        <p className="text-[10px] text-emerald-700 mt-0.5">100% Verified &amp; Settled</p>
+                      </div>
+                    </div>
+                    <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      PAID ✓
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      const msg = `*Minnit KGF - Order Receipt*\nOrder ID: ${billModalOrder.id}\nStore: ${storesMap[billModalOrder.store_id] || 'Minnit Store'}\nDate: ${formatOrderDateTime(billModalOrder.created_at)}\nTotal Paid: ${formatCurrency(billModalOrder.estimated_total)}\nStatus: ${billModalOrder.status}\n\nThank you for ordering with Minnit! ⚡`;
+                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>WhatsApp Receipt</span>
+                  </button>
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1 transition-colors shadow-2xs cursor-pointer"
+                    title="Print Receipt"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print</span>
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* ── About Minnit Modal ── */}
         <AnimatePresence>
           {aboutModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setAboutModal(false)} />
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setAboutModal(false)} />
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="relative bg-white rounded-3xl shadow-2xl p-7 w-full max-w-sm flex flex-col items-center text-center"
+                className="relative bg-white rounded-3xl shadow-2xl p-7 w-full max-w-sm flex flex-col items-center text-center z-10"
               >
                 <button onClick={() => setAboutModal(false)}
-                  className="absolute top-4 right-4 w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                  className="absolute top-4 right-4 w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
                 <div className="w-16 h-16 bg-white border border-emerald-200 rounded-2xl flex items-center justify-center mb-3 p-1.5 shadow-[0_8px_20px_rgba(5,150,105,0.15)] overflow-hidden">
@@ -1530,28 +1799,28 @@ export const ProfileView: React.FC = () => {
         {/* ── Policy Modals (bottom-sheet) ── */}
         <AnimatePresence>
           {policyModal && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center">
+            <div className="fixed inset-0 z-[70] flex items-end justify-center">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPolicyModal(null)} />
               <motion.div
                 initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }}
                 transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                className="relative bg-white rounded-t-[2.5rem] shadow-2xl px-6 pt-5 pb-8 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
+                className="relative bg-white rounded-t-[2.5rem] shadow-2xl px-6 pt-5 pb-24 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden z-10"
               >
-                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4" />
+                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 shrink-0" />
                 <button onClick={() => setPolicyModal(null)}
-                  className="absolute top-5 right-5 w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                  className="absolute top-5 right-5 w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 shrink-0">
                   <h3 className="font-black text-xl text-text-primary">{policyContent[policyModal].title}</h3>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md w-fit mb-4">
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md w-fit mb-4 shrink-0">
                   {policyContent[policyModal].badge}
                 </span>
                 
                 {/* Scrollable Policy Sections */}
-                <div className="overflow-y-auto space-y-4 pr-1 text-left flex-1">
+                <div className="overflow-y-auto space-y-4 pr-1 text-left flex-1 pb-4">
                   {policyContent[policyModal].sections.map((sec, idx) => (
                     <div key={idx} className="bg-gray-50/80 rounded-2xl p-3.5 border border-gray-100">
                       <h4 className="font-black text-xs text-gray-900 mb-1">{sec.heading}</h4>
@@ -1560,10 +1829,10 @@ export const ProfileView: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="pt-4 border-t border-gray-100 mt-2">
+                <div className="pt-4 border-t border-gray-100 mt-2 shrink-0">
                   <button
                     onClick={() => setPolicyModal(null)}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-transform active:scale-95 uppercase tracking-wider"
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-md transition-all uppercase tracking-wider cursor-pointer"
                   >
                     Got It, Close
                   </button>

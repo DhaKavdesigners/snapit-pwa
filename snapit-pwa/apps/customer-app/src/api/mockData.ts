@@ -18,12 +18,21 @@ export const mockFoodStores: Store[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXPLORE CATEGORIES CONFIGURATION (Clean & Original Images)
+// EXPLORE CATEGORIES CONFIGURATION (Modern 2-Column Bento Grid & Pastel Themes)
 // ─────────────────────────────────────────────────────────────────────────────
 export const exploreShoppingCategories = [
   {
     id: 'cat_vegetables',
     title: 'Fresh Vegetables',
+    shortTitle: 'Vegetables',
+    subtitle: 'Tomato, Onion, Palak & Veggies',
+    emoji: '🥦',
+    tag: 'Farm Fresh',
+    itemCountText: '15+ Items',
+    bgGradient: 'from-emerald-50 via-green-50/70 to-emerald-100/50',
+    borderColor: 'border-emerald-200/80',
+    accentColor: 'text-emerald-800',
+    badgeBg: 'bg-emerald-100/90 text-emerald-800 border-emerald-300/60',
     imageUrl: '/images/cat_exp_head/Vegetables.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -36,6 +45,15 @@ export const exploreShoppingCategories = [
   {
     id: 'cat_fruits',
     title: 'Sweet Fruits',
+    shortTitle: 'Fresh Fruits',
+    subtitle: 'Apple, Banana, Oranges & Salads',
+    emoji: '🍎',
+    tag: 'Sweet & Juicy',
+    itemCountText: '12+ Items',
+    bgGradient: 'from-orange-50 via-amber-50/70 to-orange-100/50',
+    borderColor: 'border-orange-200/80',
+    accentColor: 'text-orange-800',
+    badgeBg: 'bg-orange-100/90 text-orange-800 border-orange-300/60',
     imageUrl: '/images/cat_exp_head/fruits.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -45,19 +63,17 @@ export const exploreShoppingCategories = [
     ]
   },
   {
-    id: 'cat_groceries',
-    title: 'Groceries',
-    imageUrl: '/images/cat_exp_head/grocery-products.jpg',
-    fallbackImageUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=600&auto=format&fit=crop&q=80',
-    subCategories: [
-      { id: 'sc_essentials', name: 'Everyday Essentials' },
-      { id: 'sc_cooking', name: 'Cooking Essentials' },
-      { id: 'sc_snacks', name: 'Snacks & Beverages' }
-    ]
-  },
-  {
     id: 'cat_dairy',
     title: 'Dairy & Milk',
+    shortTitle: 'Dairy Essentials',
+    subtitle: 'Nandini Milk, Curd, Butter & Ghee',
+    emoji: '🥛',
+    tag: 'Daily Fresh',
+    itemCountText: '10+ Items',
+    bgGradient: 'from-blue-50 via-sky-50/70 to-cyan-100/50',
+    borderColor: 'border-blue-200/80',
+    accentColor: 'text-blue-800',
+    badgeBg: 'bg-blue-100/90 text-blue-800 border-blue-300/60',
     imageUrl: '/images/cat_exp_head/dairy_products.webp',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -67,8 +83,37 @@ export const exploreShoppingCategories = [
     ]
   },
   {
+    id: 'cat_groceries',
+    title: 'Daily Groceries',
+    shortTitle: 'Atta & Oils',
+    subtitle: 'Fortune Oil, Atta, Rice & Masalas',
+    emoji: '🛒',
+    tag: 'Essentials',
+    itemCountText: '25+ Items',
+    bgGradient: 'from-amber-50 via-yellow-50/70 to-amber-100/50',
+    borderColor: 'border-amber-200/80',
+    accentColor: 'text-amber-800',
+    badgeBg: 'bg-amber-100/90 text-amber-800 border-amber-300/60',
+    imageUrl: '/images/cat_exp_head/grocery-products.jpg',
+    fallbackImageUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=600&auto=format&fit=crop&q=80',
+    subCategories: [
+      { id: 'sc_essentials', name: 'Everyday Essentials' },
+      { id: 'sc_cooking', name: 'Cooking Essentials' },
+      { id: 'sc_snacks', name: 'Snacks & Beverages' }
+    ]
+  },
+  {
     id: 'cat_juices',
-    title: 'Cold Drinks & Juices',
+    title: 'Drinks & Juices',
+    shortTitle: 'Cold Drinks',
+    subtitle: 'Coca-Cola, Frooti, Soda & Juices',
+    emoji: '🧃',
+    tag: 'Chilled ❄️',
+    itemCountText: '14+ Items',
+    bgGradient: 'from-rose-50 via-pink-50/70 to-red-100/50',
+    borderColor: 'border-rose-200/80',
+    accentColor: 'text-rose-800',
+    badgeBg: 'bg-rose-100/90 text-rose-800 border-rose-300/60',
     imageUrl: '/images/cat_exp_head/fruits_juices.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -79,7 +124,16 @@ export const exploreShoppingCategories = [
   },
   {
     id: 'cat_home_care',
-    title: 'Personal Care',
+    title: 'Personal & Home',
+    shortTitle: 'Home Care',
+    subtitle: 'Surf Excel, Soaps & Cleaning Needs',
+    emoji: '🧼',
+    tag: 'Top Hygiene',
+    itemCountText: '18+ Items',
+    bgGradient: 'from-purple-50 via-violet-50/70 to-indigo-100/50',
+    borderColor: 'border-purple-200/80',
+    accentColor: 'text-purple-800',
+    badgeBg: 'bg-purple-100/90 text-purple-800 border-purple-300/60',
     imageUrl: '/images/cat_exp_head/personaol_care_products.webp',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -92,7 +146,16 @@ export const exploreShoppingCategories = [
 export const exploreFoodCategories = [
   {
     id: 'cat_biryani',
-    title: 'Biryani',
+    title: 'Ambur Biryani',
+    shortTitle: 'Dum Biryani',
+    subtitle: 'Authentic Ambur Chicken & Mutton',
+    emoji: '🍗',
+    tag: 'Hot & Fresh',
+    itemCountText: '8+ Dishes',
+    bgGradient: 'from-amber-50 via-orange-50/70 to-amber-100/60',
+    borderColor: 'border-amber-300/80',
+    accentColor: 'text-amber-900',
+    badgeBg: 'bg-amber-100 text-amber-900 border-amber-300/60',
     imageUrl: '/images/categories/biryani.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -101,7 +164,16 @@ export const exploreFoodCategories = [
   },
   {
     id: 'cat_fastfood',
-    title: 'Fast Food',
+    title: 'Fast Food & Rolls',
+    shortTitle: 'Fast Food',
+    subtitle: 'Burgers, Shawarmas, Rolls & Fries',
+    emoji: '🍔',
+    tag: 'Quick Bites',
+    itemCountText: '12+ Dishes',
+    bgGradient: 'from-red-50 via-rose-50/70 to-red-100/60',
+    borderColor: 'border-red-300/80',
+    accentColor: 'text-red-900',
+    badgeBg: 'bg-red-100 text-red-900 border-red-300/60',
     imageUrl: '/images/categories/fastfood.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=600&auto=format&fit=crop&q=80',
     subCategories: [
@@ -111,6 +183,15 @@ export const exploreFoodCategories = [
   {
     id: 'cat_bakery',
     title: 'Bakery & Sweets',
+    shortTitle: 'Bakery & Cakes',
+    subtitle: 'Fresh Bread, Puffs, Pastries & Cakes',
+    emoji: '🥐',
+    tag: 'Oven Fresh',
+    itemCountText: '10+ Items',
+    bgGradient: 'from-amber-50 via-yellow-50/70 to-orange-100/60',
+    borderColor: 'border-amber-300/80',
+    accentColor: 'text-amber-900',
+    badgeBg: 'bg-amber-100 text-amber-900 border-amber-300/60',
     imageUrl: '/images/categories/bakery.jpg',
     fallbackImageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80',
     subCategories: [

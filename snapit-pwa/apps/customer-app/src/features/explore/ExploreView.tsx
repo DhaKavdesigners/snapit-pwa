@@ -32,6 +32,12 @@ export const ExploreView: React.FC = () => {
 
   const categories = isShopping ? exploreShoppingCategories : exploreFoodCategories;
 
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as any });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [exploreState, activeTab, isShopping]);
+
   // --- HANDLERS ---
   const handleCategoryClick = (category: any) => {
     setSelectedCategory(category);
@@ -262,40 +268,79 @@ export const ExploreView: React.FC = () => {
         
         {/* CATEGORIES / FOOD TAB */}
         {activeTab === 'categories' && (
-          <div className="grid grid-cols-1 gap-2.5">
-            {categories.map((category) => (
-              <motion.div 
-                key={category.id} 
-                whileTap={{ scale: 0.97 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                onClick={() => handleCategoryClick(category)}
-                className="relative h-26 sm:h-28 rounded-2xl overflow-hidden shadow-xs border border-gray-100/90 cursor-pointer group active:scale-[0.98] transition-all bg-white"
-              >
-                {/* Clean & Natural Image */}
-                <img 
-                  src={category.imageUrl} 
-                  alt={category.title}
-                  onError={(e) => { 
-                    const target = e.target as HTMLImageElement;
-                    if (target.src !== category.fallbackImageUrl) {
-                      target.src = category.fallbackImageUrl;
-                    }
-                  }}
-                  className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
-                />
+          <div className="space-y-4">
+            {/* Section Header */}
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h2 className="font-black text-base text-gray-900 tracking-tight">
+                  {isShopping ? 'Explore Categories' : 'Food & Cuisines'}
+                </h2>
+                <p className="text-[11px] text-gray-500 font-medium">
+                  {isShopping ? 'Fresh farm picks & daily home essentials' : 'Hot & delicious meals delivered fast'}
+                </p>
+              </div>
+              <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                {categories.length} Categories
+              </span>
+            </div>
 
-                {/* Bottom gradient for crisp text legibility */}
-                <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-end justify-between p-3.5 z-10">
-                  <h3 className="font-black text-white text-base tracking-tight drop-shadow-md">
-                    {category.title}
-                  </h3>
+            {/* 2-Column Bento Grid - Image First Hero Layout */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
+              {categories.map((category: any) => {
+                const bgGrad = category.bgGradient || 'from-emerald-50 via-white to-green-50';
+                const borderColor = category.borderColor || 'border-emerald-200/80';
+                const accentColor = category.accentColor || 'text-emerald-900';
 
-                  <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white group-hover:bg-white group-hover:text-gray-900 group-hover:scale-110 transition-all shadow-xs shrink-0">
-                    <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                return (
+                  <motion.div
+                    key={category.id}
+                    whileTap={{ scale: 0.96 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    onClick={() => handleCategoryClick(category)}
+                    className={`relative bg-gradient-to-b ${bgGrad} border ${borderColor} rounded-3xl p-2.5 flex flex-col justify-between shadow-xs hover:shadow-md transition-all cursor-pointer group overflow-hidden`}
+                  >
+                    {/* TOP HERO: Large, High-Clarity Image (takes >55% of the card) */}
+                    <div className="relative w-full h-28 sm:h-32 rounded-2xl overflow-hidden bg-white shadow-2xs group-hover:shadow-xs transition-all">
+                      <img
+                        src={category.imageUrl}
+                        alt={category.title}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== category.fallbackImageUrl) {
+                            target.src = category.fallbackImageUrl;
+                          }
+                        }}
+                        className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                      />
+
+                      {/* Floating Translucent Pill Badge */}
+                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-full shadow-xs border border-white/80">
+                        <span className="text-xs">{category.emoji || '✨'}</span>
+                        <span className="text-[9px] font-black uppercase tracking-wider text-gray-800">
+                          {category.tag || 'Fresh'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* BOTTOM HALF: Category Name, Subtitle & Item Count */}
+                    <div className="px-1 pt-2.5 pb-1 space-y-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <h3 className={`font-black text-sm sm:text-[15px] leading-tight ${accentColor} tracking-tight truncate`}>
+                          {category.title}
+                        </h3>
+                        <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300/60 px-1.5 py-0.5 rounded-md shrink-0">
+                          {category.itemCountText || '10+'}
+                        </span>
+                      </div>
+
+                      <p className="text-[10.5px] text-gray-500 font-medium line-clamp-1 leading-snug">
+                        {category.subtitle || 'Fresh & fast in KGF'}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         )}
 

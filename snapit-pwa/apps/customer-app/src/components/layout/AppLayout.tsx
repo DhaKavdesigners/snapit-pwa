@@ -20,6 +20,24 @@ export const AppLayout: React.FC = () => {
     };
   }, [userProfile?.phone, initLiveSubscription]);
 
+  // Always scroll window and containers to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as any });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    const timer = setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      document.querySelectorAll('.overflow-y-auto, main').forEach((el) => {
+        el.scrollTop = 0;
+      });
+    }, 10);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
   // Hide floating bubble only on cart page if needed
   const isCart = location.pathname === '/cart';
 
