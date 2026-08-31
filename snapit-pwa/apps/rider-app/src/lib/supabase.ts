@@ -16,7 +16,7 @@ export interface DbOrder {
   customer_id?: string;
   store_id?: string;
   rider_id?: string | null;
-  status: string;
+  status: string; // 'PLACED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'REJECTED', 'CANCELLED'
   items: Array<{ name: string; quantity: number; price?: number }>;
   estimated_total: number;
   delivery_address: any;
@@ -27,9 +27,12 @@ export interface DbOrder {
   payment_status?: string;
   shopkeeper_handover_confirmed?: boolean;
   rider_pickup_confirmed?: boolean;
-  rider_assignment?: string;
+  rider_assignment?: string; // 'UNASSIGNED', 'OFFERED', 'ACCEPTED', 'REJECTED', 'TIMEOUT', 'AUTO_ASSIGNED', 'ADMIN_ASSIGNED'
   delivery_pin?: string | number;
   delivery_fee?: number;
+  assigned_at?: string;
+  picked_up_at?: string;
+  delivered_at?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -43,6 +46,8 @@ export interface DbStore {
   lat?: number;
   lng?: number;
   phone?: string;
+  is_online?: boolean;
+  rush_mode?: boolean;
 }
 
 export interface DbRiderProfile {
@@ -51,14 +56,18 @@ export interface DbRiderProfile {
   name: string;
   phone: string;
   mpin?: string;
+  dob?: string;
   alt_phone?: string;
   email?: string;
   address?: string;
   avatar_url?: string;
   selfie_url?: string;
   aadhaar_number?: string;
+  aadhaar_doc_url?: string;
   pan_number?: string;
+  pan_doc_url?: string;
   dl_number?: string;
+  dl_doc_url?: string;
   upi_id?: string;
   vehicle_type?: string;
   vehicle_number?: string;
@@ -67,6 +76,8 @@ export interface DbRiderProfile {
   is_verified?: boolean;
   verification_step?: number;
   is_online?: boolean;
+  current_lat?: number;
+  current_lng?: number;
   wallet_balance?: number;
   rating?: number;
   total_deliveries?: number;
@@ -75,3 +86,52 @@ export interface DbRiderProfile {
   updated_at?: string;
 }
 
+export interface DbRiderSlot {
+  id: string;
+  rider_id: string;
+  slot_date: string; // YYYY-MM-DD
+  start_time: string; // HH:mm
+  end_time: string; // HH:mm
+  start_timestamp: number;
+  end_timestamp: number;
+  zone_id: string;
+  zone_name: string;
+  status: string; // 'BOOKED', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'EXTENDED', 'PENDING_APPROVAL'
+  booked_at?: string;
+  created_at?: string;
+}
+
+export interface DbWalletTransaction {
+  id: string;
+  rider_id: string;
+  order_id?: string | null;
+  amount: number;
+  type: string; // 'TRIP_EARNING', 'TIP', 'SURGE', 'BONUS', 'PENALTY', 'CASHOUT'
+  status: string; // 'AVAILABLE', 'PENDING', 'TRANSFERRED'
+  description?: string;
+  created_at?: string;
+}
+
+export interface DbSupportTicket {
+  id: string;
+  rider_id: string;
+  order_id?: string | null;
+  category: string;
+  message: string;
+  status: string; // 'OPEN', 'IN_PROGRESS', 'RESOLVED'
+  admin_response?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DbNotification {
+  id: string;
+  rider_id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  amount?: number;
+  action_route?: string;
+  created_at?: string;
+}
