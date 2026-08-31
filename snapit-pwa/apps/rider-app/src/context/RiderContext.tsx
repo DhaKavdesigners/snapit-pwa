@@ -82,8 +82,11 @@ import {
   loginRiderWithMpin,
   loginRiderWithMpinOnly,
   fetchRiderProfileFromDb,
+  updateRiderLiveLocation,
+  updateRiderOnlineStatus,
 } from '@/services/supabaseOrderService';
 import { verifyDeliveryPin } from '../../../../common_logic/deliveryLogic';
+import { soundEngine } from '@/services/soundService';
 
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
@@ -1045,22 +1048,45 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Online Toggle ─────────────────────────────────────────────────────────
 
   const toggleOnline = () => {
-    setIsOnline((prev) => !prev);
+    setIsOnline((prev) => {
+      const next = !prev;
+      if (rider.phone) {
+        updateRiderOnlineStatus(rider.phone, next);
+      }
+      return next;
+    });
   };
 
   const setOnlineStatus = (status: boolean) => {
     setIsOnline(status);
     if (!status) setIncomingOrder(null);
+    if (rider.phone) {
+      updateRiderOnlineStatus(rider.phone, status);
+    }
   };
 
   const toggleDesktopFrame = () => {
     setDesktopFrame((prev) => !prev);
   };
 
+  // ─── Incoming Order Sound Effect ──────────────────────────────────────────
+  useEffect(() => {
+    if (incomingOrder) {
+      soundEngine.startIncomingOrderRingtone();
+    } else {
+      soundEngine.stopIncomingOrderRingtone();
+    }
+    return () => {
+      soundEngine.stopIncomingOrderRingtone();
+    };
+  }, [incomingOrder]);
+
   // ─── Order Methods ─────────────────────────────────────────────────────────
 
   const acceptIncomingOrder = () => {
     if (!incomingOrder) return;
+    soundEngine.stopIncomingOrderRingtone();
+    soundEngine.playSuccessChime();
     recordOrderAcceptance(incomingOrder.id, 'accepted');
     const orderWithActiveStatus: Order = {
       ...incomingOrder,
@@ -1081,6 +1107,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const declineIncomingOrder = () => {
     if (!incomingOrder) return;
+    soundEngine.stopIncomingOrderRingtone();
     recordOrderAcceptance(incomingOrder.id, 'declined');
     const declinedOrder: Order = {
       ...incomingOrder,
@@ -1222,6 +1249,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setOrdersHistory((prev) => [completedOrder, ...prev.filter((o) => o.id !== activeOrder.id)]);
     const orderEarnings = activeOrder.earnings || 45;
 
+    soundEngine.playPayoutChime();
     updateDbOrderStatus(activeOrder.id, 'DELIVERED');
 
     setRider((prev) => ({

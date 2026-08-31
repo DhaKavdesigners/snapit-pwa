@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Order, LocationPoint } from '@/types';
+import { useDeviceGps } from '@/hooks/useDeviceGps';
+import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
+import { fetchRoadRoute } from '@/services/routingService';
 
 interface LiveRiderNavigationProps {
   order: Order;
@@ -165,10 +168,10 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
 
         leafletMapInstance.current = map;
 
-        // Light map tile (CartoDB Voyager — clean & bright like reference)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // 100% Free OpenStreetMap Tiles (Zero API key, Zero watermark)
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          subdomains: 'abcd',
+          subdomains: 'abc',
         }).addTo(map);
 
         // Blue arrow rider marker
@@ -228,26 +231,24 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
         const riderMarker = L.marker([currentRiderPos.lat, currentRiderPos.lng], { icon: riderIcon }).addTo(map);
         riderMarkerRef.current = riderMarker;
 
-        // Blue route polyline
-        const routePoints = [
-          [currentRiderPos.lat, currentRiderPos.lng],
-          [midLat + 0.001, midLng - 0.003],
-          [targetCoords.lat, targetCoords.lng],
-        ];
+        // Fetch real road-following route from OSRM
+        fetchRoadRoute(
+          { lat: currentRiderPos.lat, lng: currentRiderPos.lng },
+          { lat: targetCoords.lat, lng: targetCoords.lng }
+        ).then((routeRes) => {
+          if (map) {
+            L.polyline(routeRes.coordinates, {
+              color: '#2563eb',
+              weight: 5,
+              opacity: 0.95,
+              lineCap: 'round',
+              lineJoin: 'round',
+            }).addTo(map);
 
-        L.polyline(routePoints, {
-          color: '#2563eb',
-          weight: 5,
-          opacity: 0.95,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(map);
-
-        const bounds = L.latLngBounds([
-          [currentRiderPos.lat, currentRiderPos.lng],
-          [targetCoords.lat, targetCoords.lng],
-        ]);
-        map.fitBounds(bounds, { padding: [50, 60] });
+            const bounds = L.latLngBounds(routeRes.coordinates);
+            map.fitBounds(bounds, { padding: [50, 60] });
+          }
+        });
       } catch (err) {
         console.warn('Leaflet map error:', err);
       }
@@ -495,21 +496,27 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
       {/* ═══════════════════════════════════════════════
           GOOGLE MAPS LINK
       ═══════════════════════════════════════════════ */}
-      <a
-        href={googleMapsUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bg-slate-50 border-t border-slate-100 px-4 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 transition-colors active:opacity-80"
+      <button
+        type="button"
+        onClick={() => {
+          openTurnByTurnNavigation({
+            lat: targetCoords.lat,
+            lng: targetCoords.lng,
+            label: isToShop ? order.restaurantName : order.customerName,
+            address: isToShop ? order.restaurantAddress : order.deliveryAddress,
+          });
+        }}
+        className="w-full bg-slate-50 border-t border-slate-100 px-4 py-2.5 flex items-center justify-center gap-1.5 text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-colors active:opacity-80 cursor-pointer"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
-        Open in Google Maps for live navigation
+        <span>Open in Google Maps for turn-by-turn navigation</span>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>
-      </a>
+      </button>
     </div>
   );
 };
