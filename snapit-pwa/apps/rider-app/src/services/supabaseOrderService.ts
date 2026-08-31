@@ -506,3 +506,64 @@ export async function fetchRiderDeliveredStats(riderPhoneOrName?: string): Promi
     return { todayEarnings: 0, todayDeliveries: 0, totalEarnings: 0, totalDeliveries: 0, orders: [] };
   }
 }
+
+/** Update rider live GPS location in Supabase */
+export async function updateRiderLiveLocation(
+  phone: string,
+  lat: number,
+  lng: number,
+  isOnline?: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    if (!cleanPhone) return { success: false, error: 'No phone number provided' };
+
+    const updatePayload: any = {
+      current_lat: lat,
+      current_lng: lng,
+      updated_at: new Date().toISOString(),
+    };
+    if (isOnline !== undefined) {
+      updatePayload.is_online = isOnline;
+    }
+
+    const { error } = await supabase
+      .from('rider_profiles')
+      .update(updatePayload)
+      .eq('phone', cleanPhone);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/** Update rider online status in Supabase */
+export async function updateRiderOnlineStatus(
+  phone: string,
+  isOnline: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    if (!cleanPhone) return { success: false, error: 'No phone number provided' };
+
+    const { error } = await supabase
+      .from('rider_profiles')
+      .update({
+        is_online: isOnline,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('phone', cleanPhone);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+

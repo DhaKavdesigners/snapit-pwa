@@ -154,10 +154,10 @@ export const LiveMap: React.FC<LiveMapProps> = ({
 
         leafletMapRef.current = mapInstance;
 
-        // 100% Free CartoDB Voyager Map Layer (Clean, crisp, high contrast road names)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // 100% Free OpenStreetMap Humanitarian/Standard Tiles (Zero API key, Zero watermark)
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          subdomains: 'abcd',
+          subdomains: 'abc',
         }).addTo(mapInstance);
 
         // Feature Group for dynamic overlays

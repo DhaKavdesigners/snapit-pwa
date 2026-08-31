@@ -167,10 +167,10 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
 
         leafletMapInstance.current = map;
 
-        // Light map tile (CartoDB Voyager — clean & bright like reference)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // 100% Free OpenStreetMap Tiles (Zero API key, Zero watermark)
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          subdomains: 'abcd',
+          subdomains: 'abc',
         }).addTo(map);
 
         // Blue arrow rider marker

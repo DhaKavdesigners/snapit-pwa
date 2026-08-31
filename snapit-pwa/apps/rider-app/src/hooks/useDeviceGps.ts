@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRider } from '@/context/RiderContext';
+import { updateRiderLiveLocation } from '@/services/supabaseOrderService';
 
 export interface GpsLocation {
   lat: number;
@@ -37,13 +38,14 @@ function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number
 }
 
 export function useDeviceGps(enabled: boolean = true): UseDeviceGpsReturn {
-  const { isMockLocationEnabled, gpsCoords: mockCoords } = useRider();
+  const { isMockLocationEnabled, gpsCoords: mockCoords, rider, isOnline } = useRider();
   const [location, setLocation] = useState<GpsLocation | null>(null);
   const [status, setStatus] = useState<'searching' | 'locked' | 'permission_denied' | 'error'>('searching');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isHighAccuracy, setIsHighAccuracy] = useState<boolean>(true);
 
   const lastCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastBroadcastTsRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
   const wakeLockRef = useRef<any>(null);
 
@@ -148,6 +150,13 @@ export function useDeviceGps(enabled: boolean = true): UseDeviceGpsReturn {
 
         setStatus('locked');
         setIsHighAccuracy(accuracy <= 30);
+
+        // Throttle-broadcast live GPS location to Supabase every 6 seconds
+        const now = Date.now();
+        if (now - lastBroadcastTsRef.current > 6000 && rider.phone) {
+          lastBroadcastTsRef.current = now;
+          updateRiderLiveLocation(rider.phone, latitude, longitude, isOnline);
+        }
       },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
@@ -166,7 +175,7 @@ export function useDeviceGps(enabled: boolean = true): UseDeviceGpsReturn {
       },
       geoOptions
     );
-  }, [isMockLocationEnabled, mockCoords]);
+  }, [isMockLocationEnabled, mockCoords, rider.phone, isOnline]);
 
   useEffect(() => {
     if (!enabled) {
