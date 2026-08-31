@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { CheckCircle2, TrendingUp, Home, PackageCheck } from 'lucide-react';
 import Link from 'next/link';
+import { soundEngine } from '@/services/soundService';
 
 interface SuccessModalProps {
   orderNumber: string;
@@ -17,6 +18,9 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
   onDone,
 }) => {
   useEffect(() => {
+    // Play celebratory coin / payout chime
+    soundEngine.playPayoutChime();
+
     // Trigger confetti explosion
     try {
       confetti({

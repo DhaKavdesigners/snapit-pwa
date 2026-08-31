@@ -35,14 +35,15 @@ export const LiveMap: React.FC<LiveMapProps> = ({
 
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [showHotspots, setShowHotspots] = useState(true);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const riderMarkerRef = useRef<any>(null);
+  const accuracyCircleRef = useRef<any>(null);
   const routePolylineRef = useRef<any>(null);
   const zoneCircleRef = useRef<any>(null);
   const markersGroupRef = useRef<any>(null);
+  const hasAutoCenteredRef = useRef<boolean>(false);
 
   // Selected Zone fallback
   const currentZone = useMemo(() => {
@@ -123,7 +124,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({
     setIsMounted(true);
   }, []);
 
-  // Initialize Leaflet Map Instance
+  // Initialize Leaflet Map Instance with High-Resolution Retina Tiles
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined' || !mapContainerRef.current) return;
 
@@ -144,20 +145,23 @@ export const LiveMap: React.FC<LiveMapProps> = ({
           (mapContainerRef.current as any)._leaflet_id = null;
         }
 
+        const initialZoom = gpsLoc ? 16 : 15;
+
         // Initialize Map centered on rider
         mapInstance = L.map(mapContainerRef.current, {
           zoomControl: false,
           attributionControl: false,
           fadeAnimation: true,
           zoomAnimation: true,
-        }).setView([riderCoords.lat, riderCoords.lng], 15);
+        }).setView([riderCoords.lat, riderCoords.lng], initialZoom);
 
         leafletMapRef.current = mapInstance;
 
-        // 100% Free OpenStreetMap Humanitarian/Standard Tiles (Zero API key, Zero watermark)
-        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        // High-DPI, crystal-clear OpenStreetMap tiles with zero watermark
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          subdomains: 'abc',
+          detectRetina: true,
+          crossOrigin: true,
         }).addTo(mapInstance);
 
         // Feature Group for dynamic overlays
@@ -170,33 +174,44 @@ export const LiveMap: React.FC<LiveMapProps> = ({
             radius: currentZone.radiusMeters || 5000,
             color: '#10b981',
             fillColor: '#10b981',
-            fillOpacity: 0.08,
-            weight: 2,
+            fillOpacity: 0.06,
+            weight: 1.5,
             dashArray: '6, 6',
           }).addTo(markersGroup);
           zoneCircleRef.current = zoneCircle;
         }
 
+        // GPS Accuracy halo circle
+        const accuracyRadius = gpsLoc?.accuracy || 25;
+        const accuracyCircle = L.circle([riderCoords.lat, riderCoords.lng], {
+          radius: Math.min(accuracyRadius, 80),
+          color: '#10b981',
+          fillColor: '#10b981',
+          fillOpacity: 0.15,
+          weight: 1,
+        }).addTo(markersGroup);
+        accuracyCircleRef.current = accuracyCircle;
+
         // Rider Icon
         const riderIcon = L.divIcon({
           className: 'rider-gps-marker',
           html: `
-            <div style="width: 42px; height: 42px; position: relative; display: flex; align-items: center; justify-content: center;">
-              <div style="position: absolute; width: 42px; height: 42px; border-radius: 50%; background: ${
-                isOnline ? 'rgba(16, 185, 129, 0.25)' : 'rgba(100, 116, 139, 0.2)'
+            <div style="width: 40px; height: 40px; position: relative; display: flex; align-items: center; justify-content: center;">
+              <div style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: ${
+                isOnline ? 'rgba(16, 185, 129, 0.35)' : 'rgba(100, 116, 139, 0.2)'
               }; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-              <div style="position: relative; z-index: 10; width: 30px; height: 30px; border-radius: 50%; background: ${
-                isOnline ? '#059669' : '#475569'
-              }; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transform: rotate(${
+              <div style="position: relative; z-index: 10; width: 28px; height: 28px; border-radius: 50%; background: ${
+                isOnline ? '#006e2f' : '#475569'
+              }; border: 3px solid #ffffff; box-shadow: 0 3px 10px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; transform: rotate(${
             riderCoords.heading
-          }deg); transition: transform 0.4s ease;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="white">
+          }deg); transition: transform 0.3s ease;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
                   <polygon points="12 2 19 21 12 17 5 21 12 2"/>
                 </svg>
               </div>
             </div>`,
-          iconSize: [42, 42],
-          iconAnchor: [21, 21],
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
         });
 
         const riderMarker = L.marker([riderCoords.lat, riderCoords.lng], {
@@ -268,8 +283,8 @@ export const LiveMap: React.FC<LiveMapProps> = ({
           ]);
           mapInstance.fitBounds(bounds, { padding: [35, 35] });
         } else {
-          // Centered on Rider
-          mapInstance.setView([riderCoords.lat, riderCoords.lng], 15);
+          // Centered directly on exact Rider position
+          mapInstance.setView([riderCoords.lat, riderCoords.lng], initialZoom);
         }
 
         // Trigger resize calculation after render
@@ -277,7 +292,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({
           if (mapInstance) {
             mapInstance.invalidateSize();
           }
-        }, 150);
+        }, 200);
       } catch (err) {
         console.warn('Leaflet map error:', err);
       }
@@ -302,19 +317,35 @@ export const LiveMap: React.FC<LiveMapProps> = ({
     isFullScreen,
   ]);
 
-  // Update Rider GPS position on the live map without full reload
+  // Update Rider GPS position on the live map and auto-center to exact coordinates on lock
   useEffect(() => {
     if (riderMarkerRef.current && riderCoords) {
       riderMarkerRef.current.setLatLng([riderCoords.lat, riderCoords.lng]);
-    }
-  }, [riderCoords]);
 
-  // Recenter Map on Rider Position
+      if (accuracyCircleRef.current) {
+        accuracyCircleRef.current.setLatLng([riderCoords.lat, riderCoords.lng]);
+        if (gpsLoc?.accuracy) {
+          accuracyCircleRef.current.setRadius(Math.min(gpsLoc.accuracy, 80));
+        }
+      }
+
+      // Auto-center camera to exact GPS position on first lock
+      if (leafletMapRef.current && gpsLoc && !activeOrder) {
+        if (!hasAutoCenteredRef.current) {
+          hasAutoCenteredRef.current = true;
+          leafletMapRef.current.setView([gpsLoc.lat, gpsLoc.lng], 16, { animate: true });
+        }
+      }
+    }
+  }, [riderCoords, gpsLoc, activeOrder]);
+
+  // Recenter Map on Exact Rider Position
   const handleRecenter = () => {
+    refreshGps();
     if (leafletMapRef.current && riderCoords) {
-      leafletMapRef.current.setView([riderCoords.lat, riderCoords.lng], 16, {
+      leafletMapRef.current.setView([riderCoords.lat, riderCoords.lng], 17, {
         animate: true,
-        duration: 0.6,
+        duration: 0.5,
       });
     }
   };
@@ -329,11 +360,10 @@ export const LiveMap: React.FC<LiveMapProps> = ({
         address: currentNavTarget.address,
       });
     } else {
-      // Default to opening rider zone center in Google Maps
       openTurnByTurnNavigation({
         lat: riderCoords.lat,
         lng: riderCoords.lng,
-        label: rider.selectedZone || 'Current Zone',
+        label: rider.selectedZone || 'Current Location',
       });
     }
   };
@@ -368,11 +398,11 @@ export const LiveMap: React.FC<LiveMapProps> = ({
             }`}
           />
           <span className="text-[11px] font-bold text-white font-mono">
-            {rider.selectedZone || 'Robertsonpet'}
+            {gpsLoc ? 'Exact GPS Lock' : rider.selectedZone || 'Robertsonpet'}
           </span>
           {gpsStatus === 'locked' && (
             <span className="text-[9px] text-emerald-400 font-extrabold uppercase px-1.5 py-0.2 rounded bg-emerald-950/80 border border-emerald-800">
-              GPS {gpsLoc?.accuracy ? `±${Math.round(gpsLoc.accuracy)}m` : 'Active'}
+              {gpsLoc?.accuracy ? `±${Math.round(gpsLoc.accuracy)}m` : 'Active'}
             </span>
           )}
         </div>
@@ -450,9 +480,9 @@ export const LiveMap: React.FC<LiveMapProps> = ({
               <Store className="w-3.5 h-3.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Coverage Zone</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase">Live Location</p>
               <p className="text-xs font-bold text-white truncate">
-                {rider.selectedZone || 'Robertsonpet'} Core
+                {gpsLoc ? `Lat: ${gpsLoc.lat.toFixed(4)}, Lng: ${gpsLoc.lng.toFixed(4)}` : `${rider.selectedZone || 'Robertsonpet'} Active`}
               </p>
             </div>
           </div>
