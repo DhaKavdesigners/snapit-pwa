@@ -28,10 +28,24 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     f5: 'Al Naz Shawarma & Rolls',
   };
 
-  const shopLat = store?.lat || 12.9785;
-  const shopLng = store?.lng || 77.645;
+  const KGF_STORES_COORDS: Record<string, { lat: number; lng: number; address: string }> = {
+    g1: { lat: 12.9365, lng: 78.2672, address: 'Main Road, Andersonpet, KGF' },
+    d1: { lat: 12.9348, lng: 78.2685, address: 'South Gilberts Road, Andersonpet, KGF' },
+    f1: { lat: 12.9382, lng: 78.2658, address: 'Andersonpet Main Road, KGF' },
+    s1: { lat: 12.9365, lng: 78.2672, address: 'Main Road, Andersonpet, KGF' },
+    s4: { lat: 12.9348, lng: 78.2685, address: 'South Gilberts Road, Andersonpet, KGF' },
+  };
+
+  const defaultCoords = (dbOrder.store_id && KGF_STORES_COORDS[dbOrder.store_id]) || {
+    lat: 12.9365,
+    lng: 78.2672,
+    address: 'Andersonpet, KGF',
+  };
+
+  const shopLat = store?.lat || defaultCoords.lat;
+  const shopLng = store?.lng || defaultCoords.lng;
   const storeName = store?.name || (dbOrder.store_id ? STORES_MAP[dbOrder.store_id] : '') || 'Mhetha Stores';
-  const storeAddress = store?.address || store?.store_address || (dbOrder.store_id && (dbOrder.store_id === 'g1' || dbOrder.store_id === 's1') ? 'Robertsonpet, KGF' : 'Near Clock Tower, Robertsonpet, KGF');
+  const storeAddress = store?.address || store?.store_address || defaultCoords.address;
   const storePhone = store?.phone || '8217649688';
 
   // Items

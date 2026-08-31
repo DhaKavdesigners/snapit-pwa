@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { useDeviceGps } from '@/hooks/useDeviceGps';
 import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
+import { fetchRoadRoute } from '@/services/routingService';
 import {
   Crosshair,
   Maximize2,
@@ -257,31 +258,32 @@ export const LiveMap: React.FC<LiveMapProps> = ({
           L.marker([shopCoords.lat, shopCoords.lng], { icon: shopIcon }).addTo(markersGroup);
           L.marker([customerCoords.lat, customerCoords.lng], { icon: customerIcon }).addTo(markersGroup);
 
-          // Route Polyline (Rider -> Shop -> Customer)
-          const polyline = L.polyline(
-            [
-              [riderCoords.lat, riderCoords.lng],
-              [shopCoords.lat, shopCoords.lng],
-              [customerCoords.lat, customerCoords.lng],
-            ],
-            {
-              color: '#059669',
-              weight: 5,
-              opacity: 0.85,
-              dashArray: '8, 6',
-              lineCap: 'round',
-              lineJoin: 'round',
-            }
-          ).addTo(markersGroup);
-          routePolylineRef.current = polyline;
+          // Fetch Real Road-Following Route along actual streets (OSRM)
+          const isToShop =
+            activeOrder.status === 'accepted' ||
+            activeOrder.status === 'picking_up' ||
+            activeOrder.status === 'arrived_at_pickup';
 
-          // Fit bounds to show full route nicely
-          const bounds = L.latLngBounds([
-            [riderCoords.lat, riderCoords.lng],
-            [shopCoords.lat, shopCoords.lng],
-            [customerCoords.lat, customerCoords.lng],
-          ]);
-          mapInstance.fitBounds(bounds, { padding: [35, 35] });
+          const targetCoords = isToShop ? shopCoords : customerCoords;
+
+          fetchRoadRoute(riderCoords, targetCoords).then((routeRes) => {
+            if (mapInstance && markersGroupRef.current) {
+              if (routePolylineRef.current) {
+                markersGroupRef.current.removeLayer(routePolylineRef.current);
+              }
+              const polyline = L.polyline(routeRes.coordinates, {
+                color: '#059669',
+                weight: 5,
+                opacity: 0.9,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }).addTo(markersGroupRef.current);
+              routePolylineRef.current = polyline;
+
+              const bounds = L.latLngBounds(routeRes.coordinates);
+              mapInstance.fitBounds(bounds, { padding: [35, 35] });
+            }
+          });
         } else {
           // Centered directly on exact Rider position
           mapInstance.setView([riderCoords.lat, riderCoords.lng], initialZoom);

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Order, LocationPoint } from '@/types';
 import { useDeviceGps } from '@/hooks/useDeviceGps';
 import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
+import { fetchRoadRoute } from '@/services/routingService';
 
 interface LiveRiderNavigationProps {
   order: Order;
@@ -230,26 +231,24 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
         const riderMarker = L.marker([currentRiderPos.lat, currentRiderPos.lng], { icon: riderIcon }).addTo(map);
         riderMarkerRef.current = riderMarker;
 
-        // Blue route polyline
-        const routePoints = [
-          [currentRiderPos.lat, currentRiderPos.lng],
-          [midLat + 0.001, midLng - 0.003],
-          [targetCoords.lat, targetCoords.lng],
-        ];
+        // Fetch real road-following route from OSRM
+        fetchRoadRoute(
+          { lat: currentRiderPos.lat, lng: currentRiderPos.lng },
+          { lat: targetCoords.lat, lng: targetCoords.lng }
+        ).then((routeRes) => {
+          if (map) {
+            L.polyline(routeRes.coordinates, {
+              color: '#2563eb',
+              weight: 5,
+              opacity: 0.95,
+              lineCap: 'round',
+              lineJoin: 'round',
+            }).addTo(map);
 
-        L.polyline(routePoints, {
-          color: '#2563eb',
-          weight: 5,
-          opacity: 0.95,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(map);
-
-        const bounds = L.latLngBounds([
-          [currentRiderPos.lat, currentRiderPos.lng],
-          [targetCoords.lat, targetCoords.lng],
-        ]);
-        map.fitBounds(bounds, { padding: [50, 60] });
+            const bounds = L.latLngBounds(routeRes.coordinates);
+            map.fitBounds(bounds, { padding: [50, 60] });
+          }
+        });
       } catch (err) {
         console.warn('Leaflet map error:', err);
       }
