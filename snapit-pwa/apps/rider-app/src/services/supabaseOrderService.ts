@@ -5,13 +5,13 @@ import { calculateDeliveryFee, generateDeliveryPin } from '../../../../common_lo
 /** Map a Supabase DB order row to Rider App Order object */
 export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
   let deliveryAddrStr = 'Customer Address';
-  let dropLat = 12.963;
-  let dropLng = 77.638;
+  let dropLat = 12.9550;
+  let dropLng = 78.2720;
 
   if (typeof dbOrder.delivery_address === 'string') {
     deliveryAddrStr = dbOrder.delivery_address;
   } else if (dbOrder.delivery_address && typeof dbOrder.delivery_address === 'object') {
-    deliveryAddrStr = dbOrder.delivery_address.address || dbOrder.delivery_address.formatted || 'Customer Address';
+    deliveryAddrStr = dbOrder.delivery_address.address || dbOrder.delivery_address.formatted || dbOrder.delivery_address.line1 || 'Customer Address';
     if (dbOrder.delivery_address.lat) dropLat = Number(dbOrder.delivery_address.lat);
     if (dbOrder.delivery_address.lng) dropLng = Number(dbOrder.delivery_address.lng);
   }
@@ -100,7 +100,7 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
       name: dbOrder.recipient_name || 'Customer',
       address: deliveryAddrStr,
     },
-    riderStartLocation: { lat: 12.9716, lng: 77.6412 },
+    riderStartLocation: { lat: 12.9602, lng: 78.2711 },
     navStage: 'idle',
   };
 }
@@ -358,8 +358,8 @@ export async function registerRiderInDb(riderData: {
       is_verified: true,
       verification_step: 4,
       is_online: false,
-      current_lat: 12.9716,
-      current_lng: 77.6412,
+      current_lat: 12.9602,
+      current_lng: 78.2711,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

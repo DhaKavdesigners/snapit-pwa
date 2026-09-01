@@ -636,8 +636,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       const targetZoneId = zoneId || rider.selectedZoneId || 'zone-1';
       const targetZone = zones.find((z) => z.id === targetZoneId) || zones[0];
       const coords = customCoords || {
-        lat: targetZone.centerLat ?? 12.9716,
-        lng: targetZone.centerLng ?? 77.6412,
+        lat: targetZone.centerLat ?? 12.9602,
+        lng: targetZone.centerLng ?? 78.2711,
       };
       setIsMockLocationEnabled(true);
       setMockZoneId(targetZoneId);
@@ -1095,9 +1095,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       riderPickupConfirmed: false,
       shopkeeperHandoverConfirmed: Boolean(incomingOrder.shopkeeperHandoverConfirmed),
       dbStatus: incomingOrder.dbStatus || 'PREPARING',
-      shopLocation: incomingOrder.shopLocation || { lat: 12.9785, lng: 77.645, name: incomingOrder.restaurantName, address: incomingOrder.restaurantAddress },
-      customerLocation: incomingOrder.customerLocation || { lat: 12.963, lng: 77.638, name: incomingOrder.customerName, address: incomingOrder.deliveryAddress },
-      riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9716, lng: 77.6412 },
+      shopLocation: incomingOrder.shopLocation || { lat: 12.9365, lng: 78.2672, name: incomingOrder.restaurantName, address: incomingOrder.restaurantAddress },
+      customerLocation: incomingOrder.customerLocation || { lat: 12.9550, lng: 78.2720, name: incomingOrder.customerName, address: incomingOrder.deliveryAddress },
+      riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9602, lng: 78.2711 },
     };
     setActiveOrder(orderWithActiveStatus);
     const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
