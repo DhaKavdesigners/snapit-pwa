@@ -157,6 +157,7 @@ interface RiderContextType {
   // ── New ──
   adminConfig: AdminConfig;
   slots: RiderSlot[];
+  bookedSlotIds: string[];
   activeSlot: RiderSlot | null;
   upcomingSlot: RiderSlot | null;
   riderBreak: RiderBreak | null;
@@ -1672,6 +1673,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         // New
         adminConfig,
         slots,
+        bookedSlotIds,
         activeSlot,
         upcomingSlot,
         riderBreak,

@@ -94,7 +94,6 @@ export function getMockTimeConfig(): MockTimeConfig {
 /** Returns the current timestamp in ms (simulated if Mock Time is active) */
 export function getNow(): number {
   if (
-    currentTestMode === 'tester' &&
     mockTimeConfig.enabled &&
     mockTimeConfig.mockTimestamp !== null
   ) {
@@ -106,7 +105,6 @@ export function getNow(): number {
 /** Returns the current Date object (simulated if Mock Time is active) */
 export function getNowDate(): Date {
   if (
-    currentTestMode === 'tester' &&
     mockTimeConfig.enabled &&
     mockTimeConfig.mockTimestamp !== null
   ) {

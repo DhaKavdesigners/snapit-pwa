@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ZoneSelectionModal } from '@/components/slots/ZoneSelectionModal';
+import { HomeSlotCard } from '@/components/dashboard/HomeSlotCard';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -126,7 +127,6 @@ export default function DashboardPage() {
   ) && !isArrivedAtCustomer;
 
   const isOrderInPickupStage = isPreparing || isReadyForPickup || isOutOfShop;
-  const displaySlot = activeSlot || upcomingSlot;
 
   return (
     <AppShell>
@@ -175,36 +175,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── 3. UPCOMING / ACTIVE BOOKED SLOT CARD ── */}
-        <Link
-          href="/slots"
-          className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-3.5 shadow-sm border border-slate-800 flex items-center justify-between group active:scale-98 transition-transform"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <Calendar className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {displaySlot ? (activeSlot ? 'Active Slot' : 'Upcoming Slot') : 'Slot Booking'}
-                </span>
-                <span className="text-[11px] text-slate-300 font-bold">
-                  {rider.selectedZone || 'Robertsonpet'}
-                </span>
-              </div>
-              <p className="text-sm font-black text-white font-mono mt-0.5">
-                {displaySlot
-                  ? `${formatTimeAMPM(displaySlot.startTimestamp)} – ${formatTimeAMPM(displaySlot.endTimestamp)}`
-                  : 'No Slot Booked Today'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-            <span>{displaySlot ? 'Change' : 'Book 2h'}</span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </Link>
+        <HomeSlotCard />
 
         {/* ── 4. MAIN INTERACTIVE ORDER COCKPIT ── */}
 
