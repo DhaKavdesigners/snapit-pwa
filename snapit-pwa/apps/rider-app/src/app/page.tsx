@@ -7,7 +7,6 @@ import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatTimeAMPM } from '@/services/slotService';
-import { LiveMap } from '@/components/dashboard/LiveMap';
 import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
 import {
   ShieldCheck,
@@ -206,9 +205,6 @@ export default function DashboardPage() {
             <ChevronRight className="w-4 h-4" />
           </div>
         </Link>
-
-        {/* ── 3.5. LIVE INTERACTIVE MINI-MAP WINDOW ($0 Free Embedded Preview) ── */}
-        <LiveMap className="my-0.5" defaultHeight="h-[210px]" />
 
         {/* ── 4. MAIN INTERACTIVE ORDER COCKPIT ── */}
 

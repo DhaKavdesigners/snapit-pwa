@@ -21,6 +21,13 @@ export const BottomNav: React.FC = () => {
       active: pathname === '/',
     },
     {
+      label: 'Orders',
+      href: '/orders',
+      icon: 'local_mall',
+      active: pathname.startsWith('/orders'),
+      badge: activeOrder ? '1' : undefined,
+    },
+    {
       label: 'Slots',
       href: '/slots',
       icon: 'schedule',
@@ -33,13 +40,6 @@ export const BottomNav: React.FC = () => {
         : activeSlot
         ? 'bg-primary'
         : 'bg-primary',
-    },
-    {
-      label: 'Orders',
-      href: '/orders',
-      icon: 'local_mall',
-      active: pathname.startsWith('/orders'),
-      badge: activeOrder ? '1' : undefined,
     },
     {
       label: 'Earnings',
