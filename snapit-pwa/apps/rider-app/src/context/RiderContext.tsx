@@ -29,6 +29,7 @@ import {
 import { DEFAULT_ADMIN_CONFIG } from '@/services/adminConfig';
 import {
   generateDailySlots,
+  generateAllSlots,
   getTodayDateString,
   findNextSlot,
   buildExtendedSlot,
@@ -416,7 +417,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     const selectedZone = zones.find((z) => z.id === targetZoneId) || zones[0];
     const targetZoneName = customZoneName || selectedZone.name;
 
-    const generated = generateDailySlots(
+    const generated = generateAllSlots(
       adminConfig.slot,
       currentBooked,
       selectedZone.id,

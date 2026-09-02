@@ -3,13 +3,32 @@ import { getNow, getNowDate } from './mockService';
 
 /** Returns today's date as YYYY-MM-DD */
 export function getTodayDateString(): string {
-  return getNowDate().toISOString().split('T')[0];
+  const d = getNowDate();
+  const year = d.getFullYear();
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-/** Converts HH:mm to epoch ms for today's date */
+/** Returns tomorrow's date as YYYY-MM-DD */
+export function getTomorrowDateString(): string {
+  const d = getNowDate();
+  d.setDate(d.getDate() + 1);
+  const year = d.getFullYear();
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/** Converts HH:mm to epoch ms for a given YYYY-MM-DD date or today */
 export function timeToTodayMs(timeStr: string, date?: string): number {
   const [h, m] = timeStr.split(':').map(Number);
-  const d = date ? new Date(date) : getNowDate();
+  if (date) {
+    const [year, month, day] = date.split('-').map(Number);
+    const d = new Date(year, month - 1, day, h, m, 0, 0);
+    return d.getTime();
+  }
+  const d = getNowDate();
   d.setHours(h, m, 0, 0);
   return d.getTime();
 }
@@ -45,6 +64,16 @@ export function formatCountdown(ms: number): string {
   return `${m}:${s}`;
 }
 
+export function demandLabel(level: DemandLevel): string {
+  switch (level) {
+    case 'VERY_HIGH': return 'Very High Demand';
+    case 'HIGH': return 'High Demand';
+    case 'MEDIUM': return 'Moderate Demand';
+    case 'LOW': return 'Low Demand';
+    default: return 'Standard';
+  }
+}
+
 function mockDemandForHour(hour: number): DemandLevel {
   if (hour >= 11 && hour <= 14) return 'HIGH';
   if (hour >= 18 && hour <= 21) return 'VERY_HIGH';
@@ -66,7 +95,7 @@ function mockBookedForHour(hour: number, slotId: string, bookedSlotIds: string[]
   return Math.min(base, Math.floor(base * 0.4));
 }
 
-/** Generate all slots for today based on admin config */
+/** Generate all slots for a specific date (YYYY-MM-DD) */
 export function generateDailySlots(
   config: AdminSlotConfig,
   bookedSlotIds: string[],
@@ -125,6 +154,20 @@ export function generateDailySlots(
   return slots;
 }
 
+/** Generate both Today and Tomorrow 24h slots */
+export function generateAllSlots(
+  config: AdminSlotConfig,
+  bookedSlotIds: string[],
+  zoneId: string,
+  zoneName: string
+): RiderSlot[] {
+  const todayStr = getTodayDateString();
+  const tomorrowStr = getTomorrowDateString();
+  const todaySlots = generateDailySlots(config, bookedSlotIds, zoneId, zoneName, todayStr);
+  const tomorrowSlots = generateDailySlots(config, bookedSlotIds, zoneId, zoneName, tomorrowStr);
+  return [...todaySlots, ...tomorrowSlots];
+}
+
 /** Check if booking is still open for a slot (Relaxed for testing) */
 export function isBookingOpen(slot: RiderSlot, config: AdminSlotConfig): boolean {
   return true;
@@ -138,39 +181,38 @@ export function isSlotOnlineReady(slot: RiderSlot | null, config: AdminSlotConfi
 /** Get the currently active/upcoming slot from a list */
 export function findActiveSlot(slots: RiderSlot[]): RiderSlot | null {
   const now = getNow();
-  return slots.find((s) => s.status === 'active' || (s.status === 'booked' && now < s.endTimestamp)) || null;
+  return (
+    slots.find(
+      (s) => (s.status === 'active' || s.status === 'booked') && now >= s.startTimestamp && now < s.endTimestamp
+    ) || null
+  );
 }
 
-/** Get next bookable slot after the given one */
+/** Get upcoming slot that starts in the future */
+export function findUpcomingSlot(slots: RiderSlot[]): RiderSlot | null {
+  const now = getNow();
+  return (
+    slots
+      .filter((s) => (s.status === 'booked' || s.status === 'available') && s.startTimestamp > now)
+      .sort((a, b) => a.startTimestamp - b.startTimestamp)[0] || null
+  );
+}
+
+/** Find the immediate next slot in the schedule after current */
 export function findNextSlot(currentSlot: RiderSlot, allSlots: RiderSlot[]): RiderSlot | null {
-  return allSlots.find(
-    (s) => s.startTimestamp === currentSlot.endTimestamp && (s.status === 'available' || s.status === 'full')
-  ) || null;
+  return (
+    allSlots.find((s) => s.startTimestamp === currentSlot.endTimestamp && s.date === currentSlot.date) || null
+  );
 }
 
-/** Check if two slots overlap */
-export function slotsOverlap(a: RiderSlot, b: RiderSlot): boolean {
-  return a.startTimestamp < b.endTimestamp && b.startTimestamp < a.endTimestamp;
-}
-
-/** Extend a slot to include the next slot period */
-export function buildExtendedSlot(current: RiderSlot, next: RiderSlot): RiderSlot {
+export function buildExtendedSlot(
+  currentSlot: RiderSlot,
+  nextSlot: RiderSlot,
+  bookedSlotIds: string[]
+): RiderSlot {
   return {
-    ...current,
-    endTime: next.endTime,
-    endTimestamp: next.endTimestamp,
-    extendedFromSlotId: current.id,
-    id: `${current.id}-ext`,
+    ...currentSlot,
+    endTimestamp: nextSlot.endTimestamp,
+    endTime: nextSlot.endTime,
   };
-}
-
-/** Human-readable demand label */
-export function demandLabel(level: DemandLevel): string {
-  const map: Record<DemandLevel, string> = {
-    LOW: 'Low Demand',
-    MEDIUM: 'Medium Demand',
-    HIGH: '🔥 High Demand',
-    VERY_HIGH: '🔥 Very High Demand',
-  };
-  return map[level];
 }

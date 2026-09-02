@@ -29,6 +29,7 @@ import {
   formatTimeAMPM,
   formatRemainingTime,
   getTodayDateString,
+  getTomorrowDateString,
 } from '@/services/slotService';
 import { getNow } from '@/services/mockService';
 import { RiderSlot } from '@/types';
@@ -40,8 +41,10 @@ export default function SlotsPage() {
     slots,
     activeSlot,
     upcomingSlot,
+    bookedSlotIds,
     bookSlot,
     cancelSlot,
+    extendSlot,
     rider,
     isOnline,
     toggleOnline,
@@ -80,13 +83,22 @@ export default function SlotsPage() {
     }
   }, [slotToCancel]);
 
-  // Identify current 2-hour slot window
+  const todayStr = getTodayDateString();
+  const tomorrowStr = getTomorrowDateString();
+  const targetDateStr = selectedDay === 'today' ? todayStr : tomorrowStr;
+
+  // Identify current 2-hour slot window for today
   const currentHourSlot = slots.find(
-    (s) => now >= s.startTimestamp && now < s.endTimestamp
+    (s) => s.date === todayStr && now >= s.startTimestamp && now < s.endTimestamp
   );
 
-  // Filter slots by selected 24h period
-  const filteredSlots = slots.filter((slot) => {
+  // Separate today and tomorrow slots
+  const todaySlots = slots.filter((slot) => slot.date === todayStr);
+  const tomorrowSlots = slots.filter((slot) => slot.date === tomorrowStr);
+  const daySlots = selectedDay === 'today' ? todaySlots : tomorrowSlots;
+
+  // Filter slots by selected 24h period and selected day
+  const filteredSlots = daySlots.filter((slot) => {
     const d = new Date(slot.startTimestamp);
     const hour = d.getHours();
 
@@ -123,67 +135,210 @@ export default function SlotsPage() {
           </button>
         </div>
 
-        {/* ── 2. CURRENT ACTIVE HOUR WINDOW (HERO CARD) ── */}
-        {currentHourSlot && (
-          <div className={`rounded-3xl p-4 border-2 shadow-md relative overflow-hidden transition-all ${
-            currentHourSlot.status === 'booked' || currentHourSlot.status === 'active'
-              ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white border-emerald-400'
-              : 'bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border-emerald-300 text-slate-900'
-          }`}>
-            <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                currentHourSlot.status === 'booked' || currentHourSlot.status === 'active'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-              }`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                <span>Active Duty Window</span>
-              </span>
-              <span className="text-[11px] font-bold opacity-80 font-mono shrink-0">
-                {formatRemainingTime(currentHourSlot.endTimestamp - now)} left
-              </span>
-            </div>
+        {/* ── 2. CURRENT ACTIVE HOUR (HERO CARD FOR TODAY) ── */}
+        {selectedDay === 'today' && currentHourSlot && (() => {
+          const isBooked = currentHourSlot.status === 'booked' || currentHourSlot.status === 'active' || bookedSlotIds.includes(currentHourSlot.id);
+          const remainingMs = Math.max(0, currentHourSlot.endTimestamp - now);
+          const remainingMins = Math.floor(remainingMs / 60000);
+          const totalDurationMs = Math.max(1, currentHourSlot.endTimestamp - currentHourSlot.startTimestamp);
+          const percentRemaining = Math.min(100, Math.max(0, (remainingMs / totalDurationMs) * 100));
 
-            <div className="my-2">
-              <p className="text-xl font-black font-mono tracking-tight">
-                {formatTimeAMPM(currentHourSlot.startTimestamp)} – {formatTimeAMPM(currentHourSlot.endTimestamp)}
-              </p>
-              <p className="text-xs font-medium opacity-80 mt-0.5">
-                {currentHourSlot.status === 'booked' || currentHourSlot.status === 'active'
-                  ? isOnline ? '🟢 Connected to live store orders' : '⚪ Toggle online in top bar to receive orders'
-                  : 'Open 2-hour slot available right now. Book to start receiving orders.'}
-              </p>
-            </div>
+          if (isBooked) {
+            let cardTheme = {
+              cardBg: 'bg-emerald-50/95',
+              cardBorder: 'border-emerald-200/90',
+              cardText: 'text-emerald-950',
+              badgeBg: 'bg-emerald-100',
+              badgeText: 'text-emerald-800',
+              badgeBorder: 'border-emerald-300/80',
+              statusDot: 'bg-emerald-500 animate-pulse',
+              statusLabel: 'ACTIVE DUTY WINDOW',
+              subtitleText: 'text-emerald-700',
+              actionText: 'text-emerald-700',
+              trackBg: 'bg-emerald-200/60',
+              barBg: 'bg-emerald-500',
+              isEndingSoonLast10: false,
+            };
 
-            {/* 1-Touch Action */}
-            <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between gap-2">
-              {currentHourSlot.status === 'booked' || currentHourSlot.status === 'active' ? (
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+            if (remainingMins > 60) {
+              cardTheme = {
+                cardBg: 'bg-emerald-50/95',
+                cardBorder: 'border-emerald-200/90',
+                cardText: 'text-emerald-950',
+                badgeBg: 'bg-emerald-100',
+                badgeText: 'text-emerald-800',
+                badgeBorder: 'border-emerald-300/80',
+                statusDot: 'bg-emerald-500 animate-pulse',
+                statusLabel: 'ACTIVE DUTY',
+                subtitleText: 'text-emerald-700',
+                actionText: 'text-emerald-700',
+                trackBg: 'bg-emerald-200/60',
+                barBg: 'bg-emerald-500',
+                isEndingSoonLast10: false,
+              };
+            } else if (remainingMins >= 30 && remainingMins <= 60) {
+              cardTheme = {
+                cardBg: 'bg-amber-50/95',
+                cardBorder: 'border-amber-200/90',
+                cardText: 'text-amber-950',
+                badgeBg: 'bg-amber-100',
+                badgeText: 'text-amber-800',
+                badgeBorder: 'border-amber-300/80',
+                statusDot: 'bg-amber-500 animate-pulse',
+                statusLabel: 'ACTIVE DUTY',
+                subtitleText: 'text-amber-700',
+                actionText: 'text-amber-700',
+                trackBg: 'bg-amber-200/60',
+                barBg: 'bg-amber-500',
+                isEndingSoonLast10: false,
+              };
+            } else if (remainingMins > 10 && remainingMins < 30) {
+              cardTheme = {
+                cardBg: 'bg-orange-50/95',
+                cardBorder: 'border-orange-200/90',
+                cardText: 'text-orange-950',
+                badgeBg: 'bg-orange-100',
+                badgeText: 'text-orange-800',
+                badgeBorder: 'border-orange-300/80',
+                statusDot: 'bg-orange-500 animate-pulse',
+                statusLabel: 'ENDING SOON',
+                subtitleText: 'text-orange-700',
+                actionText: 'text-orange-700',
+                trackBg: 'bg-orange-200/60',
+                barBg: 'bg-orange-500',
+                isEndingSoonLast10: false,
+              };
+            } else {
+              cardTheme = {
+                cardBg: 'bg-rose-50/95',
+                cardBorder: 'border-rose-200/90',
+                cardText: 'text-rose-950',
+                badgeBg: 'bg-rose-100',
+                badgeText: 'text-rose-800',
+                badgeBorder: 'border-rose-300/80',
+                statusDot: 'bg-rose-500 animate-ping',
+                statusLabel: 'ENDING SOON',
+                subtitleText: 'text-rose-700',
+                actionText: 'text-rose-700',
+                trackBg: 'bg-rose-200/60',
+                barBg: 'bg-rose-500',
+                isEndingSoonLast10: true,
+              };
+            }
+
+            const nextSlot = slots.find((s) => s.startTimestamp === currentHourSlot.endTimestamp);
+
+            return (
+              <div className={`rounded-3xl p-4 sm:p-4.5 border shadow-sm relative overflow-hidden transition-all ${cardTheme.cardBg} ${cardTheme.cardBorder} ${cardTheme.cardText}`}>
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${cardTheme.badgeBg} ${cardTheme.badgeText} border ${cardTheme.badgeBorder}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${cardTheme.statusDot}`} />
+                    <span>{cardTheme.statusLabel}</span>
+                  </span>
+                  <span className={`text-[11px] font-bold font-mono shrink-0 ${cardTheme.subtitleText}`}>
+                    {formatRemainingTime(remainingMs)} left
+                  </span>
+                </div>
+
+                <div className="my-2">
+                  <p className={`text-xl font-black font-mono tracking-tight ${cardTheme.cardText}`}>
+                    {formatTimeAMPM(currentHourSlot.startTimestamp)} – {formatTimeAMPM(currentHourSlot.endTimestamp)}
+                  </p>
+                  <p className={`text-xs font-semibold mt-0.5 ${cardTheme.subtitleText}`}>
+                    {isOnline ? '🟢 Connected to live store orders' : '⚪ Toggle online in top bar to receive orders'}
+                  </p>
+                </div>
+
+                {/* Extend Button (Last 10 Min) */}
+                {cardTheme.isEndingSoonLast10 && (
+                  <div className="my-2.5 pt-2 border-t border-rose-200/70">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (nextSlot) {
+                          extendSlot(currentHourSlot.id, nextSlot.id);
+                        } else {
+                          const nextStartTs = currentHourSlot.endTimestamp;
+                          const d = new Date(nextStartTs);
+                          const h = d.getHours();
+                          const nextSlotId = `slot-${currentHourSlot.date}-${h}`;
+                          bookSlot(
+                            nextSlotId,
+                            currentHourSlot.zoneId || rider.selectedZoneId || 'zone-1',
+                            currentHourSlot.zoneName || rider.selectedZone || 'Robertsonpet'
+                          );
+                        }
+                      }}
+                      className="w-full py-2.5 px-4 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer ring-2 ring-rose-300/40"
+                    >
+                      <Zap className="w-4 h-4 fill-white" />
+                      <span>Extend +2 Hours ({formatTimeAMPM(currentHourSlot.endTimestamp)} – {formatTimeAMPM(currentHourSlot.endTimestamp + 120 * 60 * 1000)})</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 1-Touch Action Row */}
+                <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between gap-2">
+                  <span className={`text-xs font-bold flex items-center gap-1 ${cardTheme.actionText}`}>
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>You are On Duty</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setSlotToCancel(currentHourSlot.id)}
-                    className="text-xs font-bold text-red-300 hover:text-red-200 underline cursor-pointer shrink-0"
+                    className="text-xs font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer shrink-0"
                   >
                     Cancel Slot
                   </button>
                 </div>
-              ) : (
+
+                {/* Live Remaining Timing Line Bar at the Bottom */}
+                <div className="w-full mt-2.5 pt-0.5">
+                  <div className={`w-full ${cardTheme.trackBg} rounded-full h-1.5 overflow-hidden`}>
+                    <div
+                      className={`h-full ${cardTheme.barBg} rounded-full transition-all duration-1000 ease-linear`}
+                      style={{ width: `${Math.max(2, percentRemaining)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="rounded-3xl p-4 border shadow-sm relative overflow-hidden transition-all bg-emerald-50/70 border-emerald-200/90 text-slate-900">
+              <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span>CURRENT 2H SLOT</span>
+                </span>
+                <span className="text-[11px] font-bold text-emerald-700 font-mono shrink-0">
+                  {formatRemainingTime(remainingMs)} left
+                </span>
+              </div>
+
+              <div className="my-2">
+                <p className="text-xl font-black text-slate-900 font-mono tracking-tight">
+                  {formatTimeAMPM(currentHourSlot.startTimestamp)} – {formatTimeAMPM(currentHourSlot.endTimestamp)}
+                </p>
+                <p className="text-xs font-medium text-slate-600 mt-0.5">
+                  Open 2-hour slot available right now. Book to start receiving orders.
+                </p>
+              </div>
+
+              <div className="mt-2 pt-2 border-t border-emerald-200/60">
                 <button
                   type="button"
                   onClick={() => bookSlot(currentHourSlot.id, currentHourSlot.zoneId || 'z1', currentHourSlot.zoneName || rider.selectedZone || 'Robertsonpet')}
                   className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Zap className="w-4 h-4 fill-current" />
-                  <span>BOOK & START THIS WINDOW NOW</span>
+                  <span>BOOK & START NOW</span>
                 </button>
-              )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── 3. DAY SELECTOR (TODAY / TOMORROW) ── */}
         <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
@@ -195,7 +350,7 @@ export default function SlotsPage() {
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Today ({slots.length || 12} Slots)
+            Today ({todaySlots.length})
           </button>
           <button
             onClick={() => setSelectedDay('tomorrow')}
@@ -205,7 +360,7 @@ export default function SlotsPage() {
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Tomorrow
+            Tomorrow ({tomorrowSlots.length})
           </button>
         </div>
 
@@ -243,8 +398,8 @@ export default function SlotsPage() {
             const isBooked = slot.status === 'booked' || slot.status === 'active';
             const startHour = new Date(slot.startTimestamp).getHours();
             const isPeak = (startHour >= 12 && startHour < 16) || (startHour >= 18 && startHour < 22);
-            const isCurrentWindow = now >= slot.startTimestamp && now < slot.endTimestamp;
-            const isPast = slot.endTimestamp <= now && !isBooked;
+            const isCurrentWindow = now >= slot.startTimestamp && now < slot.endTimestamp && slot.date === todayStr;
+            const isPast = slot.endTimestamp <= now && !isBooked && slot.date === todayStr;
 
             return (
               <div
