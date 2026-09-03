@@ -581,3 +581,21 @@ export async function updateRiderOnlineStatus(
   }
 }
 
+/** Fetch all registered riders from Supabase for live fleet capacity calculation */
+export async function fetchAllRiders(): Promise<DbRiderProfile[]> {
+  try {
+    const { data, error } = await supabase
+      .from('rider_profiles')
+      .select('*');
+
+    if (error) {
+      console.warn('Error fetching all riders from Supabase:', error);
+      return [];
+    }
+    return (data || []) as DbRiderProfile[];
+  } catch (err) {
+    console.warn('fetchAllRiders exception:', err);
+    return [];
+  }
+}
+

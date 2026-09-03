@@ -41,6 +41,10 @@ export const DevTestingToggle: React.FC = () => {
     enableMockTime,
     disableMockTime,
     resetTestEnvironment,
+    // Demand & Capacity
+    demandStatus,
+    simulatedDemand,
+    setSimulatedDemand,
   } = useRider();
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -203,6 +207,94 @@ export const DevTestingToggle: React.FC = () => {
               </div>
             </div>
 
+            {/* ── 0. 1-Hour Slot & High Demand Mode Simulator ── */}
+            <div className="space-y-1.5 p-2.5 rounded-2xl bg-slate-950 border border-amber-500/40">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  1h Slot & High Demand Simulator
+                </span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                  demandStatus.isHighDemand ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50 animate-pulse' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                }`}>
+                  {demandStatus.isHighDemand ? '🔥 HIGH DEMAND' : '🟢 NORMAL'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                {/* Available Window */}
+                <button
+                  type="button"
+                  onClick={() => applyRelativeSlotTime(15, undefined)}
+                  className="p-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/60 text-emerald-200 text-left transition-all active:scale-95 cursor-pointer"
+                >
+                  <div className="font-bold text-[11px] flex items-center gap-1">
+                    <span>⏱️ Early in Slot</span>
+                  </div>
+                  <p className="text-[9px] text-emerald-300 mt-0.5">Booking Available</p>
+                </button>
+
+                {/* Closed Window */}
+                <button
+                  type="button"
+                  onClick={() => applyRelativeSlotTime(35, undefined)}
+                  className="p-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/60 text-rose-200 text-left transition-all active:scale-95 cursor-pointer"
+                >
+                  <div className="font-bold text-[11px] flex items-center gap-1">
+                    <span>⛔ Late in Slot</span>
+                  </div>
+                  <p className="text-[9px] text-rose-300 mt-0.5">Booking Closed</p>
+                </button>
+
+                {/* High Demand Override ON */}
+                <button
+                  type="button"
+                  onClick={() => setSimulatedDemand({ active: true, isHighDemand: true, ordersDemand: 8, capacity: 2 })}
+                  className={`p-2 rounded-xl border text-left transition-all active:scale-95 cursor-pointer ${
+                    simulatedDemand?.isHighDemand
+                      ? 'bg-orange-600 text-white border-orange-400 ring-2 ring-orange-300/50'
+                      : 'bg-orange-950/80 hover:bg-orange-900 border-orange-500/60 text-orange-200'
+                  }`}
+                >
+                  <div className="font-bold text-[11px] flex items-center gap-1">
+                    <span>🔥 High Demand ON</span>
+                  </div>
+                  <p className="text-[9px] text-orange-300 mt-0.5">Orders &gt; Capacity (Override)</p>
+                </button>
+
+                {/* High Demand Mode OFF / Restored */}
+                <button
+                  type="button"
+                  onClick={() => setSimulatedDemand({ active: true, isHighDemand: false, ordersDemand: 1, capacity: 4 })}
+                  className={`p-2 rounded-xl border text-left transition-all active:scale-95 cursor-pointer ${
+                    simulatedDemand && !simulatedDemand.isHighDemand
+                      ? 'bg-emerald-600 text-white border-emerald-400 ring-2 ring-emerald-300/50'
+                      : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  }`}
+                >
+                  <div className="font-bold text-[11px] flex items-center gap-1">
+                    <span>🟢 High Demand OFF</span>
+                  </div>
+                  <p className="text-[9px] text-slate-400 mt-0.5">Capacity &gt; Orders (Normal)</p>
+                </button>
+              </div>
+
+              {/* Status info bar */}
+              <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 pt-1 border-t border-slate-800">
+                <span>Demand: <strong className="text-white font-mono">{demandStatus.activeOrdersDemand}</strong> orders</span>
+                <span>Fleet Capacity: <strong className="text-white font-mono">{demandStatus.availableRiderCapacity}</strong> riders</span>
+                {simulatedDemand?.active && (
+                  <button
+                    type="button"
+                    onClick={() => setSimulatedDemand(null)}
+                    className="text-amber-400 hover:underline cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* ── 1. Slot Card Color State Presets ── */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -297,7 +389,7 @@ export const DevTestingToggle: React.FC = () => {
                     <span className="w-2 h-2 rounded-full bg-slate-400" />
                     <span>Slot Expired</span>
                   </div>
-                  <p className="text-[9px] text-slate-400 mt-0.5">Navy / Book 2h</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">Navy / Book 1h</p>
                 </button>
               </div>
             </div>

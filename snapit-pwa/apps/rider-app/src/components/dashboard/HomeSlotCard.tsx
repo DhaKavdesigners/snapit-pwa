@@ -73,7 +73,7 @@ export const HomeSlotCard: React.FC = () => {
     }
   }, [displaySlot, isUpcoming, remainingMins, remainingMs]);
 
-  // Handler for Extending Slot (+2 hours)
+  // Handler for Extending Slot (+1 hour)
   const handleExtendSlot = () => {
     if (!displaySlot) return;
     const nextSlot = slots.find((s) => s.startTimestamp === displaySlot.endTimestamp);
@@ -125,7 +125,7 @@ export const HomeSlotCard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-          <span>Book 2h</span>
+          <span>Book 1h</span>
           <ChevronRight className="w-4 h-4" />
         </div>
       </Link>
@@ -206,7 +206,8 @@ export const HomeSlotCard: React.FC = () => {
   // Percentage of slot remaining (e.g. 100% -> 0%)
   const percentRemaining = Math.min(100, Math.max(0, (remainingMs / totalDurationMs) * 100));
 
-  // Determine styling based on remaining minutes
+  // Determine styling based on remaining minutes:
+  // Active slot: Light green when active (> 10m remaining), Light red during last 10 minutes (<= 10m remaining)
   let cardTheme = {
     cardBg: 'bg-emerald-50/95',
     cardBorder: 'border-emerald-200/90',
@@ -228,74 +229,8 @@ export const HomeSlotCard: React.FC = () => {
     isEndingSoonLast10: false,
   };
 
-  if (remainingMins > 60) {
-    // Green (ACTIVE > 60m)
-    cardTheme = {
-      cardBg: 'bg-emerald-50/95',
-      cardBorder: 'border-emerald-200/90',
-      cardText: 'text-emerald-950',
-      iconBg: 'bg-emerald-100',
-      iconBorder: 'border-emerald-200',
-      iconText: 'text-emerald-700',
-      badgeBg: 'bg-emerald-100',
-      badgeText: 'text-emerald-800',
-      badgeBorder: 'border-emerald-300/80',
-      statusDot: 'bg-emerald-500 animate-pulse',
-      statusLabel: 'ACTIVE',
-      zoneText: 'text-emerald-800',
-      titleText: 'text-emerald-950',
-      remainingText: 'text-emerald-700',
-      actionText: 'text-emerald-700',
-      trackBg: 'bg-emerald-200/60',
-      barBg: 'bg-emerald-500',
-      isEndingSoonLast10: false,
-    };
-  } else if (remainingMins >= 30 && remainingMins <= 60) {
-    // Yellow / Amber (ACTIVE 30–60m)
-    cardTheme = {
-      cardBg: 'bg-amber-50/95',
-      cardBorder: 'border-amber-200/90',
-      cardText: 'text-amber-950',
-      iconBg: 'bg-amber-100',
-      iconBorder: 'border-amber-200',
-      iconText: 'text-amber-700',
-      badgeBg: 'bg-amber-100',
-      badgeText: 'text-amber-800',
-      badgeBorder: 'border-amber-300/80',
-      statusDot: 'bg-amber-500 animate-pulse',
-      statusLabel: 'ACTIVE',
-      zoneText: 'text-amber-800',
-      titleText: 'text-amber-950',
-      remainingText: 'text-amber-700',
-      actionText: 'text-amber-700',
-      trackBg: 'bg-amber-200/60',
-      barBg: 'bg-amber-500',
-      isEndingSoonLast10: false,
-    };
-  } else if (remainingMins > 10 && remainingMins < 30) {
-    // Orange (ENDING SOON 10–30m)
-    cardTheme = {
-      cardBg: 'bg-orange-50/95',
-      cardBorder: 'border-orange-200/90',
-      cardText: 'text-orange-950',
-      iconBg: 'bg-orange-100',
-      iconBorder: 'border-orange-200',
-      iconText: 'text-orange-700',
-      badgeBg: 'bg-orange-100',
-      badgeText: 'text-orange-800',
-      badgeBorder: 'border-orange-300/80',
-      statusDot: 'bg-orange-500 animate-pulse',
-      statusLabel: 'ENDING SOON',
-      zoneText: 'text-orange-800',
-      titleText: 'text-orange-950',
-      remainingText: 'text-orange-700',
-      actionText: 'text-orange-700',
-      trackBg: 'bg-orange-200/60',
-      barBg: 'bg-orange-500',
-      isEndingSoonLast10: false,
-    };
-  } else {
-    // Red / Pink (ENDING SOON <= 10m)
+  if (remainingMins <= 10) {
+    // Light Red (ENDING SOON <= 10m)
     cardTheme = {
       cardBg: 'bg-rose-50/95',
       cardBorder: 'border-rose-200/90',
@@ -361,7 +296,7 @@ export const HomeSlotCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Clear & Prominent Extend 2hr Button at the Bottom of the Box (Last 10 Min) */}
+        {/* Clear & Prominent Extend 1hr Button at the Bottom of the Box (Last 10 Min) */}
         {cardTheme.isEndingSoonLast10 && (
           <div className="w-full mt-3 pt-2 border-t border-rose-200/70">
             <button
@@ -374,7 +309,7 @@ export const HomeSlotCard: React.FC = () => {
               className="w-full py-2.5 px-4 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer ring-2 ring-rose-300/40"
             >
               <Zap className="w-4 h-4 fill-white" />
-              <span>Extend +2 Hours ({formatTimeAMPM(displaySlot.endTimestamp)} – {formatTimeAMPM(displaySlot.endTimestamp + 120 * 60 * 1000)})</span>
+              <span>Extend +1 Hour ({formatTimeAMPM(displaySlot.endTimestamp)} – {formatTimeAMPM(displaySlot.endTimestamp + 60 * 60 * 1000)})</span>
             </button>
           </div>
         )}

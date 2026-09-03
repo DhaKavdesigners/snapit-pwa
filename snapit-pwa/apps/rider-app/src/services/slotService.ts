@@ -1,4 +1,4 @@
-import { RiderSlot, AdminSlotConfig, SlotStatus, DemandLevel } from '@/types';
+import type { RiderSlot, AdminSlotConfig, SlotStatus, DemandLevel } from '@/types';
 import { getNow, getNowDate } from './mockService';
 
 /** Returns today's date as YYYY-MM-DD */
@@ -106,14 +106,15 @@ export function generateDailySlots(
   const date = dateStr || getTodayDateString();
   const slots: RiderSlot[] = [];
   const now = getNow();
-  const durationHours = Math.max(1, Math.round((config.slotDurationMinutes || 120) / 60));
+  const slotDurationMinutes = config.slotDurationMinutes || 60;
+  const durationHours = Math.max(1, Math.round(slotDurationMinutes / 60));
 
   for (let h = config.operatingHourStart; h < config.operatingHourEnd; h += durationHours) {
     const startHourStr = h.toString().padStart(2, '0');
     const endH = (h + durationHours) % 24;
     const endHourStr = endH.toString().padStart(2, '0');
     const startTs = timeToTodayMs(`${startHourStr}:00`, date);
-    const endTs = startTs + (config.slotDurationMinutes || 120) * 60 * 1000;
+    const endTs = startTs + slotDurationMinutes * 60 * 1000;
     const slotId = `slot-${date}-${h}`;
 
     const isBooked = bookedSlotIds.includes(slotId);
@@ -168,9 +169,223 @@ export function generateAllSlots(
   return [...todaySlots, ...tomorrowSlots];
 }
 
-/** Check if booking is still open for a slot (Relaxed for testing) */
-export function isBookingOpen(slot: RiderSlot, config: AdminSlotConfig): boolean {
-  return true;
+// ─── Demand & Rider Capacity Calculation ──────────────────────────────────────
+
+export interface RiderAvailabilityItem {
+  id: string;
+  name?: string;
+  isOnline: boolean;
+  isVerified?: boolean;
+  isOnBreak?: boolean;
+  isInsideZone?: boolean;
+  hasActiveOrder?: boolean;
+  selectedZoneId?: string;
+}
+
+/**
+ * Calculates Available Rider Capacity based on exact rules:
+ * - Riders eligible and available to accept new orders.
+ * - Excludes riders who:
+ *   * already have an active order or currently delivering
+ *   * are offline
+ *   * are on break
+ *   * are outside their selected zone
+ *   * are unverified / ineligible
+ */
+export function calculateAvailableRiderCapacity(
+  riders: RiderAvailabilityItem[],
+  targetZoneId?: string
+): {
+  availableCapacity: number;
+  totalOnline: number;
+  busyCount: number;
+  breakCount: number;
+  outsideZoneCount: number;
+  offlineCount: number;
+  totalRiders: number;
+} {
+  let availableCapacity = 0;
+  let totalOnline = 0;
+  let busyCount = 0;
+  let breakCount = 0;
+  let outsideZoneCount = 0;
+  let offlineCount = 0;
+
+  for (const r of riders) {
+    if (!r.isOnline) {
+      offlineCount++;
+      continue;
+    }
+    totalOnline++;
+
+    if (r.hasActiveOrder) {
+      busyCount++;
+      continue;
+    }
+
+    if (r.isOnBreak) {
+      breakCount++;
+      continue;
+    }
+
+    if (r.isInsideZone === false) {
+      outsideZoneCount++;
+      continue;
+    }
+
+    if (targetZoneId && r.selectedZoneId && r.selectedZoneId !== targetZoneId) {
+      outsideZoneCount++;
+      continue;
+    }
+
+    if (r.isVerified === false) {
+      continue;
+    }
+
+    // Eligible, online, inside zone, no active order, not on break
+    availableCapacity++;
+  }
+
+  return {
+    availableCapacity,
+    totalOnline,
+    busyCount,
+    breakCount,
+    outsideZoneCount,
+    offlineCount,
+    totalRiders: riders.length,
+  };
+}
+
+/**
+ * Evaluates whether HIGH DEMAND MODE should be active:
+ * Current pending/active customer orders > Available Rider Capacity
+ */
+export function evaluateHighDemandState(
+  pendingOrActiveOrdersCount: number,
+  availableRiderCapacity: number
+): boolean {
+  return pendingOrActiveOrdersCount > availableRiderCapacity;
+}
+
+/**
+ * Checks slot booking eligibility:
+ * 1. Past slot (now >= endTimestamp) -> booking closed.
+ * 2. Future slot (now < startTimestamp) -> normal booking allowed.
+ * 3. Current slot (now >= startTimestamp && now < endTimestamp):
+ *    - First 25 minutes -> normal instant booking allowed.
+ *    - After 25 minutes ->
+ *        * If HIGH DEMAND MODE is ON -> instant booking allowed (emergency override).
+ *        * If normal demand -> booking blocked for this slot, rider should book next slot.
+ */
+export function checkSlotBookingEligibility(
+  slot: RiderSlot,
+  now: number,
+  config: AdminSlotConfig,
+  demandState?: {
+    isHighDemand: boolean;
+    availableRiderCapacity?: number;
+    activeOrdersDemand?: number;
+  }
+): {
+  canBook: boolean;
+  isPast: boolean;
+  isCurrentSlot: boolean;
+  isFutureSlot: boolean;
+  isWithin25Min: boolean;
+  isHighDemandOverride: boolean;
+  reason: string;
+  minutesElapsed?: number;
+  minutesRemainingInWindow?: number;
+} {
+  const windowMinutes = config.instantBookingWindowMinutes ?? 25;
+  const isPast = now >= slot.endTimestamp;
+
+  if (isPast) {
+    return {
+      canBook: false,
+      isPast: true,
+      isCurrentSlot: false,
+      isFutureSlot: false,
+      isWithin25Min: false,
+      isHighDemandOverride: false,
+      reason: 'Slot expired',
+    };
+  }
+
+  const isCurrentSlot = now >= slot.startTimestamp && now < slot.endTimestamp;
+
+  if (!isCurrentSlot) {
+    // Future slot
+    return {
+      canBook: true,
+      isPast: false,
+      isCurrentSlot: false,
+      isFutureSlot: true,
+      isWithin25Min: false,
+      isHighDemandOverride: false,
+      reason: 'Advance booking available',
+    };
+  }
+
+  // Current operational slot
+  const elapsedMs = Math.max(0, now - slot.startTimestamp);
+  const elapsedMinutes = Math.floor(elapsedMs / 60000);
+  const remainingInWindow = Math.max(0, windowMinutes - elapsedMinutes);
+  const isWithin25Min = elapsedMinutes < windowMinutes;
+  const isHighDemand = Boolean(demandState?.isHighDemand);
+
+  if (isWithin25Min) {
+    return {
+      canBook: true,
+      isPast: false,
+      isCurrentSlot: true,
+      isFutureSlot: false,
+      isWithin25Min: true,
+      isHighDemandOverride: false,
+      reason: 'Instant booking available',
+      minutesElapsed: elapsedMinutes,
+      minutesRemainingInWindow: remainingInWindow,
+    };
+  }
+
+  // After 25 minutes
+  if (isHighDemand) {
+    return {
+      canBook: true,
+      isPast: false,
+      isCurrentSlot: true,
+      isFutureSlot: false,
+      isWithin25Min: false,
+      isHighDemandOverride: true,
+      reason: 'High Demand — Instant Booking Available',
+      minutesElapsed: elapsedMinutes,
+      minutesRemainingInWindow: 0,
+    };
+  }
+
+  return {
+    canBook: false,
+    isPast: false,
+    isCurrentSlot: true,
+    isFutureSlot: false,
+    isWithin25Min: false,
+    isHighDemandOverride: false,
+    reason: 'Booking is closed for this slot',
+    minutesElapsed: elapsedMinutes,
+    minutesRemainingInWindow: 0,
+  };
+}
+
+/** Check if booking is still open for a slot */
+export function isBookingOpen(
+  slot: RiderSlot,
+  config: AdminSlotConfig,
+  demandState?: { isHighDemand: boolean; availableRiderCapacity?: number; activeOrdersDemand?: number },
+  currentTime?: number
+): boolean {
+  const now = currentTime !== undefined ? currentTime : getNow();
+  return checkSlotBookingEligibility(slot, now, config, demandState).canBook;
 }
 
 /** Check if rider can go online now for this slot (Relaxed for testing) */

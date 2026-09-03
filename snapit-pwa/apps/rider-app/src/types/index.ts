@@ -247,6 +247,34 @@ export interface AdminSlotConfig {
   maxConsecutiveSlots: number;
   extensionEnabled: boolean;
   waitlistEnabled: boolean;
+  instantBookingWindowMinutes?: number; // default 25 minutes for current slot
+}
+
+// ─── Demand & Capacity Status ────────────────────────────────────────────────
+export interface DemandCapacityStatus {
+  availableRiderCapacity: number; // Eligible riders online, in zone, not on break, no active order
+  activeOrdersDemand: number;     // Pending/active unfulfilled customer orders
+  isHighDemand: boolean;          // activeOrdersDemand > availableRiderCapacity
+  totalOnlineRiders: number;
+  busyRiders: number;
+  breakRiders: number;
+  outsideZoneRiders: number;
+  offlineRiders: number;
+  zoneId: string;
+  lastUpdated?: number;
+}
+
+// ─── Slot Booking Eligibility ────────────────────────────────────────────────
+export interface SlotBookingEligibility {
+  canBook: boolean;
+  isPast: boolean;
+  isCurrentSlot: boolean;
+  isFutureSlot: boolean;
+  isWithin25Min: boolean;
+  isHighDemandOverride: boolean;
+  reason: string;
+  minutesElapsed?: number;
+  minutesRemainingInWindow?: number;
 }
 
 export interface AdminBreakConfig {

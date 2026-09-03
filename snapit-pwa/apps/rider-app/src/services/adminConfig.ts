@@ -1,4 +1,4 @@
-import { AdminConfig, OrderAcceptanceExceptionReason } from '@/types';
+import type { AdminConfig, OrderAcceptanceExceptionReason } from '@/types';
 
 const ALL_EXCEPTION_REASONS: OrderAcceptanceExceptionReason[] = [
   'customer_cancelled',
@@ -15,7 +15,7 @@ const ALL_EXCEPTION_REASONS: OrderAcceptanceExceptionReason[] = [
 
 export const DEFAULT_ADMIN_CONFIG: AdminConfig = {
   slot: {
-    slotDurationMinutes: 120,
+    slotDurationMinutes: 60,
     operatingHourStart: 0,
     operatingHourEnd: 24,
     bookingCutoffMinutes: 60,
@@ -23,6 +23,7 @@ export const DEFAULT_ADMIN_CONFIG: AdminConfig = {
     maxConsecutiveSlots: 3,
     extensionEnabled: true,
     waitlistEnabled: true,
+    instantBookingWindowMinutes: 25,
   },
   break: {
     allowedBreakMinutes: 15,
@@ -48,7 +49,15 @@ export function getAdminConfig(): AdminConfig {
   try {
     const stored = localStorage.getItem('snapit_admin_config_v1');
     if (stored) {
-      return { ...DEFAULT_ADMIN_CONFIG, ...JSON.parse(stored) };
+      const parsed = JSON.parse(stored);
+      // Ensure slotDuration is 60 minutes even if older 120 min was previously cached
+      const slotConfig = {
+        ...DEFAULT_ADMIN_CONFIG.slot,
+        ...(parsed.slot || {}),
+        slotDurationMinutes: 60,
+        instantBookingWindowMinutes: 25,
+      };
+      return { ...DEFAULT_ADMIN_CONFIG, ...parsed, slot: slotConfig };
     }
   } catch {
     // ignore

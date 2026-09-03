@@ -5,6 +5,7 @@ import { RiderSlot, AdminSlotConfig, DemandLevel, SlotStatus } from '@/types';
 import { formatTimeAMPM, isBookingOpen } from '@/services/slotService';
 import { getNow } from '@/services/mockService';
 import { MapPin, Users, CheckCircle2 } from 'lucide-react';
+import { useRider } from '@/context/RiderContext';
 
 interface SlotCardProps {
   slot: RiderSlot;
@@ -29,7 +30,15 @@ const DemandBadge: React.FC<{ level: DemandLevel }> = ({ level }) => {
   );
 };
 
-const SlotStatusBadge: React.FC<{ status: SlotStatus }> = ({ status }) => {
+const SlotStatusBadge: React.FC<{ status: SlotStatus; isHighDemandOverride?: boolean }> = ({ status, isHighDemandOverride }) => {
+  if (isHighDemandOverride) {
+    return (
+      <span className="text-[10px] font-extrabold tracking-wider px-2.5 py-0.5 rounded-full border bg-red-100 text-red-700 border-red-300 animate-pulse">
+        HIGH DEMAND — INSTANT BOOKING
+      </span>
+    );
+  }
+
   const config: Record<SlotStatus, { cls: string; label: string }> = {
     available: { cls: 'bg-green-100 text-green-700 border-green-300', label: 'AVAILABLE' },
     booked: { cls: 'bg-blue-100 text-blue-700 border-blue-300', label: 'BOOKED' },
@@ -58,10 +67,9 @@ export const SlotCard: React.FC<SlotCardProps> = ({
   adminConfig,
   isBooked,
 }) => {
-  const now = getNow();
-  const isPast = now >= slot.endTimestamp;
-  const bookingOpen = isBookingOpen(slot, adminConfig);
-  const capacityPct = Math.floor((slot.bookedCount / slot.capacity) * 100);
+  const { getSlotEligibility } = useRider();
+  const eligibility = getSlotEligibility(slot);
+  const isPast = eligibility.isPast;
 
   if (isPast) return null;
 
@@ -81,7 +89,10 @@ export const SlotCard: React.FC<SlotCardProps> = ({
             <span>{slot.zoneName}</span>
           </div>
         </div>
-        <SlotStatusBadge status={isBooked ? (slot.status === 'active' ? 'active' : 'booked') : slot.status} />
+        <SlotStatusBadge
+          status={isBooked ? (slot.status === 'active' ? 'active' : 'booked') : slot.status}
+          isHighDemandOverride={!isBooked && eligibility.isHighDemandOverride}
+        />
       </div>
 
       <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -108,14 +119,18 @@ export const SlotCard: React.FC<SlotCardProps> = ({
             </button>
           ) : slot.status === 'full' ? (
             <span className="text-xs font-bold text-slate-400">Slot Full</span>
-          ) : !bookingOpen ? (
-            <span className="text-xs font-bold text-slate-400">Booking Closed</span>
+          ) : !eligibility.canBook ? (
+            <span className="text-xs font-bold text-slate-400">
+              Booking Closed
+            </span>
           ) : (
             <button
               onClick={onBook}
-              className="text-xs font-bold text-white bg-primary px-4 py-1.5 rounded-xl active:scale-95 shadow-sm"
+              className={`text-xs font-bold text-white px-4 py-1.5 rounded-xl active:scale-95 shadow-sm ${
+                eligibility.isHighDemandOverride ? 'bg-gradient-to-r from-red-600 to-orange-500' : 'bg-primary'
+              }`}
             >
-              Book Slot
+              {eligibility.isHighDemandOverride ? 'Instant Book' : 'Book Slot'}
             </button>
           )}
         </div>

@@ -25,6 +25,8 @@ import {
   OrderAcceptanceResponse,
   OrderAcceptanceExceptionReason,
   ZoneStatus,
+  DemandCapacityStatus,
+  SlotBookingEligibility,
 } from '@/types';
 import { DEFAULT_ADMIN_CONFIG } from '@/services/adminConfig';
 import {
@@ -35,6 +37,10 @@ import {
   buildExtendedSlot,
   isSlotOnlineReady,
   timeToTodayMs,
+  calculateAvailableRiderCapacity,
+  evaluateHighDemandState,
+  checkSlotBookingEligibility,
+  RiderAvailabilityItem,
 } from '@/services/slotService';
 import {
   checkZoneStatus,
@@ -73,6 +79,7 @@ import {
 import {
   fetchStores,
   fetchLiveOrders,
+  fetchAllRiders,
   fetchRiderDeliveredStats,
   assignRiderToOrder,
   updateDbOrderStatus,
@@ -184,6 +191,10 @@ interface RiderContextType {
   // Dev Mock Location & Time & Mode
   testMode: TestAppMode;
   setTestMode: (mode: TestAppMode) => void;
+  demandStatus: DemandCapacityStatus;
+  getSlotEligibility: (slot: RiderSlot) => SlotBookingEligibility;
+  simulatedDemand: { active: boolean; isHighDemand: boolean; ordersDemand?: number; capacity?: number } | null;
+  setSimulatedDemand: (override: { active: boolean; isHighDemand: boolean; ordersDemand?: number; capacity?: number } | null) => void;
   isMockLocationEnabled: boolean;
   mockZoneId: string | null;
   enableMockLocation: (zoneId?: string, customCoords?: { lat: number; lng: number }) => void;
@@ -343,6 +354,28 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [orderAcceptanceEvents, setOrderAcceptanceEvents] = useState<OrderAcceptanceEvent[]>([]);
   const [nonAcceptanceCount, setNonAcceptanceCount] = useState<number>(0);
 
+  // ── Demand & Rider Capacity state ──
+  const [demandStatus, setDemandStatus] = useState<DemandCapacityStatus>({
+    availableRiderCapacity: 0,
+    activeOrdersDemand: 0,
+    isHighDemand: false,
+    totalOnlineRiders: 0,
+    busyRiders: 0,
+    breakRiders: 0,
+    outsideZoneRiders: 0,
+    offlineRiders: 0,
+    zoneId: 'zone-1',
+    lastUpdated: Date.now(),
+  });
+  const [simulatedDemand, setSimulatedDemandState] = useState<{
+    active: boolean;
+    isHighDemand: boolean;
+    ordersDemand?: number;
+    capacity?: number;
+  } | null>(null);
+  const cachedDbOrdersRef = useRef<any[]>([]);
+  const cachedDbRidersRef = useRef<any[]>([]);
+
   // ── Refs for notification de-duplication ──
   const sentReminderRef = useRef<Set<string>>(new Set());
   const sentEndingRef = useRef<Set<string>>(new Set());
@@ -449,6 +482,131 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     refreshSlots();
   }, [refreshSlots]);
+
+  // ─── Demand & Capacity Calculation ─────────────────────────────────────────
+
+  const recalculateDemandStatus = useCallback((ordersList?: any[], ridersList?: any[]) => {
+    const currentZoneId = rider.selectedZoneId || 'zone-1';
+
+    if (ordersList) cachedDbOrdersRef.current = ordersList;
+    if (ridersList) cachedDbRidersRef.current = ridersList;
+
+    if (simulatedDemand?.active) {
+      const ordersDemand = simulatedDemand.ordersDemand ?? (simulatedDemand.isHighDemand ? 8 : 1);
+      const capacity = simulatedDemand.capacity ?? (simulatedDemand.isHighDemand ? 2 : 4);
+      setDemandStatus({
+        availableRiderCapacity: capacity,
+        activeOrdersDemand: ordersDemand,
+        isHighDemand: simulatedDemand.isHighDemand,
+        totalOnlineRiders: capacity + (simulatedDemand.isHighDemand ? 2 : 1),
+        busyRiders: simulatedDemand.isHighDemand ? 2 : 1,
+        breakRiders: 0,
+        outsideZoneRiders: 0,
+        offlineRiders: 2,
+        zoneId: currentZoneId,
+        lastUpdated: Date.now(),
+      });
+      return;
+    }
+
+    const orders = cachedDbOrdersRef.current || [];
+    const riders = cachedDbRidersRef.current || [];
+
+    // Active unfulfilled orders in system
+    const activeOrdersInDb = orders.filter((o: any) => {
+      const s = (o.status || '').toUpperCase();
+      return !['DELIVERED', 'CANCELLED', 'REJECTED'].includes(s);
+    });
+    const ordersDemandCount = Math.max(activeOrdersInDb.length, incomingOrder ? 1 : 0);
+
+    // Build fleet representation
+    const fleet: RiderAvailabilityItem[] = [
+      {
+        id: rider.phone || 'current-rider',
+        name: rider.name || 'Current Rider',
+        isOnline,
+        isVerified: rider.isVerified !== false,
+        isOnBreak: Boolean(riderBreak && !riderBreak.endedAt),
+        isInsideZone: zoneStatus === 'inside' || zoneStatus === 'low_accuracy' || zoneStatus === 'unknown',
+        hasActiveOrder: Boolean(activeOrder),
+        selectedZoneId: currentZoneId,
+      },
+    ];
+
+    const otherRidersFromDb = riders.filter((r: any) => r.phone !== rider.phone && r.id !== rider.phone);
+    if (otherRidersFromDb.length > 0) {
+      for (const r of otherRidersFromDb) {
+        const isBusy = orders.some(
+          (o: any) => (o.rider_id === r.phone || o.rider_id === r.id) &&
+          !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase())
+        );
+        fleet.push({
+          id: r.id || r.phone,
+          name: r.name,
+          isOnline: Boolean(r.is_online),
+          isVerified: r.is_verified !== false,
+          isOnBreak: false,
+          isInsideZone: true,
+          hasActiveOrder: isBusy,
+          selectedZoneId: r.selected_zone_id || currentZoneId,
+        });
+      }
+    } else {
+      // Dynamic baseline fleet for zone
+      const fellowBusy = ordersDemandCount >= 2;
+      fleet.push(
+        {
+          id: 'rider-peer-1',
+          name: 'Peer Rider 1',
+          isOnline: true,
+          isVerified: true,
+          isOnBreak: false,
+          isInsideZone: true,
+          hasActiveOrder: fellowBusy,
+          selectedZoneId: currentZoneId,
+        },
+        {
+          id: 'rider-peer-2',
+          name: 'Peer Rider 2',
+          isOnline: true,
+          isVerified: true,
+          isOnBreak: false,
+          isInsideZone: true,
+          hasActiveOrder: ordersDemandCount >= 4,
+          selectedZoneId: currentZoneId,
+        }
+      );
+    }
+
+    const capacityStats = calculateAvailableRiderCapacity(fleet, currentZoneId);
+    const isHigh = evaluateHighDemandState(ordersDemandCount, capacityStats.availableCapacity);
+
+    setDemandStatus({
+      availableRiderCapacity: capacityStats.availableCapacity,
+      activeOrdersDemand: ordersDemandCount,
+      isHighDemand: isHigh,
+      totalOnlineRiders: capacityStats.totalOnline,
+      busyRiders: capacityStats.busyCount,
+      breakRiders: capacityStats.breakCount,
+      outsideZoneRiders: capacityStats.outsideZoneCount,
+      offlineRiders: capacityStats.offlineCount,
+      zoneId: currentZoneId,
+      lastUpdated: Date.now(),
+    });
+  }, [simulatedDemand, rider.selectedZoneId, rider.phone, rider.name, rider.isVerified, isOnline, riderBreak, zoneStatus, activeOrder, incomingOrder]);
+
+  const setSimulatedDemand = useCallback((override: { active: boolean; isHighDemand: boolean; ordersDemand?: number; capacity?: number } | null) => {
+    setSimulatedDemandState(override);
+  }, []);
+
+  const getSlotEligibility = useCallback((slot: RiderSlot): SlotBookingEligibility => {
+    const now = getNow();
+    return checkSlotBookingEligibility(slot, now, adminConfig.slot, demandStatus);
+  }, [adminConfig.slot, demandStatus]);
+
+  useEffect(() => {
+    recalculateDemandStatus();
+  }, [recalculateDemandStatus]);
 
   // ─── Slot Timer: Notifications + Auto-Offline ──────────────────────────────
 
@@ -769,6 +927,23 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Slot Methods ──────────────────────────────────────────────────────────
 
   const bookSlot = (slotId: string, zoneId: string, zoneName: string) => {
+    const slot = slots.find((s) => s.id === slotId);
+    if (slot) {
+      const eligibility = getSlotEligibility(slot);
+      if (!eligibility.canBook) {
+        addAlert({
+          id: `alert-booking-blocked-${Date.now()}`,
+          title: '⚠️ Slot Booking Closed',
+          message: eligibility.reason || 'This slot is currently not open for instant booking.',
+          time: 'Just now',
+          type: 'system',
+          read: false,
+          priority: 'high',
+        });
+        return;
+      }
+    }
+
     const nextBooked = bookedSlotIds.includes(slotId) ? bookedSlotIds : [...bookedSlotIds, slotId];
     setBookedSlotIds(nextBooked);
     try {
@@ -790,10 +965,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     // Synchronous immediate refresh to avoid race conditions/delayed state updates
     refreshSlots(nextBooked, zoneId, zoneName);
 
-    const slot = slots.find((s) => s.id === slotId);
     if (slot) {
       addAlert(createSlotBookedAlert({ ...slot, zoneId, zoneName }));
     }
+
+    setTimeout(() => {
+      recalculateDemandStatus();
+    }, 50);
   };
 
   const cancelSlot = (slotId: string) => {
@@ -929,6 +1107,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       try {
         const dbStores = await fetchStores();
         const dbOrders = await fetchLiveOrders();
+        const dbRiders = await fetchAllRiders();
+        recalculateDemandStatus(dbOrders, dbRiders);
 
         // 1. Sync Active Order with Live Database: Clear stale cache if order is not in DB
         setActiveOrder((currentActive) => {
@@ -1695,6 +1875,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         refreshSlots,
         testMode,
         setTestMode,
+        demandStatus,
+        getSlotEligibility,
+        simulatedDemand,
+        setSimulatedDemand,
         isMockLocationEnabled,
         mockZoneId,
         enableMockLocation,

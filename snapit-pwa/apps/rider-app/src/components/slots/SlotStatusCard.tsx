@@ -151,24 +151,24 @@ export const SlotStatusCard: React.FC = () => {
 
     if (endingSoon) {
       return (
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-4 sm:p-5 shadow-lg border border-amber-300">
+        <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-3xl p-4 sm:p-5 shadow-lg">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-black/20 px-2.5 py-0.5 rounded-full">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full">
                 ⚠️ Ending Soon
               </span>
-              <h3 className="text-lg font-black mt-1">SLOT ENDS IN {Math.ceil(remaining / 60000)} MIN</h3>
-              <p className="text-xs opacity-90 font-medium">
+              <h3 className="text-lg font-black mt-1 text-rose-950">SLOT ENDS IN {Math.ceil(remaining / 60000)} MIN</h3>
+              <p className="text-xs text-rose-700 font-medium">
                 {formatTimeAMPM(activeSlot.startTimestamp)} – {formatTimeAMPM(activeSlot.endTimestamp)}
               </p>
             </div>
             {nextSlot && (
               <button
                 onClick={() => extendSlot(activeSlot.id, nextSlot.id)}
-                className="bg-white text-orange-600 font-black text-xs px-4 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-all shrink-0 flex items-center gap-1.5"
+                className="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs px-4 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
               >
-                <Zap className="w-4 h-4 fill-orange-500" />
-                Extend 2 Hrs
+                <Zap className="w-4 h-4 fill-white" />
+                Extend 1 Hr
               </button>
             )}
           </div>
@@ -183,7 +183,7 @@ export const SlotStatusCard: React.FC = () => {
     return (
       <div
         className={`rounded-3xl border-2 shadow-lg p-4 sm:p-5 transition-all ${
-          !isOnline && !onlineGate.canGo ? 'bg-amber-50 border-amber-300' : 'bg-white border-emerald-500/30'
+          !isOnline && !onlineGate.canGo ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50/95 border-emerald-300/80 text-emerald-950'
         }`}
       >
         {/* Header */}

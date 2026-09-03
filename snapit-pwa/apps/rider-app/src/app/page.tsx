@@ -479,7 +479,7 @@ export default function DashboardPage() {
                 href="/slots"
                 className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1 transition-colors"
               >
-                <span>Pick / Change 2-Hour Duty Slot</span>
+                <span>Pick / Change 1-Hour Duty Slot</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                 href="/slots"
                 className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
               >
-                📅 View & Book 2-Hour Slots
+                📅 View & Book 1-Hour Slots
               </Link>
             </div>
           </div>

@@ -46,7 +46,7 @@ export const SlotEndingPopupModal: React.FC<SlotEndingPopupModalProps> = ({
             Slot Ending in {Math.max(1, remainingMinutes)}m
           </h3>
           <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
-            Extend duty time by <strong>+2 hours</strong> to continue receiving orders uninterrupted.
+            Extend duty time by <strong>+1 hour</strong> to continue receiving orders uninterrupted.
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export const SlotEndingPopupModal: React.FC<SlotEndingPopupModalProps> = ({
             className="w-full py-3 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-black text-xs rounded-xl shadow-md active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer ring-2 ring-rose-200/50"
           >
             <Zap className="w-3.5 h-3.5 fill-white" />
-            <span>Extend +2 Hours</span>
+            <span>Extend +1 Hour</span>
           </button>
 
           <button
