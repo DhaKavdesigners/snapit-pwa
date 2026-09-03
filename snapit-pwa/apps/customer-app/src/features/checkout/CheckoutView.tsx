@@ -15,6 +15,57 @@ import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { calculateDeliveryFee, generateDeliveryPin } from '../../../../../common_logic/deliveryLogic';
 
+// ── KGF Known Address Coordinates ───────────────────────────────────────────
+// Static lookup for addresses we know; avoids geocoding API calls for common addresses.
+const KGF_KNOWN_COORDS: Array<{ keywords: string[]; lat: number; lng: number }> = [
+  { keywords: ['dttit', 'dtte', 'oorgaum', '563120'], lat: 12.9275, lng: 78.2589 },
+  { keywords: ['andersonpet', 'anderson', 'main road', '563113'], lat: 12.9365, lng: 78.2672 },
+  { keywords: ['mariyamman', 'maariyaman', 'temple street', '563122'], lat: 12.9340, lng: 78.2680 },
+  { keywords: ['robertsonpet', 'robertson', '563119'], lat: 12.9310, lng: 78.2745 },
+  { keywords: ['bangarpet', '563114'], lat: 12.9949, lng: 78.1725 },
+  { keywords: ['marikuppam', '563116'], lat: 12.8840, lng: 78.3115 },
+  { keywords: ['kgf', 'kolar gold', '563115'], lat: 12.9592, lng: 78.2713 },
+];
+
+/** Resolve lat/lng for a delivery address string.
+ *  First checks known KGF landmarks; falls back to Nominatim geocoding API. */
+async function geocodeDeliveryAddress(
+  addressText: string,
+  pincode: string,
+  landmark: string
+): Promise<{ lat: number; lng: number }> {
+  const combined = `${addressText} ${landmark} ${pincode}`.toLowerCase();
+
+  // 1. Try static KGF lookup first (instant, no network)
+  for (const entry of KGF_KNOWN_COORDS) {
+    if (entry.keywords.some((kw) => combined.includes(kw))) {
+      return { lat: entry.lat, lng: entry.lng };
+    }
+  }
+
+  // 2. Fallback: Nominatim (OpenStreetMap) geocoding — free, no API key
+  try {
+    const query = encodeURIComponent(
+      `${addressText}${landmark ? ', ' + landmark : ''}, KGF, Karnataka, India`
+    );
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=in`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MinnitApp/1.0' } }
+    );
+    if (res.ok) {
+      const results = await res.json();
+      if (results.length > 0) {
+        return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+      }
+    }
+  } catch {
+    // Network failure — fall through to KGF town center default
+  }
+
+  // 3. Ultimate fallback: KGF town center (Andersonpet)
+  return { lat: 12.9365, lng: 78.2672 };
+}
+
 type PayMethod = 'online' | 'upiDelivery';
 
 export const CheckoutView: React.FC = () => {
@@ -79,12 +130,24 @@ export const CheckoutView: React.FC = () => {
     
     const displayId = `ORD-${Date.now().toString().slice(-6)}`;
     const storeId = cartItemsWithDetails[0]?.product?.storeId || 'g1';
-    
+
+    // ── Geocode the selected delivery address so the rider map is accurate ──
+    // This resolves real lat/lng for whichever address the customer picked,
+    // NOT the customer's current GPS location.
+    const resolvedCoords = await geocodeDeliveryAddress(
+      displayAddressLine,
+      displayPin,
+      displayLandmark
+    );
+
     const activeAddressObject = {
       title: displayTitle,
       line1: displayAddressLine,
       landmark: displayLandmark,
-      pincode: displayPin
+      pincode: displayPin,
+      // ✅ Rider map drop pin coordinates — based on the selected delivery address
+      lat: resolvedCoords.lat,
+      lng: resolvedCoords.lng,
     };
 
     const itemsJson = cartItemsWithDetails.map(item => ({
