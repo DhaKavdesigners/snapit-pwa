@@ -126,7 +126,7 @@ export function generateDailySlots(
     let status: SlotStatus = 'available';
     if (isBooked) {
       if (now >= startTs && now < endTs) status = 'active';
-      else if (now >= endTs) status = 'active';
+      else if (now >= endTs) status = 'completed';
       else status = 'booked';
     } else {
       status = 'available';

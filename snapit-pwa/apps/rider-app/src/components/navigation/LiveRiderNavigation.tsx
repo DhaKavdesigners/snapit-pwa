@@ -1,20 +1,20 @@
-﻿'use client';
+'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Order } from '@/types';
-import { useDeviceGps } from '@/hooks/useDeviceGps';
-import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
-import { MAP_CONFIG, isValidCoordinate } from '@/config/mapConfig';
+import {
+  openGoogleMapsNavigation,
+  hasValidCoordinates,
+} from '@/utils/navigationLauncher';
 import {
   Navigation,
-  Crosshair,
-  Maximize2,
-  Minimize2,
-  ExternalLink,
   Store,
   MapPin,
+  Phone,
+  ExternalLink,
+  AlertCircle,
   Clock,
-  ChevronRight,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface LiveRiderNavigationProps {
@@ -26,19 +26,8 @@ interface LiveRiderNavigationProps {
 
 export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
   order,
-  isFullScreen = false,
-  onToggleFullScreen,
 }) => {
-  const { location: gpsLoc, status: gpsStatus, refreshGps } = useDeviceGps(true);
-  const [isMounted, setIsMounted] = useState<boolean>(false);
-
-  const mapRef = useRef<HTMLDivElement>(null);
-  const leafletMapInstance = useRef<any>(null);
-  const riderMarkerRef = useRef<any>(null);
-  const routePolylineRef = useRef<any>(null);
-  const markersGroupRef = useRef<any>(null);
-
-  // Determine if order is in pickup stage or dropoff stage
+  // Determine if order is in pickup stage or dropoff/delivery stage
   const isBeforePickup = useMemo(() => {
     const s = (order.status || '').toLowerCase();
     const dbS = (order.dbStatus || '').toUpperCase();
@@ -57,307 +46,120 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
     );
   }, [order]);
 
-  // Current Rider coordinates (GPS -> Start Coords -> Default Center)
-  const riderCoords = useMemo(() => {
-    if (gpsLoc && isValidCoordinate(gpsLoc.lat, gpsLoc.lng)) {
-      return { lat: gpsLoc.lat, lng: gpsLoc.lng, heading: gpsLoc.heading || 0 };
-    }
-    if (order.riderStartLocation && isValidCoordinate(order.riderStartLocation.lat, order.riderStartLocation.lng)) {
-      return { lat: order.riderStartLocation.lat, lng: order.riderStartLocation.lng, heading: 0 };
-    }
-    return {
-      lat: MAP_CONFIG.defaultCenter.lat,
-      lng: MAP_CONFIG.defaultCenter.lng,
-      heading: 0,
-    };
-  }, [gpsLoc, order.riderStartLocation]);
+  const shopLat = order.shopLocation?.lat;
+  const shopLng = order.shopLocation?.lng;
+  const hasShopCoords = hasValidCoordinates(shopLat, shopLng);
 
-  // Shop coordinates
-  const shopCoords = useMemo(() => {
-    return {
-      lat: isValidCoordinate(order.shopLocation?.lat, order.shopLocation?.lng)
-        ? Number(order.shopLocation!.lat)
-        : MAP_CONFIG.defaultCenter.lat + 0.004,
-      lng: isValidCoordinate(order.shopLocation?.lat, order.shopLocation?.lng)
-        ? Number(order.shopLocation!.lng)
-        : MAP_CONFIG.defaultCenter.lng + 0.003,
-      name: order.restaurantName || 'Store',
-      address: order.restaurantAddress || 'Store Address',
-    };
-  }, [order.shopLocation, order.restaurantName, order.restaurantAddress]);
+  const custLat = order.customerLocation?.lat;
+  const custLng = order.customerLocation?.lng;
+  const hasCustCoords = hasValidCoordinates(custLat, custLng);
 
-  // Customer coordinates
-  const customerCoords = useMemo(() => {
-    return {
-      lat: isValidCoordinate(order.customerLocation?.lat, order.customerLocation?.lng)
-        ? Number(order.customerLocation!.lat)
-        : MAP_CONFIG.defaultCenter.lat - 0.005,
-      lng: isValidCoordinate(order.customerLocation?.lat, order.customerLocation?.lng)
-        ? Number(order.customerLocation!.lng)
-        : MAP_CONFIG.defaultCenter.lng - 0.004,
-      name: order.customerName || 'Customer',
-      address: order.deliveryAddress || 'Customer Address',
-    };
-  }, [order.customerLocation, order.customerName, order.deliveryAddress]);
+  const activeHasCoords = isBeforePickup ? hasShopCoords : hasCustCoords;
+  const activeLat = isBeforePickup ? shopLat : custLat;
+  const activeLng = isBeforePickup ? shopLng : custLng;
 
-  // Active Destination Target
-  const targetCoords = isBeforePickup ? shopCoords : customerCoords;
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Initialize Leaflet Map
-  useEffect(() => {
-    if (!isMounted || typeof window === 'undefined' || !mapRef.current) return;
-
-    let L: any;
-    let mapInstance: any;
-
-    const initMap = async () => {
-      try {
-        L = (await import('leaflet')).default;
-        if (!mapRef.current) return;
-
-        if (leafletMapInstance.current) {
-          leafletMapInstance.current.remove();
-          leafletMapInstance.current = null;
-        }
-        if ((mapRef.current as any)._leaflet_id) {
-          (mapRef.current as any)._leaflet_id = null;
-        }
-
-        mapInstance = L.map(mapRef.current, {
-          zoomControl: false,
-          attributionControl: false,
-          fadeAnimation: true,
-          zoomAnimation: true,
-        }).setView([riderCoords.lat, riderCoords.lng], MAP_CONFIG.focusedZoom);
-
-        leafletMapInstance.current = mapInstance;
-
-        // Configurable Tile Server Layer
-        L.tileLayer(MAP_CONFIG.tileUrl, {
-          maxZoom: MAP_CONFIG.maxZoom,
-          minZoom: MAP_CONFIG.minZoom,
-          attribution: MAP_CONFIG.attribution,
-          crossOrigin: true,
-        }).addTo(mapInstance);
-
-        const markersGroup = L.layerGroup().addTo(mapInstance);
-        markersGroupRef.current = markersGroup;
-
-        // Rider Marker Icon
-        const riderIcon = L.divIcon({
-          className: 'rider-marker',
-          html: `
-            <div style="width:38px;height:38px;position:relative;display:flex;align-items:center;justify-content:center;">
-              <div style="position:absolute;width:38px;height:38px;border-radius:50%;background:rgba(5,150,105,0.3);animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
-              <div style="position:relative;z-index:10;width:26px;height:26px;border-radius:50%;background:#059669;border:3px solid #fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);display:flex;align-items:center;justify-content:center;transform:rotate(${riderCoords.heading}deg);">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><polygon points="12 2 19 21 12 17 5 21 12 2"/></svg>
-              </div>
-            </div>`,
-          iconSize: [38, 38],
-          iconAnchor: [19, 19],
-        });
-
-        const riderMarker = L.marker([riderCoords.lat, riderCoords.lng], { icon: riderIcon, zIndexOffset: 1000 }).addTo(markersGroup);
-        riderMarkerRef.current = riderMarker;
-
-        // Target Marker (Store or Customer)
-        const targetIcon = L.divIcon({
-          className: 'dest-marker',
-          html: isBeforePickup
-            ? `
-            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-              <div style="background:#0f172a;color:#fff;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:1px solid #334155;">
-                🏬 ${order.restaurantName || 'Store'}
-              </div>
-              <div style="width:32px;height:32px;border-radius:50%;background:#059669;border:3px solid #fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);display:flex;align-items:center;justify-content:center;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
-              </div>
-            </div>`
-            : `
-            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-              <div style="background:#0f172a;color:#fff;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:1px solid #334155;">
-                📍 ${order.customerName || 'Customer'}
-              </div>
-              <div style="width:32px;height:32px;border-radius:50%;background:#7c3aed;border:3px solid #fff;box-shadow:0 3px 10px rgba(124,58,237,0.4);display:flex;align-items:center;justify-content:center;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              </div>
-            </div>`,
-          iconSize: [110, 54],
-          iconAnchor: [55, 54],
-        });
-
-        L.marker([targetCoords.lat, targetCoords.lng], { icon: targetIcon }).addTo(markersGroup);
-
-        // Visual Polyline connecting Rider to Target
-        const linePoints = [
-          [riderCoords.lat, riderCoords.lng],
-          [targetCoords.lat, targetCoords.lng],
-        ];
-
-        const polyline = L.polyline(linePoints, {
-          ...MAP_CONFIG.routeStyle,
-          color: isBeforePickup ? '#059669' : '#7c3aed',
-        }).addTo(markersGroup);
-        routePolylineRef.current = polyline;
-
-        // Fit Bounds
-        const bounds = L.latLngBounds(linePoints);
-        mapInstance.fitBounds(bounds, { padding: [45, 45], maxZoom: 17 });
-
-        setTimeout(() => {
-          if (mapInstance) mapInstance.invalidateSize();
-        }, 150);
-      } catch (err) {
-        console.warn('Leaflet map init error:', err);
-      }
-    };
-
-    initMap();
-
-    return () => {
-      if (leafletMapInstance.current) {
-        leafletMapInstance.current.remove();
-        leafletMapInstance.current = null;
-      }
-    };
-  }, [isMounted, isBeforePickup, targetCoords, isFullScreen]);
-
-  // Update Rider GPS position dynamically
-  useEffect(() => {
-    if (riderMarkerRef.current && riderCoords) {
-      riderMarkerRef.current.setLatLng([riderCoords.lat, riderCoords.lng]);
-    }
-  }, [riderCoords]);
-
-  const handleZoomIn = () => leafletMapInstance.current?.zoomIn();
-  const handleZoomOut = () => leafletMapInstance.current?.zoomOut();
-  const handleRecenter = () => {
-    refreshGps();
-    if (leafletMapInstance.current && riderCoords) {
-      leafletMapInstance.current.setView([riderCoords.lat, riderCoords.lng], MAP_CONFIG.focusedZoom, {
-        animate: true,
-      });
-    }
-  };
-
-  const handleLaunchGoogleMaps = () => {
-    openTurnByTurnNavigation({
-      lat: targetCoords.lat,
-      lng: targetCoords.lng,
-      label: isBeforePickup ? order.restaurantName : order.customerName,
-      address: isBeforePickup ? order.restaurantAddress : order.deliveryAddress,
-    });
+  const handleNavigate = () => {
+    if (!activeHasCoords) return;
+    openGoogleMapsNavigation(activeLat, activeLng);
   };
 
   return (
-    <div
-      className={`relative overflow-hidden transition-all duration-300 ${
-        isFullScreen
-          ? 'fixed inset-0 z-50 flex flex-col bg-white'
-          : 'w-full rounded-3xl bg-white shadow-sm border border-slate-200 flex flex-col'
-      }`}
-    >
-      {/* Leaflet CSS */}
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossOrigin=""
-      />
-
-      {/* Map Viewport Canvas */}
-      <div className={`relative w-full bg-slate-100 ${isFullScreen ? 'flex-1' : 'h-[230px]'}`}>
-        <div ref={mapRef} className="w-full h-full z-10" />
-
-        {/* Top Floating Mission Banner */}
-        <div className="absolute top-3 left-3 z-20 max-w-[70%] pointer-events-none">
-          <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl px-3 py-2 flex items-center gap-2.5 shadow-xl border border-slate-800 pointer-events-auto">
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              {isBeforePickup ? <Store className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
+    <div className="w-full bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* Target Destination Header Banner */}
+      <div className={`p-4 border-b ${isBeforePickup ? 'bg-emerald-50/70 border-emerald-100' : 'bg-blue-50/70 border-blue-100'}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
+              isBeforePickup ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
+            }`}>
+              {isBeforePickup ? (
+                <Store className="w-5 h-5" />
+              ) : (
+                <MapPin className="w-5 h-5" />
+              )}
             </div>
+
             <div className="min-w-0">
-              <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400 block truncate">
-                {isBeforePickup ? 'Heading to Store' : 'Out for Delivery'}
-              </span>
-              <p className="text-white font-bold text-xs leading-tight truncate">
-                {isBeforePickup ? order.restaurantName : order.customerName}
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                  isBeforePickup
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    : 'bg-blue-100 text-blue-800 border border-blue-200'
+                }`}>
+                  {isBeforePickup ? 'Pickup Navigation' : 'Delivery Navigation'}
+                </span>
+                {!activeHasCoords && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Location unavailable
+                  </span>
+                )}
+              </div>
+
+              <h3 className="font-black text-base text-slate-900 truncate">
+                {isBeforePickup ? (order.restaurantName || 'Store') : (order.customerName || 'Customer')}
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">
+                {isBeforePickup ? (order.restaurantAddress || 'Store Address') : (order.deliveryAddress || 'Customer Address')}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Right Stack Controls: Recenter + Zoom + Fullscreen */}
-        <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 pointer-events-auto">
-          {onToggleFullScreen && (
-            <button
-              type="button"
-              onClick={onToggleFullScreen}
-              className="w-8 h-8 bg-white/95 backdrop-blur-md rounded-full shadow-md flex items-center justify-center border border-slate-200 active:scale-90 transition-transform cursor-pointer"
-              title={isFullScreen ? 'Minimize Map' : 'Expand Map'}
+        {/* Action Button Strip */}
+        <div className="mt-3.5 flex gap-2">
+          {/* Primary Navigation Action Button */}
+          <button
+            type="button"
+            onClick={handleNavigate}
+            disabled={!activeHasCoords}
+            className={`flex-1 py-3 px-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
+              activeHasCoords
+                ? 'bg-slate-900 hover:bg-slate-800 text-white active:scale-98 shadow-md'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+            }`}
+          >
+            <Navigation className={`w-4 h-4 ${activeHasCoords ? 'text-emerald-400' : 'text-slate-400'}`} />
+            <span>
+              {isBeforePickup ? 'Navigate to Shop' : 'Navigate to Customer'}
+            </span>
+            {activeHasCoords && (
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+            )}
+          </button>
+
+          {/* Quick Call Button */}
+          {isBeforePickup ? (
+            <a
+              href="tel:8217649688"
+              className="py-3 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs"
+              title="Call Store"
             >
-              {isFullScreen ? (
-                <Minimize2 className="w-3.5 h-3.5 text-slate-700" />
-              ) : (
-                <Maximize2 className="w-3.5 h-3.5 text-slate-700" />
-              )}
-            </button>
+              <Phone className="w-4 h-4 text-emerald-600" />
+              <span className="hidden sm:inline">Call Store</span>
+            </a>
+          ) : (
+            <a
+              href={`tel:${order.customerPhone}`}
+              className="py-3 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs"
+              title="Call Customer"
+            >
+              <Phone className="w-4 h-4 text-blue-600" />
+              <span className="hidden sm:inline">Call Customer</span>
+            </a>
           )}
-
-          <button
-            type="button"
-            onClick={handleRecenter}
-            className="w-8 h-8 bg-white/95 backdrop-blur-md rounded-full shadow-md flex items-center justify-center border border-slate-200 text-emerald-600 active:scale-90 transition-transform cursor-pointer"
-            title="Recenter on My Location"
-          >
-            <Crosshair className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            className="w-8 h-8 bg-white/95 backdrop-blur-md rounded-full shadow-md flex items-center justify-center border border-slate-200 font-bold text-slate-700 text-base active:scale-90 transition-transform cursor-pointer"
-            title="Zoom In"
-          >
-            +
-          </button>
-
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className="w-8 h-8 bg-white/95 backdrop-blur-md rounded-full shadow-md flex items-center justify-center border border-slate-200 font-bold text-slate-700 text-base active:scale-90 transition-transform cursor-pointer"
-            title="Zoom Out"
-          >
-            −
-          </button>
         </div>
       </div>
 
-      {/* Bottom Floating Bar: 1-Tap Google Maps External Deep Link */}
-      <div className="bg-white border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>~{order.estimatedMinutes || 10} mins</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Navigation className="w-3.5 h-3.5 text-slate-400" />
-            <span>{order.distanceKm || 2.4} km</span>
-          </div>
+      {/* Navigation Info Footer */}
+      <div className="px-4 py-2.5 bg-slate-50 flex items-center justify-between text-[11px] text-slate-500">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>Navigation handled directly by <strong>Google Maps</strong></span>
         </div>
-
-        <button
-          type="button"
-          onClick={handleLaunchGoogleMaps}
-          className="py-2 px-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-          title="Open Turn-by-Turn Navigation in Native Google Maps"
-        >
-          <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Google Maps</span>
-        </button>
+        <span className="font-mono font-bold text-slate-600">
+          ~{order.estimatedMinutes || 12} mins ({order.distanceKm || 2.4} km)
+        </span>
       </div>
     </div>
   );

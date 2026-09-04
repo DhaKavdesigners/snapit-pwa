@@ -8,7 +8,8 @@ import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatTimeAMPM } from '@/services/slotService';
-import { openTurnByTurnNavigation } from '@/utils/navigationLauncher';
+import { openGoogleMapsNavigation, hasValidCoordinates } from '@/utils/navigationLauncher';
+import { soundEngine } from '@/services/soundService';
 import {
   ShieldCheck,
   Check,
@@ -69,6 +70,13 @@ export default function DashboardPage() {
       router.push('/onboarding');
     }
   }, [isHydrated, rider.phone, router]);
+
+  // Guarantee buzzer is stopped if leaving or unmounting dashboard
+  useEffect(() => {
+    return () => {
+      soundEngine.stopIncomingOrderBuzzer();
+    };
+  }, []);
 
   // Online timer calculation
   const [onlineSeconds, setOnlineSeconds] = useState(0);
@@ -320,23 +328,30 @@ export default function DashboardPage() {
                     <Phone className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Call Store</span>
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const lat = activeOrder.shopLocation?.lat ?? 12.9602;
-                      const lng = activeOrder.shopLocation?.lng ?? 78.2711;
-                      openTurnByTurnNavigation({
-                        lat,
-                        lng,
-                        label: activeOrder.restaurantName,
-                        address: activeOrder.restaurantAddress,
-                      });
-                    }}
-                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
-                  >
-                    <Navigation className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Google Maps</span>
-                  </button>
+                  {hasValidCoordinates(activeOrder.shopLocation?.lat, activeOrder.shopLocation?.lng) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        openGoogleMapsNavigation(
+                          activeOrder.shopLocation?.lat,
+                          activeOrder.shopLocation?.lng
+                        );
+                      }}
+                      className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
+                    >
+                      <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Navigate to Shop</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex-1 py-2.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-200 cursor-not-allowed"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Location unavailable</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Items in order */}
@@ -387,23 +402,30 @@ export default function DashboardPage() {
                     <Phone className="w-3.5 h-3.5 text-blue-600" />
                     <span>Call Customer</span>
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const lat = activeOrder.customerLocation?.lat ?? 12.9602;
-                      const lng = activeOrder.customerLocation?.lng ?? 78.2711;
-                      openTurnByTurnNavigation({
-                        lat,
-                        lng,
-                        label: activeOrder.customerName,
-                        address: activeOrder.deliveryAddress,
-                      });
-                    }}
-                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
-                  >
-                    <Navigation className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Google Maps</span>
-                  </button>
+                  {hasValidCoordinates(activeOrder.customerLocation?.lat, activeOrder.customerLocation?.lng) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        openGoogleMapsNavigation(
+                          activeOrder.customerLocation?.lat,
+                          activeOrder.customerLocation?.lng
+                        );
+                      }}
+                      className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
+                    >
+                      <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Navigate to Customer</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex-1 py-2.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-200 cursor-not-allowed"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Location unavailable</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}

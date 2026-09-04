@@ -5,7 +5,10 @@
 
 class SoundEngine {
   private audioCtx: AudioContext | null = null;
-  private alertInterval: any = null;
+  private alertInterval: ReturnType<typeof setInterval> | null = null;
+  private isBuzzerActive: boolean = false;
+  private currentBuzzerOrderId: string | null = null;
+  private playedDeliveredOrders: Set<string> = new Set();
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -16,7 +19,7 @@ class SoundEngine {
       }
     }
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+      this.audioCtx.resume().catch(() => {});
     }
     return this.audioCtx;
   }
@@ -67,24 +70,55 @@ class SoundEngine {
   }
 
   /**
-   * Start looping incoming order ringtone
+   * Start looping incoming order buzzer
+   * Deduplicates by orderId to prevent multiple overlapping audio loops.
    */
-  public startIncomingOrderRingtone() {
-    this.stopIncomingOrderRingtone();
+  public startIncomingOrderBuzzer(orderId?: string) {
+    if (orderId && this.isBuzzerActive && this.currentBuzzerOrderId === orderId) {
+      return; // Already buzzing for this exact order
+    }
+
+    this.stopIncomingOrderBuzzer();
+
+    this.isBuzzerActive = true;
+    this.currentBuzzerOrderId = orderId || 'pending-order';
+
     this.playIncomingOrderBeep();
     this.alertInterval = setInterval(() => {
+      if (!this.isBuzzerActive) {
+        this.stopIncomingOrderBuzzer();
+        return;
+      }
       this.playIncomingOrderBeep();
     }, 1200);
   }
 
   /**
-   * Stop incoming order ringtone
+   * Immediately stops incoming order notification buzzer
    */
-  public stopIncomingOrderRingtone() {
+  public stopIncomingOrderBuzzer() {
+    this.isBuzzerActive = false;
+    this.currentBuzzerOrderId = null;
+
     if (this.alertInterval) {
       clearInterval(this.alertInterval);
       this.alertInterval = null;
     }
+
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(0); // Cancel vibration
+      } catch {}
+    }
+  }
+
+  // Backward-compatible aliases
+  public startIncomingOrderRingtone(orderId?: string) {
+    this.startIncomingOrderBuzzer(orderId);
+  }
+
+  public stopIncomingOrderRingtone() {
+    this.stopIncomingOrderBuzzer();
   }
 
   /**
@@ -120,6 +154,7 @@ class SoundEngine {
 
   /**
    * Play celebratory cashout / delivery completed payout chime
+   * Non-looping, single shot.
    */
   public playPayoutChime() {
     try {
@@ -157,6 +192,24 @@ class SoundEngine {
         navigator.vibrate([100, 50, 150]);
       }
     } catch {}
+  }
+
+  /**
+   * Play ONE short coin/success sound when transitioning to DELIVERED.
+   * Guarantees buzzer is stopped, does not loop, and deduplicates so it plays exactly once per order.
+   */
+  public playDeliveredSound(orderId?: string) {
+    // Stop any buzzer immediately
+    this.stopIncomingOrderBuzzer();
+
+    if (orderId) {
+      if (this.playedDeliveredOrders.has(orderId)) {
+        return; // Already played for this order
+      }
+      this.playedDeliveredOrders.add(orderId);
+    }
+
+    this.playPayoutChime();
   }
 }
 

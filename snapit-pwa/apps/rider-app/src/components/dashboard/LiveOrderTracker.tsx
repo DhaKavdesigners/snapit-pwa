@@ -4,13 +4,11 @@ import React, { useState } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { SlideToConfirm } from '@/components/orders/SlideToConfirm';
 import { RouteTimeline } from '@/components/orders/RouteTimeline';
-import { LiveRouteSimulation } from '@/components/orders/LiveRouteSimulation';
 import { Phone, Navigation, PackageCheck, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export const LiveOrderTracker: React.FC = () => {
   const { activeOrder, advanceActiveOrderStatus } = useRider();
-  const [showNavigation, setShowNavigation] = useState(false);
   const router = useRouter();
 
   if (!activeOrder) return null;
@@ -146,11 +144,6 @@ export const LiveOrderTracker: React.FC = () => {
           />
         </div>
       </div>
-
-      {/* Turn-by-turn Navigation Simulation Overlay */}
-      {showNavigation && (
-        <LiveRouteSimulation order={activeOrder} onClose={() => setShowNavigation(false)} />
-      )}
     </div>
   );
 };

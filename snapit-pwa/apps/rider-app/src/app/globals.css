@@ -108,13 +108,3 @@ body {
   font-family: var(--font-inter);
 }
 
-/* Crisp High-DPI Leaflet Tile Rendering (Eliminates Blurriness) */
-.leaflet-container {
-  font-family: inherit;
-}
-.leaflet-tile {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  filter: contrast(104%) brightness(101%);
-}
-

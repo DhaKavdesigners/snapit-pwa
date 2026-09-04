@@ -341,6 +341,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [zones] = useState<DeliveryZone[]>(availableZones);
   const [alerts, setAlerts] = useState<AlertNotification[]>(initialAlerts);
   const [desktopFrame, setDesktopFrame] = useState<boolean>(false);
+  const handledOrderIdsRef = useRef<Set<string>>(new Set());
+  const activeOrderRef = useRef<Order | null>(null);
+  activeOrderRef.current = activeOrder;
 
   // ── New state ──
   const [adminConfig] = useState<AdminConfig>(DEFAULT_ADMIN_CONFIG);
@@ -380,6 +383,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const sentReminderRef = useRef<Set<string>>(new Set());
   const sentEndingRef = useRef<Set<string>>(new Set());
   const sentActiveRef = useRef<Set<string>>(new Set());
+  const sentEndedRef = useRef<Set<string>>(new Set());
   const breakWarn5Ref = useRef<Set<string>>(new Set());
   const breakWarn1Ref = useRef<Set<string>>(new Set());
   const breakExceededRef = useRef<Set<string>>(new Set());
@@ -618,6 +622,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
       const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
 
+      // Check if there is any currently active booked slot running right now
+      const hasActiveBookedSlot = generated.some(
+        (s) => bookedSlotIds.includes(s.id) && now >= s.startTimestamp && now < s.endTimestamp
+      );
+
       for (const slot of generated) {
         if (!bookedSlotIds.includes(slot.id)) continue;
 
@@ -649,13 +658,17 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Slot expired
-        if (endsIn <= 0 && slot.status !== 'completed') {
-          if (isOnline && !activeOrder) {
-            setIsOnline(false);
-            addAlert(createSlotEndedAlert(slot));
-          } else if (isOnline && activeOrder) {
-            // Has active order — stay online until complete, don't assign new
-            // Mark slot as completed logic would happen on order completion
+        if (endsIn <= 0 && !sentEndedRef.current.has(slot.id)) {
+          sentEndedRef.current.add(slot.id);
+
+          // Only auto-offline if rider does NOT have another currently active slot
+          if (!hasActiveBookedSlot) {
+            if (isOnline && !activeOrder) {
+              setIsOnline(false);
+              addAlert(createSlotEndedAlert(slot));
+            } else if (isOnline && activeOrder) {
+              // Has active order — stay online until order delivery completes
+            }
           }
         }
       }
@@ -731,13 +744,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       addAlert(createZoneEnteredAlert(selectedZone.name));
     } else if (prevZoneStatusRef.current === 'inside' && newStatus === 'outside') {
       addAlert(createZoneExitedAlert(selectedZone.name));
-      // Auto-offline if outside zone
-      if (isOnline && !activeOrder) {
-        setIsOnline(false);
-      }
     }
     prevZoneStatusRef.current = newStatus;
-  }, [zones, rider.selectedZoneId, isOnline, activeOrder]);
+  }, [zones, rider.selectedZoneId]);
 
   useEffect(() => {
     const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
@@ -1137,10 +1146,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         });
 
         // 2. Sync Incoming Orders (unassigned orders waiting for rider)
-        if (dbOrders && dbOrders.length > 0) {
+        if (dbOrders && dbOrders.length > 0 && !activeOrderRef.current) {
           const eligible = dbOrders.find((o) =>
             isEligibleNotificationStatus(o.status) &&
-            (!o.rider_id || o.rider_id === rider.phone || o.rider_assignment !== 'assigned')
+            (!o.rider_id || o.rider_id === rider.phone || o.rider_assignment !== 'assigned') &&
+            !handledOrderIdsRef.current.has(o.id)
           );
           if (eligible) {
             const store = dbStores.find((s) => s.id === eligible.store_id);
@@ -1171,6 +1181,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
         unsubscribe = subscribeToOrders(
           (newOrder) => {
+            // Do not notify if rider already has an active order or already handled this order
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(newOrder.id)) return;
+
             // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
             if (isEligibleNotificationStatus(newOrder.status)) {
               const store = dbStores.find((s) => s.id === newOrder.store_id);
@@ -1200,6 +1213,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
               const store = dbStores.find((s) => s.id === updatedOrder.store_id);
               return mapDbOrderToAppOrder(updatedOrder, store);
             });
+
+            // Do NOT re-trigger incoming order notification if already active or already handled
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedOrder.id)) {
+              return;
+            }
 
             // Trigger notification when merchant accepts and order reaches PREPARING
             if (isEligibleNotificationStatus(updatedOrder.status)) {
@@ -1251,25 +1269,28 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setDesktopFrame((prev) => !prev);
   };
 
-  // ─── Incoming Order Sound Effect ──────────────────────────────────────────
+  // ─── Incoming Order Sound Effect (Strict Lifecycle) ───────────────────────
   useEffect(() => {
-    if (incomingOrder) {
-      soundEngine.startIncomingOrderRingtone();
+    // Only play buzzer while order is waiting for rider response AND no active order exists
+    if (incomingOrder && !activeOrder && !handledOrderIdsRef.current.has(incomingOrder.id)) {
+      soundEngine.startIncomingOrderBuzzer(incomingOrder.id);
     } else {
-      soundEngine.stopIncomingOrderRingtone();
+      soundEngine.stopIncomingOrderBuzzer();
     }
     return () => {
-      soundEngine.stopIncomingOrderRingtone();
+      soundEngine.stopIncomingOrderBuzzer();
     };
-  }, [incomingOrder]);
+  }, [incomingOrder?.id, Boolean(activeOrder)]);
 
   // ─── Order Methods ─────────────────────────────────────────────────────────
 
   const acceptIncomingOrder = () => {
     if (!incomingOrder) return;
-    soundEngine.stopIncomingOrderRingtone();
+    const orderId = incomingOrder.id;
+    handledOrderIdsRef.current.add(orderId);
+    soundEngine.stopIncomingOrderBuzzer();
     soundEngine.playSuccessChime();
-    recordOrderAcceptance(incomingOrder.id, 'accepted');
+    recordOrderAcceptance(orderId, 'accepted');
     const orderWithActiveStatus: Order = {
       ...incomingOrder,
       status: 'picking_up',
@@ -1281,16 +1302,19 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       customerLocation: incomingOrder.customerLocation || { lat: 12.9550, lng: 78.2720, name: incomingOrder.customerName, address: incomingOrder.deliveryAddress },
       riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9602, lng: 78.2711 },
     };
+    activeOrderRef.current = orderWithActiveStatus;
     setActiveOrder(orderWithActiveStatus);
     const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
-    assignRiderToOrder(incomingOrder.id, cleanPhone);
+    assignRiderToOrder(orderId, cleanPhone);
     setIncomingOrder(null);
   };
 
   const declineIncomingOrder = () => {
     if (!incomingOrder) return;
-    soundEngine.stopIncomingOrderRingtone();
-    recordOrderAcceptance(incomingOrder.id, 'declined');
+    const orderId = incomingOrder.id;
+    handledOrderIdsRef.current.add(orderId);
+    soundEngine.stopIncomingOrderBuzzer();
+    recordOrderAcceptance(orderId, 'declined');
     const declinedOrder: Order = {
       ...incomingOrder,
       status: 'cancelled',
@@ -1431,7 +1455,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setOrdersHistory((prev) => [completedOrder, ...prev.filter((o) => o.id !== activeOrder.id)]);
     const orderEarnings = activeOrder.earnings || 45;
 
-    soundEngine.playPayoutChime();
+    soundEngine.playDeliveredSound(activeOrder.id);
     updateDbOrderStatus(activeOrder.id, 'DELIVERED');
 
     setRider((prev) => ({
@@ -1466,8 +1490,18 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setActiveOrder(null);
     try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
 
-    // If slot ended during delivery, now go offline
-    if (activeSlot && Date.now() >= activeSlot.endTimestamp) {
+    // Online status check upon delivery completion:
+    // The rider must REMAIN ONLINE during an active duty slot or when manually toggled online.
+    // They should only automatically go offline if their booked duty slot has ended/completed
+    // and there is no other active booked slot running.
+    const now = getNow();
+    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+    const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
+    const hasActiveBookedSlot = generated.some(
+      (s) => bookedSlotIds.includes(s.id) && now >= s.startTimestamp && now < s.endTimestamp
+    );
+
+    if (activeSlot && now >= activeSlot.endTimestamp && !hasActiveBookedSlot) {
       setIsOnline(false);
       addAlert(createSlotEndedAlert(activeSlot));
     }

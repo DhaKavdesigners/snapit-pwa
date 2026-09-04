@@ -1,10 +1,80 @@
-﻿/**
- * Navigation Launcher Utility
- * Generates deep links to launch native turn-by-turn navigation in Google Maps / Apple Maps.
- * Cost: 100% Free (zero Google Maps API billing, zero API keys).
+/**
+ * Google Maps Navigation Launcher Utility
+ * Generates direct Google Maps Directions URLs for turn-by-turn navigation.
+ * Cost: 100% Free (zero Google Maps API billing, zero API keys, no embedded SDKs).
  */
 
-import { isValidCoordinate, MAP_CONFIG } from '@/config/mapConfig';
+/**
+ * Validates whether latitude and longitude are valid numeric coordinates.
+ */
+export function hasValidCoordinates(
+  lat?: number | null,
+  lng?: number | null
+): boolean {
+  if (lat === undefined || lat === null || lng === undefined || lng === null) {
+    return false;
+  }
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  if (isNaN(nLat) || isNaN(nLng)) {
+    return false;
+  }
+  if (nLat === 0 && nLng === 0) {
+    return false; // Reject Null Island
+  }
+  return nLat >= -90 && nLat <= 90 && nLng >= -180 && nLng <= 180;
+}
+
+// Backward-compatible alias
+export const isValidCoordinate = hasValidCoordinates;
+
+/**
+ * Builds the canonical Google Maps directions URL for driving navigation.
+ * Format: https://www.google.com/maps/dir/?api=1&destination=LATITUDE,LONGITUDE&travelmode=driving
+ */
+export function getGoogleMapsNavigationUrl(
+  latitude: number,
+  longitude: number
+): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`;
+}
+
+/**
+ * Opens Google Maps turn-by-turn driving navigation on the rider's phone.
+ * Launches the native Google Maps app when available on Android / iOS / PWA,
+ * with standard browser fallback.
+ */
+export const openGoogleMapsNavigation = (
+  latitude?: number | null,
+  longitude?: number | null
+): void => {
+  if (!hasValidCoordinates(latitude, longitude)) {
+    console.error('Missing or invalid destination coordinates for Google Maps navigation', {
+      latitude,
+      longitude,
+    });
+    return;
+  }
+
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  const url = getGoogleMapsNavigationUrl(lat, lng);
+
+  if (typeof window === 'undefined') return;
+
+  // On mobile browsers and PWAs, window.open with _blank allows the OS
+  // to hand off the Universal / App Link to the native Google Maps application.
+  try {
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    // If popup was blocked or in standalone PWA mode where window.open is restricted:
+    if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+      window.location.href = url;
+    }
+  } catch (err) {
+    console.warn('Fallback navigation redirect', err);
+    window.location.href = url;
+  }
+};
 
 export interface NavigationTarget {
   lat: number;
@@ -14,58 +84,8 @@ export interface NavigationTarget {
 }
 
 /**
- * Returns a universal Google Maps navigation URL with direct driving mode.
- * Sensitive data (e.g. PIN / OTP) is strictly omitted.
- */
-export function getGoogleMapsNavigationUrl(target: NavigationTarget): string {
-  const safeLat = isValidCoordinate(target.lat, target.lng) ? target.lat : MAP_CONFIG.defaultCenter.lat;
-  const safeLng = isValidCoordinate(target.lat, target.lng) ? target.lng : MAP_CONFIG.defaultCenter.lng;
-  
-  // Clean label to avoid passing sensitive info
-  const cleanLabel = target.label ? encodeURIComponent(target.label.replace(/pin|otp|\d{4}/gi, '').trim()) : '';
-  const destination = cleanLabel ? `${safeLat},${safeLng} (${cleanLabel})` : `${safeLat},${safeLng}`;
-
-  return `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
-}
-
-/**
- * Returns an Android-specific navigation intent URL to launch the native Google Maps app in turn-by-turn mode.
- */
-export function getAndroidNavigationIntent(target: NavigationTarget): string {
-  const safeLat = isValidCoordinate(target.lat, target.lng) ? target.lat : MAP_CONFIG.defaultCenter.lat;
-  const safeLng = isValidCoordinate(target.lat, target.lng) ? target.lng : MAP_CONFIG.defaultCenter.lng;
-  return `google.navigation:q=${safeLat},${safeLng}&mode=d`;
-}
-
-/**
- * Returns an Apple Maps navigation URL for iOS devices.
- */
-export function getAppleMapsNavigationUrl(target: NavigationTarget): string {
-  const safeLat = isValidCoordinate(target.lat, target.lng) ? target.lat : MAP_CONFIG.defaultCenter.lat;
-  const safeLng = isValidCoordinate(target.lat, target.lng) ? target.lng : MAP_CONFIG.defaultCenter.lng;
-  const cleanLabel = target.label ? encodeURIComponent(target.label.replace(/pin|otp|\d{4}/gi, '').trim()) : '';
-  return `maps://?daddr=${safeLat},${safeLng}&q=${cleanLabel}&dirflg=d`;
-}
-
-/**
- * Launches turn-by-turn navigation in the best available map application on the device.
+ * Backward-compatible helper for existing callers
  */
 export function openTurnByTurnNavigation(target: NavigationTarget): void {
-  if (typeof window === 'undefined') return;
-
-  const fallbackUrl = getGoogleMapsNavigationUrl(target);
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  if (isAndroid) {
-    try {
-      window.location.href = getAndroidNavigationIntent(target);
-    } catch {
-      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-    }
-  } else if (isIOS) {
-    window.location.href = fallbackUrl;
-  } else {
-    window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-  }
+  openGoogleMapsNavigation(target.lat, target.lng);
 }

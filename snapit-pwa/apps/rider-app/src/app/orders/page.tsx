@@ -17,13 +17,11 @@ export default function OrdersPage() {
     advanceActiveOrderStatus,
     triggerMockOrder,
     markOrderPickedUp,
-    nonAcceptanceCount,
     simulateMerchantReadyForPickup,
     simulateShopkeeperHandover,
     resetActiveOrder,
   } = useRider();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'cancelled'>('active');
-  const [isFullScreenNav, setIsFullScreenNav] = useState<boolean>(false);
   const router = useRouter();
 
   // Strict Sequential Action Handlers
@@ -142,23 +140,6 @@ export default function OrdersPage() {
     <AppShell>
       <div className="flex flex-col gap-4 pt-2 pb-8">
 
-        {/* Acceptance warning banner */}
-        {nonAcceptanceCount >= 1 && (
-          <div className={`rounded-2xl px-4 py-3 flex items-center gap-2.5 border ${
-            nonAcceptanceCount >= 3 ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'
-          }`}>
-            <AlertCircle className={`w-4 h-4 shrink-0 ${nonAcceptanceCount >= 3 ? 'text-red-500' : 'text-amber-600'}`} />
-            <div className="flex-1">
-              <p className="text-xs font-bold text-slate-800">
-                {nonAcceptanceCount >= 3 ? '🔴 Acceptance Threshold Reached' : '⚠️ Order Acceptance Warning'}
-              </p>
-              <p className="text-[11px] text-slate-500">
-                {nonAcceptanceCount} non-accepted order{nonAcceptanceCount !== 1 ? 's' : ''} during current slot.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Segmented Control Filter Tabs */}
         <div className="flex bg-slate-200/80 p-1 rounded-2xl w-full border border-slate-300/60 shadow-inner">
           {(['active', 'completed', 'cancelled'] as const).map((tab) => (
@@ -184,12 +165,8 @@ export default function OrdersPage() {
             {activeOrder ? (
               <div className="flex flex-col gap-3 animate-fade-in">
 
-                {/* 1. LIVE NAVIGATION MAP — compact, light-themed, in-map overlays */}
-                <LiveRiderNavigation
-                  order={activeOrder}
-                  isFullScreen={isFullScreenNav}
-                  onToggleFullScreen={() => setIsFullScreenNav((fs) => !fs)}
-                />
+                {/* 1. GOOGLE MAPS NAVIGATION CARD */}
+                <LiveRiderNavigation order={activeOrder} />
 
                 {/* 2. ORDER DETAILS CARD — matches reference screenshot layout */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
