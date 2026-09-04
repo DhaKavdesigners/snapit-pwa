@@ -57,10 +57,14 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
   const activeHasCoords = isBeforePickup ? hasShopCoords : hasCustCoords;
   const activeLat = isBeforePickup ? shopLat : custLat;
   const activeLng = isBeforePickup ? shopLng : custLng;
+  const activeAddress = isBeforePickup
+    ? (order.restaurantAddress || order.shopLocation?.address)
+    : (order.deliveryAddress || order.customerLocation?.address);
+  const canNavigate = activeHasCoords || Boolean(activeAddress && activeAddress.trim() && activeAddress !== 'Customer Address' && activeAddress !== 'Store Location');
 
   const handleNavigate = () => {
-    if (!activeHasCoords) return;
-    openGoogleMapsNavigation(activeLat, activeLng);
+    if (!canNavigate) return;
+    openGoogleMapsNavigation(activeLat, activeLng, activeAddress);
   };
 
   return (
@@ -88,7 +92,7 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
                 }`}>
                   {isBeforePickup ? 'Pickup Navigation' : 'Delivery Navigation'}
                 </span>
-                {!activeHasCoords && (
+                {!canNavigate && (
                   <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Location unavailable
@@ -112,18 +116,18 @@ export const LiveRiderNavigation: React.FC<LiveRiderNavigationProps> = ({
           <button
             type="button"
             onClick={handleNavigate}
-            disabled={!activeHasCoords}
+            disabled={!canNavigate}
             className={`flex-1 py-3 px-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
-              activeHasCoords
+              canNavigate
                 ? 'bg-slate-900 hover:bg-slate-800 text-white active:scale-98 shadow-md'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
             }`}
           >
-            <Navigation className={`w-4 h-4 ${activeHasCoords ? 'text-emerald-400' : 'text-slate-400'}`} />
+            <Navigation className={`w-4 h-4 ${canNavigate ? 'text-emerald-400' : 'text-slate-400'}`} />
             <span>
               {isBeforePickup ? 'Navigate to Shop' : 'Navigate to Customer'}
             </span>
-            {activeHasCoords && (
+            {canNavigate && (
               <ExternalLink className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
             )}
           </button>

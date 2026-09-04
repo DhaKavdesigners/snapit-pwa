@@ -5,16 +5,25 @@ import { calculateDeliveryFee, generateDeliveryPin } from '../../../../common_lo
 /** Map a Supabase DB order row to Rider App Order object */
 export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
   let deliveryAddrStr = 'Customer Address';
-  let dropLat = 12.9550;
-  let dropLng = 78.2720;
+  let dropLat = 0;
+  let dropLng = 0;
 
   if (typeof dbOrder.delivery_address === 'string') {
     deliveryAddrStr = dbOrder.delivery_address;
   } else if (dbOrder.delivery_address && typeof dbOrder.delivery_address === 'object') {
-    deliveryAddrStr = dbOrder.delivery_address.address || dbOrder.delivery_address.formatted || dbOrder.delivery_address.line1 || 'Customer Address';
+    deliveryAddrStr =
+      dbOrder.delivery_address.address ||
+      dbOrder.delivery_address.formatted ||
+      dbOrder.delivery_address.line1 ||
+      'Customer Address';
     if (dbOrder.delivery_address.lat) dropLat = Number(dbOrder.delivery_address.lat);
     if (dbOrder.delivery_address.lng) dropLng = Number(dbOrder.delivery_address.lng);
   }
+
+  if (!dropLat && (dbOrder as any).drop_lat) dropLat = Number((dbOrder as any).drop_lat);
+  if (!dropLng && (dbOrder as any).drop_lng) dropLng = Number((dbOrder as any).drop_lng);
+  if (!dropLat && (dbOrder as any).latitude) dropLat = Number((dbOrder as any).latitude);
+  if (!dropLng && (dbOrder as any).longitude) dropLng = Number((dbOrder as any).longitude);
 
   const STORES_MAP: Record<string, string> = {
     g1: 'Mhetha Stores',
@@ -36,16 +45,11 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     s4: { lat: 12.9348, lng: 78.2685, address: 'South Gilberts Road, Andersonpet, KGF' },
   };
 
-  const defaultCoords = (dbOrder.store_id && KGF_STORES_COORDS[dbOrder.store_id]) || {
-    lat: 12.9365,
-    lng: 78.2672,
-    address: 'Andersonpet, KGF',
-  };
-
-  const shopLat = store?.lat || defaultCoords.lat;
-  const shopLng = store?.lng || defaultCoords.lng;
-  const storeName = store?.name || (dbOrder.store_id ? STORES_MAP[dbOrder.store_id] : '') || 'Mhetha Stores';
-  const storeAddress = store?.address || store?.store_address || defaultCoords.address;
+  const knownStoreCoords = dbOrder.store_id ? KGF_STORES_COORDS[dbOrder.store_id] : undefined;
+  const shopLat = Number(store?.lat || (store as any)?.latitude || knownStoreCoords?.lat || 0);
+  const shopLng = Number(store?.lng || (store as any)?.longitude || knownStoreCoords?.lng || 0);
+  const storeName = store?.name || (dbOrder.store_id ? STORES_MAP[dbOrder.store_id] : '') || 'Store';
+  const storeAddress = store?.address || store?.store_address || knownStoreCoords?.address || 'Store Location';
   const storePhone = store?.phone || '8217649688';
 
   // Items
@@ -57,8 +61,23 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
       }))
     : [{ name: 'Order Package', quantity: 1, price: 100 }];
 
+  // Calculate actual distance between store and customer if valid coordinates are present
+  let distanceKm = Number((dbOrder as any).distance_km || 0);
+  if (!distanceKm && shopLat && dropLat) {
+    const R = 6371; // Earth radius in km
+    const dLat = (dropLat - shopLat) * (Math.PI / 180);
+    const dLon = (dropLng - shopLng) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(shopLat * (Math.PI / 180)) * Math.cos(dropLat * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    distanceKm = Math.round(R * c * 10) / 10;
+  }
+  const estimatedMinutes = distanceKm > 0 ? Math.max(5, Math.round(distanceKm * 4 + 5)) : 0;
+
   // Compute rider payout: from database delivery_fee column (defaults to common_logic if unset)
-  const earnings = Number(dbOrder.delivery_fee) || calculateDeliveryFee({ distanceKm: 2.4 }).feeRupees;
+  const earnings = Number(dbOrder.delivery_fee) || calculateDeliveryFee({ distanceKm: distanceKm || 2 }).feeRupees;
 
   // 4-Digit Handshake PIN from database delivery_pin column or common_logic generator
   let rawOtp = '4821';
@@ -73,12 +92,12 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     id: dbOrder.id,
     orderNumber: String(dbOrder.id).slice(-5).toUpperCase(),
     customerName: dbOrder.recipient_name || 'Customer',
-    customerPhone: dbOrder.recipient_phone || '+91 8217649688',
+    customerPhone: dbOrder.recipient_phone || storePhone,
     restaurantName: storeName,
     restaurantAddress: storeAddress,
     deliveryAddress: deliveryAddrStr,
-    distanceKm: 2.4,
-    estimatedMinutes: 12,
+    distanceKm,
+    estimatedMinutes,
     earnings,
     items,
     status: mapDbStatusToAppStatus(dbOrder.status, dbOrder),
@@ -100,7 +119,7 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
       name: dbOrder.recipient_name || 'Customer',
       address: deliveryAddrStr,
     },
-    riderStartLocation: { lat: 12.9602, lng: 78.2711 },
+    riderStartLocation: undefined,
     navStage: 'idle',
   };
 }

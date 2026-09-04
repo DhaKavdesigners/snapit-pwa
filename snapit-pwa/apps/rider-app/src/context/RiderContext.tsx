@@ -753,9 +753,6 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
     startWatchingZone(selectedZone, (result) => {
       const newStatus = result.status;
-      if (result.status === 'inside') {
-        setGpsCoords(null); // actual coords not stored for privacy but status is tracked
-      }
       setZoneStatus((prev) => {
         if (prev !== 'inside' && newStatus === 'inside') {
           addAlert(createZoneEnteredAlert(selectedZone.name));
@@ -771,6 +768,40 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       stopWatchingZone();
     };
   }, [rider.selectedZoneId, zones]);
+
+  // ─── Real Device GPS Tracking & Live Supabase Location Broadcasting ───────
+  useEffect(() => {
+    if (!isOnline || typeof window === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+
+    let lastBroadcastTs = 0;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setGpsCoords({ lat: latitude, lng: longitude });
+
+        // Throttle broadcast to Supabase rider_profiles every 6 seconds
+        const now = Date.now();
+        if (now - lastBroadcastTs > 6000 && rider.phone) {
+          lastBroadcastTs = now;
+          updateRiderLiveLocation(rider.phone, latitude, longitude, true);
+        }
+      },
+      (err) => {
+        console.warn('Real device GPS watch notice:', err.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000,
+      }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isOnline, rider.phone]);
 
   // ─── Dev Test Mode ─────────────────────────────────────────────────────────
 

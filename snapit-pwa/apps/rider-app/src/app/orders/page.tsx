@@ -15,11 +15,7 @@ export default function OrdersPage() {
     ordersHistory,
     cancelledOrders,
     advanceActiveOrderStatus,
-    triggerMockOrder,
     markOrderPickedUp,
-    simulateMerchantReadyForPickup,
-    simulateShopkeeperHandover,
-    resetActiveOrder,
   } = useRider();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'cancelled'>('active');
   const router = useRouter();
@@ -293,58 +289,6 @@ export default function OrdersPage() {
                         <span>{actionConfig.label}</span>
                       </button>
                     )}
-                  </div>
-
-                  {/* ── TEMPORARY DEV HANDOVER SIMULATOR ── */}
-                  <div className="mx-4 mb-4 p-3 rounded-2xl bg-slate-900 text-white shadow-md border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold">
-                      <span className="flex items-center gap-1.5 text-purple-300">
-                        <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
-                        🧪 Temporary Dev Handover Simulator
-                      </span>
-                      <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                        DB: {activeOrder.dbStatus || 'PREPARING'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5 pt-1">
-                      {/* Step 1: Merchant Marks Ready for Pickup */}
-                      <button
-                        onClick={() => simulateMerchantReadyForPickup(activeOrder.dbStatus !== 'READY_FOR_PICKUP')}
-                        className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
-                          activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
-                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-500'
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                        }`}
-                      >
-                        <span>
-                          {activeOrder.dbStatus === 'READY_FOR_PICKUP' || activeOrder.dbStatus === 'OUT_OF_SHOP' || activeOrder.dbStatus === 'OUT_FOR_DELIVERY'
-                            ? '✓ 1. Ready for Pickup'
-                            : '🏪 1. Mark Ready'}
-                        </span>
-                      </button>
-
-                      {/* Step 2: Merchant Slide Out of Shop */}
-                      <button
-                        onClick={() => simulateShopkeeperHandover(!activeOrder.shopkeeperHandoverConfirmed)}
-                        className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
-                          activeOrder.shopkeeperHandoverConfirmed
-                            ? 'bg-amber-950 text-amber-300 border border-amber-500'
-                            : 'bg-teal-600 hover:bg-teal-500 text-white'
-                        }`}
-                      >
-                        <span>{activeOrder.shopkeeperHandoverConfirmed ? '✓ 2. Out of Shop' : '🏪 2. Out of Shop'}</span>
-                      </button>
-                    </div>
-
-                    <div className="pt-0.5">
-                      <button
-                        onClick={resetActiveOrder}
-                        className="w-full py-1.5 px-2 rounded-xl text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center justify-center gap-1 active:scale-95"
-                      >
-                        <span>✕ Clear Test Order</span>
-                      </button>
-                    </div>
                   </div>
                 </div>
 

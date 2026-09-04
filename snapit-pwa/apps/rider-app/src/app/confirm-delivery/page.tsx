@@ -9,7 +9,7 @@ import { ArrowLeft, Phone, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ConfirmDeliveryPage() {
-  const { activeOrder, completeDeliveryWithOtp, triggerMockOrder } = useRider();
+  const { activeOrder, completeDeliveryWithOtp } = useRider();
   const [enteredOtp, setEnteredOtp] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);

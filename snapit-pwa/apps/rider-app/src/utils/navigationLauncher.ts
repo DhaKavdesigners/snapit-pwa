@@ -46,19 +46,25 @@ export function getGoogleMapsNavigationUrl(
  */
 export const openGoogleMapsNavigation = (
   latitude?: number | null,
-  longitude?: number | null
+  longitude?: number | null,
+  fallbackAddress?: string | null
 ): void => {
-  if (!hasValidCoordinates(latitude, longitude)) {
-    console.error('Missing or invalid destination coordinates for Google Maps navigation', {
+  let url = '';
+
+  if (hasValidCoordinates(latitude, longitude)) {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    url = getGoogleMapsNavigationUrl(lat, lng);
+  } else if (fallbackAddress && fallbackAddress.trim() && fallbackAddress.trim() !== 'Customer Address' && fallbackAddress.trim() !== 'Store Location') {
+    url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fallbackAddress.trim())}&travelmode=driving`;
+  } else {
+    console.warn('Missing or invalid destination coordinates and address for Google Maps navigation', {
       latitude,
       longitude,
+      fallbackAddress,
     });
     return;
   }
-
-  const lat = Number(latitude);
-  const lng = Number(longitude);
-  const url = getGoogleMapsNavigationUrl(lat, lng);
 
   if (typeof window === 'undefined') return;
 
