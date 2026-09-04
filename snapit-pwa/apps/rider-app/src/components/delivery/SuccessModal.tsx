@@ -19,7 +19,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
 }) => {
   useEffect(() => {
     // Play celebratory coin / payout chime (deduplicated so it only plays once)
-    soundEngine.playDeliveredSound(orderNumber);
+    soundEngine.playDeliveredSound(undefined, orderNumber);
 
     // Trigger confetti explosion
     try {

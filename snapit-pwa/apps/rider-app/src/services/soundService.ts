@@ -5,9 +5,11 @@
 
 class SoundEngine {
   private audioCtx: AudioContext | null = null;
-  private alertInterval: ReturnType<typeof setInterval> | null = null;
+  private alertInterval: any = null;
   private isBuzzerActive: boolean = false;
   private currentBuzzerOrderId: string | null = null;
+  private buzzerGain: GainNode | null = null;
+  private handledOrders: Set<string> = new Set();
   private playedDeliveredOrders: Set<string> = new Set();
 
   private getContext(): AudioContext | null {
@@ -28,11 +30,23 @@ class SoundEngine {
    * Play urgent incoming order delivery chime
    */
   public playIncomingOrderBeep() {
+    if (!this.isBuzzerActive) return;
+
     try {
       const ctx = this.getContext();
       if (!ctx) return;
 
       const now = ctx.currentTime;
+
+      // Master gain node for the buzzer to allow instantaneous mute on stop
+      if (this.buzzerGain) {
+        try {
+          this.buzzerGain.disconnect();
+        } catch {}
+      }
+      this.buzzerGain = ctx.createGain();
+      this.buzzerGain.gain.setValueAtTime(1, now);
+      this.buzzerGain.connect(ctx.destination);
 
       // Tone 1
       const osc1 = ctx.createOscillator();
@@ -43,7 +57,7 @@ class SoundEngine {
       gain1.gain.setValueAtTime(0.3, now);
       gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
       osc1.connect(gain1);
-      gain1.connect(ctx.destination);
+      gain1.connect(this.buzzerGain);
       osc1.start(now);
       osc1.stop(now + 0.25);
 
@@ -56,7 +70,7 @@ class SoundEngine {
       gain2.gain.setValueAtTime(0.4, now + 0.12);
       gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
       osc2.connect(gain2);
-      gain2.connect(ctx.destination);
+      gain2.connect(this.buzzerGain);
       osc2.start(now + 0.12);
       osc2.stop(now + 0.45);
 
@@ -73,15 +87,28 @@ class SoundEngine {
    * Start looping incoming order buzzer
    * Deduplicates by orderId to prevent multiple overlapping audio loops.
    */
-  public startIncomingOrderBuzzer(orderId?: string) {
-    if (orderId && this.isBuzzerActive && this.currentBuzzerOrderId === orderId) {
-      return; // Already buzzing for this exact order
+  public startIncomingOrderBuzzer(orderId?: string | null) {
+    const idKey = orderId ? String(orderId).trim() : 'pending-order';
+
+    // If order was already handled (accepted or declined), NEVER buzz again
+    if (orderId && this.handledOrders.has(idKey)) {
+      return;
+    }
+
+    // If already delivered, NEVER buzz
+    if (orderId && this.playedDeliveredOrders.has(idKey)) {
+      return;
+    }
+
+    // If already buzzing for this exact order, avoid re-triggering loop
+    if (this.isBuzzerActive && this.currentBuzzerOrderId === idKey) {
+      return;
     }
 
     this.stopIncomingOrderBuzzer();
 
     this.isBuzzerActive = true;
-    this.currentBuzzerOrderId = orderId || 'pending-order';
+    this.currentBuzzerOrderId = idKey;
 
     this.playIncomingOrderBeep();
     this.alertInterval = setInterval(() => {
@@ -100,9 +127,24 @@ class SoundEngine {
     this.isBuzzerActive = false;
     this.currentBuzzerOrderId = null;
 
-    if (this.alertInterval) {
+    if (this.alertInterval !== null) {
       clearInterval(this.alertInterval);
+      if (typeof window !== 'undefined') {
+        window.clearInterval(this.alertInterval);
+      }
       this.alertInterval = null;
+    }
+
+    if (this.buzzerGain) {
+      try {
+        const ctx = this.audioCtx;
+        if (ctx) {
+          this.buzzerGain.gain.cancelScheduledValues(ctx.currentTime);
+          this.buzzerGain.gain.setValueAtTime(0, ctx.currentTime);
+        }
+        this.buzzerGain.disconnect();
+      } catch {}
+      this.buzzerGain = null;
     }
 
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -110,6 +152,17 @@ class SoundEngine {
         navigator.vibrate(0); // Cancel vibration
       } catch {}
     }
+  }
+
+  /**
+   * Mark an order as handled (Accepted or Declined).
+   * Stops buzzer immediately and prevents this order from ever buzzing again.
+   */
+  public markOrderHandled(orderId?: string | null) {
+    if (orderId) {
+      this.handledOrders.add(String(orderId).trim());
+    }
+    this.stopIncomingOrderBuzzer();
   }
 
   // Backward-compatible aliases
@@ -125,6 +178,7 @@ class SoundEngine {
    * Play positive confirmation chime (Order Accepted, Ready, Pickup)
    */
   public playSuccessChime() {
+    this.stopIncomingOrderBuzzer();
     try {
       const ctx = this.getContext();
       if (!ctx) return;
@@ -198,19 +252,23 @@ class SoundEngine {
    * Play ONE short coin/success sound when transitioning to DELIVERED.
    * Guarantees buzzer is stopped, does not loop, and deduplicates so it plays exactly once per order.
    */
-  public playDeliveredSound(orderId?: string) {
+  public playDeliveredSound(orderId?: string | null, orderNumber?: string | null) {
     // Stop any buzzer immediately
     this.stopIncomingOrderBuzzer();
 
-    if (orderId) {
-      if (this.playedDeliveredOrders.has(orderId)) {
-        return; // Already played for this order
-      }
-      this.playedDeliveredOrders.add(orderId);
-    }
+    const idKey = orderId ? String(orderId).trim() : null;
+    const numKey = orderNumber ? String(orderNumber).trim() : null;
+
+    if (idKey && this.playedDeliveredOrders.has(idKey)) return;
+    if (numKey && this.playedDeliveredOrders.has(numKey)) return;
+
+    if (idKey) this.playedDeliveredOrders.add(idKey);
+    if (numKey) this.playedDeliveredOrders.add(numKey);
 
     this.playPayoutChime();
   }
 }
 
-export const soundEngine = new SoundEngine();
+const globalObj = typeof window !== 'undefined' ? window : (globalThis as any);
+export const soundEngine: SoundEngine =
+  globalObj.__SNAPIT_SOUND_ENGINE__ || (globalObj.__SNAPIT_SOUND_ENGINE__ = new SoundEngine());

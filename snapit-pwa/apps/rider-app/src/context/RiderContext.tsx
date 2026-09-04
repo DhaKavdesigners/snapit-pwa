@@ -1181,7 +1181,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           const eligible = dbOrders.find((o) =>
             isEligibleNotificationStatus(o.status) &&
             (!o.rider_id || o.rider_id === rider.phone || o.rider_assignment !== 'assigned') &&
-            !handledOrderIdsRef.current.has(o.id)
+            !handledOrderIdsRef.current.has(String(o.id).trim())
           );
           if (eligible) {
             const store = dbStores.find((s) => s.id === eligible.store_id);
@@ -1212,8 +1212,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
         unsubscribe = subscribeToOrders(
           (newOrder) => {
+            const newId = String(newOrder.id).trim();
             // Do not notify if rider already has an active order or already handled this order
-            if (activeOrderRef.current || handledOrderIdsRef.current.has(newOrder.id)) return;
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(newId)) return;
 
             // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
             if (isEligibleNotificationStatus(newOrder.status)) {
@@ -1223,12 +1224,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             }
           },
           (updatedOrder) => {
+            const updatedId = String(updatedOrder.id).trim();
             const s = (updatedOrder.status || '').toUpperCase();
 
             // If order completed or cancelled -> clear active order immediately
             if (['DELIVERED', 'CANCELLED', 'REJECTED'].includes(s)) {
               setActiveOrder((currentActive) => {
-                if (currentActive && currentActive.id === updatedOrder.id) {
+                if (currentActive && String(currentActive.id).trim() === updatedId) {
                   try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
                   return null;
                 }
@@ -1239,14 +1241,14 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
             // Realtime Handover Sync for Active Order
             setActiveOrder((currentActive) => {
-              if (!currentActive || currentActive.id !== updatedOrder.id) return currentActive;
+              if (!currentActive || String(currentActive.id).trim() !== updatedId) return currentActive;
 
               const store = dbStores.find((s) => s.id === updatedOrder.store_id);
               return mapDbOrderToAppOrder(updatedOrder, store);
             });
 
             // Do NOT re-trigger incoming order notification if already active or already handled
-            if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedOrder.id)) {
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedId)) {
               return;
             }
 
@@ -1302,9 +1304,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Incoming Order Sound Effect (Strict Lifecycle) ───────────────────────
   useEffect(() => {
-    // Only play buzzer while order is waiting for rider response AND no active order exists
-    if (incomingOrder && !activeOrder && !handledOrderIdsRef.current.has(incomingOrder.id)) {
-      soundEngine.startIncomingOrderBuzzer(incomingOrder.id);
+    const orderId = incomingOrder ? String(incomingOrder.id).trim() : null;
+    // Only play buzzer while order is waiting for rider response AND no active order exists AND not handled
+    if (orderId && !activeOrder && !handledOrderIdsRef.current.has(orderId)) {
+      soundEngine.startIncomingOrderBuzzer(orderId);
     } else {
       soundEngine.stopIncomingOrderBuzzer();
     }
@@ -1317,8 +1320,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const acceptIncomingOrder = () => {
     if (!incomingOrder) return;
-    const orderId = incomingOrder.id;
+    const orderId = String(incomingOrder.id).trim();
     handledOrderIdsRef.current.add(orderId);
+    soundEngine.markOrderHandled(orderId);
     soundEngine.stopIncomingOrderBuzzer();
     soundEngine.playSuccessChime();
     recordOrderAcceptance(orderId, 'accepted');
@@ -1342,8 +1346,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const declineIncomingOrder = () => {
     if (!incomingOrder) return;
-    const orderId = incomingOrder.id;
+    const orderId = String(incomingOrder.id).trim();
     handledOrderIdsRef.current.add(orderId);
+    soundEngine.markOrderHandled(orderId);
     soundEngine.stopIncomingOrderBuzzer();
     recordOrderAcceptance(orderId, 'declined');
     const declinedOrder: Order = {
@@ -1486,7 +1491,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setOrdersHistory((prev) => [completedOrder, ...prev.filter((o) => o.id !== activeOrder.id)]);
     const orderEarnings = activeOrder.earnings || 45;
 
-    soundEngine.playDeliveredSound(activeOrder.id);
+    soundEngine.stopIncomingOrderBuzzer();
+    soundEngine.playDeliveredSound(String(activeOrder.id), String(activeOrder.orderNumber));
     updateDbOrderStatus(activeOrder.id, 'DELIVERED');
 
     setRider((prev) => ({
