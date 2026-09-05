@@ -32,7 +32,7 @@ export const IncomingOrderModal: React.FC = () => {
 
   const handleAccept = () => {
     acceptIncomingOrder();
-    router.push('/orders');
+    router.push('/');
   };
 
   return (
@@ -73,7 +73,7 @@ export const IncomingOrderModal: React.FC = () => {
                 </span>
               </div>
               <h2 className="font-black text-lg text-slate-900 tracking-tight">
-                {incomingOrder.customerName}
+                {incomingOrder.restaurantName}
               </h2>
               <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1 font-medium">
                 <span className="material-symbols-outlined text-[15px] text-emerald-600">

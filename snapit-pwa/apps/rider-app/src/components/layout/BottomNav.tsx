@@ -25,7 +25,6 @@ export const BottomNav: React.FC = () => {
       href: '/orders',
       icon: 'local_mall',
       active: pathname.startsWith('/orders'),
-      badge: activeOrder ? '1' : undefined,
     },
     {
       label: 'Slots',

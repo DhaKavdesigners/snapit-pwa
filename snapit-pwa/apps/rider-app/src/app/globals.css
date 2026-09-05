@@ -108,3 +108,75 @@ body {
   font-family: var(--font-inter);
 }
 
+/* ── Cute Scooter & Smokeout Exhaust Animations ── */
+@keyframes cute-scooter-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes cute-smoke-1 {
+  0% {
+    transform: translate(0, 0) scale(0.3);
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate(-7px, -4px) scale(0.85);
+  }
+  100% {
+    transform: translate(-16px, -8px) scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes cute-smoke-2 {
+  0% {
+    transform: translate(0, 0) scale(0.2);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.55;
+    transform: translate(-11px, -6px) scale(0.95);
+  }
+  100% {
+    transform: translate(-22px, -11px) scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes cute-smoke-3 {
+  0% {
+    transform: translate(0, 0) scale(0.35);
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(-6px, -2px) scale(0.7);
+  }
+  100% {
+    transform: translate(-13px, -5px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.animate-scooter-bob {
+  animation: cute-scooter-bob 1.1s ease-in-out infinite;
+}
+
+.animate-smoke-1 {
+  animation: cute-smoke-1 1.2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+}
+
+.animate-smoke-2 {
+  animation: cute-smoke-2 1.2s cubic-bezier(0.2, 0.8, 0.4, 1) 0.4s infinite;
+}
+
+.animate-smoke-3 {
+  animation: cute-smoke-3 1.2s cubic-bezier(0.2, 0.8, 0.4, 1) 0.8s infinite;
+}
+
+
