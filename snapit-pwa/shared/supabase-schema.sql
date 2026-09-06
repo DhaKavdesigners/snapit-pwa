@@ -71,9 +71,9 @@ CREATE TABLE public.products (
 -- 6. CREATE ORDERS TABLE (Realtime Order Pipeline)
 CREATE TABLE public.orders (
     id TEXT PRIMARY KEY,
-    customer_id TEXT DEFAULT 'guest_user',
-    store_id TEXT REFERENCES public.stores(id) ON DELETE CASCADE,
-    rider_id TEXT,
+    customer_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+    store_id TEXT NOT NULL REFERENCES public.stores(id) ON DELETE CASCADE,
+    rider_id TEXT REFERENCES public.rider_profiles(id) ON DELETE SET NULL,
     status TEXT NOT NULL DEFAULT 'PLACED', -- PLACED, PREPARING, READY_FOR_PICKUP, OUT_FOR_DELIVERY, DELIVERED, REJECTED
     items JSONB NOT NULL,
     estimated_total INTEGER NOT NULL, -- in paise
