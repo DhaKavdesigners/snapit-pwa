@@ -5,8 +5,7 @@ import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
 import { useAllProducts } from '../../api/queries';
 import { formatCurrency } from '../../utils/currency';
 import { Plus, Minus, ArrowRight, ShoppingBag, Sparkles, Clock, Zap, Store } from 'lucide-react';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { calculateDeliveryFee } from '../../../../../common_logic/deliveryLogic';
 
 export const CartView: React.FC = () => {
@@ -23,31 +22,91 @@ export const CartView: React.FC = () => {
   const deliveryFee = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feePaise;
   const total       = itemTotal + deliveryFee;
 
+  // ── Empty Cart — Baby Mascot Hero ─────────────────────────
   if (items.length === 0) {
     return (
-      <div className="p-4 h-full flex flex-col pt-16 pb-24 bg-gradient-to-b from-emerald-50/40 via-white to-gray-50 items-center justify-center min-h-[75vh]">
-        <EmptyState 
-          title="Your Cart is Empty" 
-          description="Delicious meals and fresh groceries are waiting for you in KGF."
-        />
-        <div className="mt-8 px-4 flex justify-center w-full max-w-xs">
-           <button 
-             onClick={() => navigate('/')} 
-             className="w-full h-13 py-3.5 bg-gradient-to-r from-emerald-600 to-brand text-white font-black rounded-2xl shadow-lg shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-wider text-xs flex items-center justify-center gap-2"
-           >
-             <ShoppingBag className="w-4 h-4" />
-             Explore Stores
-           </button>
-        </div>
+      <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-emerald-50/60 via-white to-gray-50 items-center justify-center px-6 pb-28 pt-10">
+        {/* Baby waiting illustration */}
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.92 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.1 }}
+          className="relative w-52 h-52 mb-6"
+        >
+          <img
+            src="/baby/empty_wating.jpg"
+            alt="Baby waiting with empty basket"
+            className="w-full h-full object-contain drop-shadow-xl"
+          />
+          {/* Floating speech bubble */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6, x: 20 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            transition={{ delay: 0.5, type: 'spring', stiffness: 380 }}
+            className="absolute -top-2 -right-4 bg-white rounded-2xl rounded-br-sm px-3 py-1.5 shadow-lg border border-emerald-100"
+          >
+            <p className="text-[11px] font-black text-emerald-700 whitespace-nowrap">Let's shop, Mama! 🛒</p>
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="text-center"
+        >
+          <h2 className="font-black text-2xl text-gray-900 tracking-tight mb-2">Your basket is empty</h2>
+          <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-[240px] mx-auto">
+            She's patiently waiting to carry your groceries 💚
+          </p>
+        </motion.div>
+
+        <motion.button
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => navigate('/')}
+          className="mt-8 flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-brand text-white font-black text-sm px-7 py-4 rounded-2xl shadow-lg shadow-emerald-500/30 uppercase tracking-wider"
+        >
+          <ShoppingBag className="w-4 h-4" />
+          Explore Stores
+        </motion.button>
       </div>
     );
   }
+
   const hasOfflineItems = cartItemsWithDetails.some(item => item.product?.storeIsOpen === false);
+  const isReadyForCheckout = cartItemsWithDetails.length >= 3;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col relative pb-36">
       <div className="flex-1 p-4 pt-3">
-        {/* Header with quick stats */}
+        {/* ── Ready-to-checkout baby banner — appears when cart has 3+ items */}
+        <AnimatePresence>
+          {isReadyForCheckout && (
+            <motion.div
+              key="ready-banner"
+              initial={{ opacity: 0, y: -20, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 24 }}
+              className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl px-4 py-3 mb-4 shadow-sm overflow-hidden relative"
+            >
+              <img
+                src="/baby/ready_to_checkout.jpg"
+                alt="Ready to checkout"
+                className="w-14 h-14 object-contain object-bottom shrink-0 -mb-3"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-sm text-emerald-900">All set! She's ready 🎉</p>
+                <p className="text-[11px] text-emerald-700 font-medium mt-0.5">Basket is packed — checkout when you are!</p>
+              </div>
+              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-black text-2xl text-gray-900 tracking-tight flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shadow-md shadow-emerald-500/20">

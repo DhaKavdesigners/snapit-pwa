@@ -4,6 +4,7 @@ import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { FloatingRiderBubble } from '../orders/FloatingRiderBubble';
 import { LiveOrderTrackerModal } from '../orders/LiveOrderTrackerModal';
+import { BabyToast } from '../ui/BabyToast';
 import { useOrderStore } from '../../store/orderStore';
 import { useAuthStore } from '../../store/authStore';
 
@@ -53,6 +54,9 @@ export const AppLayout: React.FC = () => {
 
       {/* Unique Roadmap Delivery Track Modal Sheet */}
       <LiveOrderTrackerModal />
+
+      {/* Global Baby Mascot Toast */}
+      <BabyToast />
 
       <BottomNav />
     </div>

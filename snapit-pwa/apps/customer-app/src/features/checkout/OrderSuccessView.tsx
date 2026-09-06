@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ShoppingBag, Bike, Zap, Store } from "lucide-react";
 import { motion } from "framer-motion";
@@ -174,7 +174,29 @@ export const OrderSuccessView: React.FC = () => {
           </button>
         </motion.div>
 
+        {/* ⑥ Baby "order on the way" floating mascot card */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.1, type: 'spring', stiffness: 300, damping: 22 }}
+          className="w-full mt-5 flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-3 overflow-hidden"
+        >
+          <img
+            src="/baby/order_on_the_toast.jpg"
+            alt="Your order is on its way"
+            className="w-14 h-14 object-contain rounded-xl shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-sm text-white">Your order is on its way! 🚀</p>
+            <p className="text-[11px] text-emerald-200 font-medium mt-0.5">
+              She waved goodbye to the rider — 10-15 mins!
+            </p>
+          </div>
+          <Zap className="w-4 h-4 text-amber-300 fill-amber-300 shrink-0 animate-pulse" />
+        </motion.div>
+
       </div>
     </div>
   );
 };
+

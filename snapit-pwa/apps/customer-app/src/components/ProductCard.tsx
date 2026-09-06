@@ -3,6 +3,7 @@ import { Product } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { useCartStore } from '../store/cartStore';
 import { useFavoritesStore } from '../store/favoritesStore';
+import { useBabyToastStore } from '../store/babyToastStore';
 import { Plus, Minus, Heart } from 'lucide-react';
 import { Button } from './ui/Button';
 import { motion } from 'framer-motion';
@@ -16,6 +17,7 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = false }) => {
   const { items, addItem, updateQuantity } = useCartStore();
   const { isFavorite, toggleFavorite } = useFavoritesStore();
+  const { showToast } = useBabyToastStore();
   const cartItem = items.find((i) => i.productId === product.id);
   const quantity = cartItem?.quantity || 0;
   const [imgSrc, setImgSrc] = useState(product.imageUrl);
@@ -81,7 +83,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
         <button
           onClick={(e) => {
             e.stopPropagation();
+            const wasAlreadyFav = isFavorite(product.id);
             toggleFavorite(product.id);
+            if (!wasAlreadyFav) {
+              showToast('favourite_saved', product.name);
+            }
           }}
           aria-label={isFavorite(product.id) ? `Remove ${product.name} from favourites` : `Add ${product.name} to favourites`}
           className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm active:scale-90 transition-transform z-10"
@@ -159,7 +165,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
             <Button
               variant="outline"
               size="sm"
-              onClick={() => addItem(product.id, stock)}
+              onClick={() => {
+                const isFirstEverItem = items.length === 0;
+                const isMoreItems = items.length >= 2;
+                const success = addItem(product.id, stock);
+                if (success) {
+                  if (isFirstEverItem) {
+                    showToast('item_added_first', product.name);
+                  } else if (isMoreItems) {
+                    showToast('more_item', product.name);
+                  } else {
+                    showToast('item_added', product.name);
+                  }
+                }
+              }}
               aria-label={`Add ${product.name} to cart`}
               className="border-brand text-brand hover:bg-brand hover:text-white w-7 h-7 p-0 rounded-full transition-colors shadow-sm"
             >
