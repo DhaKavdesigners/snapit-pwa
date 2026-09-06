@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { useRouter } from 'next/navigation';
+import { soundEngine } from '@/services/soundService';
 
 export const IncomingOrderModal: React.FC = () => {
   const { incomingOrder, acceptIncomingOrder, declineIncomingOrder } = useRider();
@@ -12,12 +13,14 @@ export const IncomingOrderModal: React.FC = () => {
   useEffect(() => {
     if (!incomingOrder) {
       setCountdown(25);
+      soundEngine.stopIncomingOrderBuzzer();
       return;
     }
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
+          soundEngine.stopIncomingOrderBuzzer();
           declineIncomingOrder();
           return 25;
         }
@@ -25,14 +28,23 @@ export const IncomingOrderModal: React.FC = () => {
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      soundEngine.stopIncomingOrderBuzzer();
+    };
   }, [incomingOrder, declineIncomingOrder]);
 
   if (!incomingOrder) return null;
 
   const handleAccept = () => {
+    soundEngine.stopIncomingOrderBuzzer();
     acceptIncomingOrder();
     router.push('/');
+  };
+
+  const handleDecline = () => {
+    soundEngine.stopIncomingOrderBuzzer();
+    declineIncomingOrder();
   };
 
   return (
@@ -113,7 +125,7 @@ export const IncomingOrderModal: React.FC = () => {
           {/* Action Buttons */}
           <div className="flex gap-3 mt-4">
             <button
-              onClick={declineIncomingOrder}
+              onClick={handleDecline}
               className="flex-1 border border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 active:scale-95"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>

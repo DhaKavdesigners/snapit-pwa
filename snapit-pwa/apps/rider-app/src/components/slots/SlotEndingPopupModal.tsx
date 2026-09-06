@@ -3,6 +3,7 @@
 import React from 'react';
 import { RiderSlot } from '@/types';
 import { Clock, Zap, X } from 'lucide-react';
+import { formatTimeAMPM } from '@/services/slotService';
 
 interface SlotEndingPopupModalProps {
   slot: RiderSlot;
@@ -12,17 +13,20 @@ interface SlotEndingPopupModalProps {
 }
 
 export const SlotEndingPopupModal: React.FC<SlotEndingPopupModalProps> = ({
+  slot,
   remainingMinutes,
   onExtend,
   onClose,
 }) => {
+  const nextSlotTimingStr = `${formatTimeAMPM(slot.endTimestamp)} – ${formatTimeAMPM(slot.endTimestamp + 60 * 60 * 1000)}`;
+
   return (
     <div
       className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[300px] bg-white rounded-3xl p-5 shadow-2xl border border-slate-100 animate-scale-in text-center flex flex-col items-center gap-3 relative"
+        className="w-full max-w-[320px] bg-white rounded-3xl p-5 shadow-2xl border border-slate-100 animate-scale-in text-center flex flex-col items-center gap-3 relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top-right close icon */}
@@ -61,7 +65,7 @@ export const SlotEndingPopupModal: React.FC<SlotEndingPopupModalProps> = ({
             className="w-full py-3 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-black text-xs rounded-xl shadow-md active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer ring-2 ring-rose-200/50"
           >
             <Zap className="w-3.5 h-3.5 fill-white" />
-            <span>Extend +1 Hour</span>
+            <span>Extend +1 Hour ({nextSlotTimingStr})</span>
           </button>
 
           <button

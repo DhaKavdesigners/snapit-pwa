@@ -421,6 +421,35 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
       const savedCancelled = localStorage.getItem('snapit_cancelled_orders_v2');
       if (savedCancelled) setCancelledOrders(JSON.parse(savedCancelled));
+
+      // Restore handled order IDs to prevent repeat buzzing across reloads
+      const savedHandled = localStorage.getItem('snapit_handled_orders_v2');
+      if (savedHandled) {
+        try {
+          const parsed = JSON.parse(savedHandled);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((id: any) => handledOrderIdsRef.current.add(String(id).trim()));
+          }
+        } catch {}
+      }
+      if (savedCancelled) {
+        try {
+          const parsedCancelled = JSON.parse(savedCancelled);
+          if (Array.isArray(parsedCancelled)) {
+            parsedCancelled.forEach((o: any) => {
+              if (o?.id) handledOrderIdsRef.current.add(String(o.id).trim());
+            });
+          }
+        } catch {}
+      }
+      if (savedActive) {
+        try {
+          const parsedActive = JSON.parse(savedActive);
+          if (parsedActive?.id) {
+            handledOrderIdsRef.current.add(String(parsedActive.id).trim());
+          }
+        } catch {}
+      }
     } catch (e) {
       console.warn('Could not read local storage', e);
     } finally {
@@ -672,7 +701,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       }
-    }, 30000); // poll every 30 seconds
+    }, 2000); // live real-time check every 2 seconds
 
     return () => clearInterval(interval);
   }, [bookedSlotIds, adminConfig.slot, isOnline, activeOrder, zones, rider.selectedZoneId]);
@@ -1032,17 +1061,37 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     refreshSlots(nextBooked);
   };
 
-  const extendSlot = (currentSlotId: string, nextSlotId: string) => {
-    const nextSlot = slots.find((s) => s.id === nextSlotId);
-    if (!nextSlot) return;
-    const nextBooked = bookedSlotIds.includes(nextSlotId) ? bookedSlotIds : [...bookedSlotIds, nextSlotId];
+  const extendSlot = (currentSlotId: string, nextSlotId?: string) => {
+    let targetSlotId = nextSlotId;
+    if (!targetSlotId) {
+      const current = slots.find((s) => s.id === currentSlotId);
+      if (current) {
+        const next = slots.find((s) => s.startTimestamp === current.endTimestamp);
+        if (next) {
+          targetSlotId = next.id;
+        } else {
+          const d = new Date(current.endTimestamp);
+          const h = d.getHours();
+          targetSlotId = `slot-${current.date}-${h}`;
+        }
+      }
+    }
+    if (!targetSlotId) return;
+
+    const nextBooked = bookedSlotIds.includes(targetSlotId) ? bookedSlotIds : [...bookedSlotIds, targetSlotId];
     setBookedSlotIds(nextBooked);
     try {
       localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(nextBooked));
     } catch (e) {}
 
-    if (nextSlot) {
-      addAlert(createSlotExtendedAlert(nextSlot.endTimestamp));
+    const bookedSlot = slots.find((s) => s.id === targetSlotId);
+    if (bookedSlot) {
+      addAlert(createSlotExtendedAlert(bookedSlot.endTimestamp));
+    } else {
+      const current = slots.find((s) => s.id === currentSlotId);
+      if (current) {
+        addAlert(createSlotExtendedAlert(current.endTimestamp + 3600000));
+      }
     }
     refreshSlots(nextBooked);
   };
@@ -1181,7 +1230,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           const eligible = dbOrders.find((o) =>
             isEligibleNotificationStatus(o.status) &&
             (!o.rider_id || o.rider_id === rider.phone || o.rider_assignment !== 'assigned') &&
-            !handledOrderIdsRef.current.has(String(o.id).trim())
+            !handledOrderIdsRef.current.has(String(o.id).trim()) &&
+            !soundEngine.isOrderHandled(String(o.id).trim())
           );
           if (eligible) {
             const store = dbStores.find((s) => s.id === eligible.store_id);
@@ -1214,7 +1264,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           (newOrder) => {
             const newId = String(newOrder.id).trim();
             // Do not notify if rider already has an active order or already handled this order
-            if (activeOrderRef.current || handledOrderIdsRef.current.has(newId)) return;
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(newId) || soundEngine.isOrderHandled(newId)) return;
+            if (newOrder.rider_id && newOrder.rider_id !== rider.phone && newOrder.rider_assignment === 'assigned') return;
 
             // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
             if (isEligibleNotificationStatus(newOrder.status)) {
@@ -1248,7 +1299,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             });
 
             // Do NOT re-trigger incoming order notification if already active or already handled
-            if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedId)) {
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedId) || soundEngine.isOrderHandled(updatedId)) {
+              return;
+            }
+            if (updatedOrder.rider_id && updatedOrder.rider_id !== rider.phone && updatedOrder.rider_assignment === 'assigned') {
               return;
             }
 
@@ -1302,11 +1356,23 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setDesktopFrame((prev) => !prev);
   };
 
+  const markOrderHandledLocally = (orderId: string) => {
+    const idKey = String(orderId).trim();
+    handledOrderIdsRef.current.add(idKey);
+    soundEngine.markOrderHandled(idKey);
+    try {
+      localStorage.setItem(
+        'snapit_handled_orders_v2',
+        JSON.stringify(Array.from(handledOrderIdsRef.current))
+      );
+    } catch {}
+  };
+
   // ─── Incoming Order Sound Effect (Strict Lifecycle) ───────────────────────
   useEffect(() => {
     const orderId = incomingOrder ? String(incomingOrder.id).trim() : null;
     // Only play buzzer while order is waiting for rider response AND no active order exists AND not handled
-    if (orderId && !activeOrder && !handledOrderIdsRef.current.has(orderId)) {
+    if (orderId && !activeOrder && !handledOrderIdsRef.current.has(orderId) && !soundEngine.isOrderHandled(orderId)) {
       soundEngine.startIncomingOrderBuzzer(orderId);
     } else {
       soundEngine.stopIncomingOrderBuzzer();
@@ -1321,8 +1387,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const acceptIncomingOrder = () => {
     if (!incomingOrder) return;
     const orderId = String(incomingOrder.id).trim();
-    handledOrderIdsRef.current.add(orderId);
-    soundEngine.markOrderHandled(orderId);
+    markOrderHandledLocally(orderId);
     soundEngine.stopIncomingOrderBuzzer();
     soundEngine.playSuccessChime();
     recordOrderAcceptance(orderId, 'accepted');
@@ -1347,8 +1412,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const declineIncomingOrder = () => {
     if (!incomingOrder) return;
     const orderId = String(incomingOrder.id).trim();
-    handledOrderIdsRef.current.add(orderId);
-    soundEngine.markOrderHandled(orderId);
+    markOrderHandledLocally(orderId);
     soundEngine.stopIncomingOrderBuzzer();
     recordOrderAcceptance(orderId, 'declined');
     const declinedOrder: Order = {

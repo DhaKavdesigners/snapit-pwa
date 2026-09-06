@@ -57,11 +57,12 @@ export default function SlotsPage() {
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
   const [slotToCancel, setSlotToCancel] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [now, setNow] = useState(getNow());
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     setMounted(true);
-    const t = setInterval(() => setNow(getNow()), 1000);
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -166,7 +167,10 @@ export default function SlotsPage() {
               isEndingSoonLast10: false,
             };
 
-            if (remainingMins <= 10) {
+            const nextSlot = slots.find((s) => s.startTimestamp === currentHourSlot.endTimestamp);
+            const isNextSlotBooked = Boolean(nextSlot && bookedSlotIds.includes(nextSlot.id));
+
+            if (remainingMins <= 10 && !isNextSlotBooked) {
               // Light Red (ENDING SOON <= 10m)
               cardTheme = {
                 cardBg: 'bg-rose-50/95',
@@ -183,9 +187,16 @@ export default function SlotsPage() {
                 barBg: 'bg-rose-500',
                 isEndingSoonLast10: true,
               };
+            } else if (isNextSlotBooked) {
+              cardTheme = {
+                ...cardTheme,
+                statusLabel: 'EXTENDED',
+                badgeBg: 'bg-emerald-100',
+                badgeText: 'text-emerald-900',
+                statusDot: 'bg-emerald-600',
+                isEndingSoonLast10: false,
+              };
             }
-
-            const nextSlot = slots.find((s) => s.startTimestamp === currentHourSlot.endTimestamp);
 
             return (
               <div className={`rounded-3xl p-4 sm:p-4.5 border shadow-sm relative overflow-hidden transition-all ${cardTheme.cardBg} ${cardTheme.cardBorder} ${cardTheme.cardText}`}>
@@ -208,8 +219,8 @@ export default function SlotsPage() {
                   </p>
                 </div>
 
-                {/* Extend Button (Last 10 Min) */}
-                {cardTheme.isEndingSoonLast10 && (
+                {/* Extend Button (Last 10 Min when not yet extended) */}
+                {cardTheme.isEndingSoonLast10 && !isNextSlotBooked && (
                   <div className="my-2.5 pt-2 border-t border-rose-200/70">
                     <button
                       type="button"
@@ -233,6 +244,19 @@ export default function SlotsPage() {
                       <Zap className="w-4 h-4 fill-white" />
                       <span>Extend +1 Hour ({formatTimeAMPM(currentHourSlot.endTimestamp)} – {formatTimeAMPM(currentHourSlot.endTimestamp + 60 * 60 * 1000)})</span>
                     </button>
+                  </div>
+                )}
+
+                {/* Confirmed Extension Banner */}
+                {isNextSlotBooked && nextSlot && (
+                  <div className="my-2.5 pt-2 border-t border-emerald-200/70 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 font-extrabold text-emerald-800">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Next Slot Booked ({formatTimeAMPM(nextSlot.startTimestamp)} – {formatTimeAMPM(nextSlot.endTimestamp)})</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-black tracking-wider text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+                      Extended
+                    </span>
                   </div>
                 )}
 

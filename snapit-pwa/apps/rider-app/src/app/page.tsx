@@ -83,11 +83,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!incomingOrder) {
       setCountdown(25);
+      soundEngine.stopIncomingOrderBuzzer();
       return;
     }
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
+          soundEngine.stopIncomingOrderBuzzer();
           declineIncomingOrder();
           return 25;
         }
@@ -148,77 +150,90 @@ export default function DashboardPage() {
 
         {/* ── 4. MAIN INTERACTIVE ORDER COCKPIT ── */}
 
-        {/* ─── SCENARIO A: INCOMING ORDER ALERT ─── */}
+        {/* ─── SCENARIO A: INCOMING ORDER ALERT (Professional Light Color Theme) ─── */}
         {incomingOrder && !activeOrder && (
-          <div className="bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white rounded-3xl p-5 shadow-2xl border-2 border-emerald-400 relative overflow-hidden animate-slide-up space-y-4">
+          <div className="bg-white text-slate-900 rounded-3xl p-5 shadow-[0_16px_45px_rgba(0,0,0,0.09)] border-2 border-emerald-500/50 relative overflow-hidden animate-slide-up space-y-4 ring-2 ring-emerald-500/15">
             {/* Top Timer Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-800">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 overflow-hidden">
               <div
-                className="h-full bg-emerald-400 transition-all duration-1000 ease-linear"
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-1000 ease-linear"
                 style={{ width: `${(countdown / 25) * 100}%` }}
               />
             </div>
 
-            {/* Header: Title + Payout */}
+            {/* Header: Status Chip + Title + Payout */}
             <div className="flex items-center justify-between pt-1">
               <div>
-                <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-2xs">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+                  </span>
                   New Delivery • {countdown}s
                 </span>
-                <h3 className="text-xl font-black text-white mt-1">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight mt-1">
                   {incomingOrder.restaurantName}
                 </h3>
               </div>
 
-              <div className="bg-emerald-500/20 border border-emerald-400/50 rounded-2xl px-3.5 py-2 text-right">
-                <span className="text-[10px] font-bold uppercase text-emerald-300 block">Payout</span>
-                <span className="text-2xl font-black text-white font-mono leading-none">
+              <div className="bg-emerald-50/90 border border-emerald-200/90 rounded-2xl px-3.5 py-2 text-right shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 block">Payout</span>
+                <span className="text-2xl font-black text-emerald-600 font-mono leading-none">
                   ₹{incomingOrder.earnings || 45}
                 </span>
               </div>
             </div>
 
-            {/* Simple Route Summary */}
-            <div className="bg-white/10 rounded-2xl p-3.5 space-y-2 text-xs border border-white/10">
+            {/* Professional Route Summary */}
+            <div className="bg-slate-50/90 rounded-2xl p-3.5 space-y-2.5 text-xs border border-slate-200/80 shadow-2xs">
               <div className="flex items-start gap-2.5">
-                <Store className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                  <Store className="w-3.5 h-3.5" />
+                </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase font-bold text-gray-400">Pick Up From</p>
-                  <p className="font-bold text-white truncate">{incomingOrder.restaurantName}</p>
-                  <p className="text-[11px] text-gray-300 truncate">{incomingOrder.restaurantAddress}</p>
+                  <p className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400">Pick Up From</p>
+                  <p className="font-extrabold text-slate-900 text-sm truncate">{incomingOrder.restaurantName}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{incomingOrder.restaurantAddress}</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 pt-2 border-t border-white/10">
-                <Home className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2.5 pt-2.5 border-t border-slate-200/70">
+                <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                  <Home className="w-3.5 h-3.5" />
+                </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase font-bold text-gray-400">Deliver To</p>
-                  <p className="font-bold text-white truncate">Delivery Location</p>
-                  <p className="text-[11px] text-gray-300 truncate">{incomingOrder.deliveryAddress}</p>
+                  <p className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400">Deliver To</p>
+                  <p className="font-extrabold text-slate-900 text-sm truncate">Delivery Location</p>
+                  <p className="text-[11px] text-slate-500 truncate">{incomingOrder.deliveryAddress}</p>
                 </div>
               </div>
             </div>
 
             {/* Quick Metrics */}
-            <div className="flex items-center justify-between text-xs text-gray-300 px-1">
-              <span className="font-bold">📍 {incomingOrder.distanceKm} km trip</span>
-              <span className="font-bold">⏱️ ~{incomingOrder.estimatedMinutes} mins</span>
-              <span className="font-bold text-emerald-300">📦 Package Delivery</span>
+            <div className="flex items-center justify-between text-xs px-0.5">
+              <span className="bg-slate-100/90 border border-slate-200/80 text-slate-700 font-bold px-2.5 py-1 rounded-xl shadow-2xs flex items-center gap-1">
+                <span>📍</span> {incomingOrder.distanceKm} km trip
+              </span>
+              <span className="bg-slate-100/90 border border-slate-200/80 text-slate-700 font-bold px-2.5 py-1 rounded-xl shadow-2xs flex items-center gap-1">
+                <span>⏱️</span> ~{incomingOrder.estimatedMinutes} mins
+              </span>
+              <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-xl shadow-2xs flex items-center gap-1">
+                <span>📦</span> Package Delivery
+              </span>
             </div>
 
             {/* 2 Huge Action Buttons */}
             <div className="grid grid-cols-3 gap-2.5 pt-1">
               <button
                 onClick={declineIncomingOrder}
-                className="col-span-1 py-3.5 bg-white/10 hover:bg-white/20 text-gray-300 font-bold text-xs rounded-2xl transition-all active:scale-95 cursor-pointer"
+                className="col-span-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-extrabold text-xs rounded-2xl border border-slate-200/90 transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center gap-1"
               >
                 Pass
               </button>
 
               <button
                 onClick={acceptIncomingOrder}
-                className="col-span-2 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="col-span-2 py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Check className="w-5 h-5 stroke-[3]" />
                 <span>ACCEPT ORDER</span>

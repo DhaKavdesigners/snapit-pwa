@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Calendar, ChevronRight, Zap } from 'lucide-react';
+import { Calendar, ChevronRight, Zap, CheckCircle2 } from 'lucide-react';
 import { useRider } from '@/context/RiderContext';
 import { formatTimeAMPM } from '@/services/slotService';
 import { getNow } from '@/services/mockService';
@@ -20,15 +20,15 @@ export const HomeSlotCard: React.FC = () => {
     rider,
   } = useRider();
 
-  const [now, setNow] = useState<number>(getNow());
+  const [now, setNow] = useState<number>(Date.now());
   const [showEndingModal, setShowEndingModal] = useState<boolean>(false);
   const dismissedSlotIdRef = useRef<string | null>(null);
 
-  // Lightweight 1-second live countdown ticker
+  // 1-second live real-time countdown ticker
   useEffect(() => {
-    setNow(getNow());
+    setNow(Date.now());
     const interval = setInterval(() => {
-      setNow(getNow());
+      setNow(Date.now());
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -60,26 +60,35 @@ export const HomeSlotCard: React.FC = () => {
   const remainingMs = displaySlot ? Math.max(0, displaySlot.endTimestamp - now) : 0;
   const remainingMins = Math.floor(remainingMs / 60000);
 
-  // Trigger ending soon popup 10 minutes before slot end (once per slot session)
+  // Check if the next consecutive slot is already booked
+  const nextSlot = displaySlot
+    ? slots.find((s) => s.startTimestamp === displaySlot.endTimestamp)
+    : null;
+  const isNextSlotBooked = Boolean(
+    nextSlot && bookedSlotIds.includes(nextSlot.id)
+  );
+
+  // Trigger ending soon popup 10 minutes before slot end if not already extended
   useEffect(() => {
     if (
       displaySlot &&
       !isUpcoming &&
+      !isNextSlotBooked &&
       remainingMins <= 10 &&
       remainingMs > 0 &&
       dismissedSlotIdRef.current !== displaySlot.id
     ) {
       setShowEndingModal(true);
     }
-  }, [displaySlot, isUpcoming, remainingMins, remainingMs]);
+  }, [displaySlot, isUpcoming, isNextSlotBooked, remainingMins, remainingMs]);
 
   // Handler for Extending Slot (+1 hour)
   const handleExtendSlot = () => {
     if (!displaySlot) return;
-    const nextSlot = slots.find((s) => s.startTimestamp === displaySlot.endTimestamp);
+    const targetNext = slots.find((s) => s.startTimestamp === displaySlot.endTimestamp);
 
-    if (nextSlot) {
-      extendSlot(displaySlot.id, nextSlot.id);
+    if (targetNext) {
+      extendSlot(displaySlot.id, targetNext.id);
     } else {
       const nextStartTs = displaySlot.endTimestamp;
       const d = new Date(nextStartTs);
@@ -229,8 +238,8 @@ export const HomeSlotCard: React.FC = () => {
     isEndingSoonLast10: false,
   };
 
-  if (remainingMins <= 10) {
-    // Light Red (ENDING SOON <= 10m)
+  if (remainingMins <= 10 && !isNextSlotBooked) {
+    // Light Red (ENDING SOON <= 10m - Needs Extension)
     cardTheme = {
       cardBg: 'bg-rose-50/95',
       cardBorder: 'border-rose-200/90',
@@ -250,6 +259,16 @@ export const HomeSlotCard: React.FC = () => {
       trackBg: 'bg-rose-200/60',
       barBg: 'bg-rose-500',
       isEndingSoonLast10: true,
+    };
+  } else if (isNextSlotBooked) {
+    // Extension confirmed: show green continuous duty badge
+    cardTheme = {
+      ...cardTheme,
+      statusLabel: 'EXTENDED',
+      badgeBg: 'bg-emerald-100',
+      badgeText: 'text-emerald-900',
+      statusDot: 'bg-emerald-600',
+      isEndingSoonLast10: false,
     };
   }
 
@@ -297,7 +316,7 @@ export const HomeSlotCard: React.FC = () => {
         </div>
 
         {/* Clear & Prominent Extend 1hr Button at the Bottom of the Box (Last 10 Min) */}
-        {cardTheme.isEndingSoonLast10 && (
+        {cardTheme.isEndingSoonLast10 && !isNextSlotBooked && (
           <div className="w-full mt-3 pt-2 border-t border-rose-200/70">
             <button
               type="button"
@@ -311,6 +330,19 @@ export const HomeSlotCard: React.FC = () => {
               <Zap className="w-4 h-4 fill-white" />
               <span>Extend +1 Hour ({formatTimeAMPM(displaySlot.endTimestamp)} – {formatTimeAMPM(displaySlot.endTimestamp + 60 * 60 * 1000)})</span>
             </button>
+          </div>
+        )}
+
+        {/* Confirmed Extension Banner */}
+        {isNextSlotBooked && nextSlot && (
+          <div className="w-full mt-3 pt-2 border-t border-emerald-200/70 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5 font-extrabold text-emerald-800">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Next Slot Booked ({formatTimeAMPM(nextSlot.startTimestamp)} – {formatTimeAMPM(nextSlot.endTimestamp)})</span>
+            </div>
+            <span className="text-[10px] uppercase font-black tracking-wider text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+              Extended
+            </span>
           </div>
         )}
 

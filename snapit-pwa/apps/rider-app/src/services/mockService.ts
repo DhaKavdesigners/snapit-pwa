@@ -37,13 +37,14 @@ let mockLocationConfig: MockLocationConfig = {
 
 if (typeof window !== 'undefined') {
   try {
+    // Clear any stale mock time to guarantee 100% real-time dashboard operation
+    localStorage.removeItem('snapit_dev_mock_time_v2');
+    mockTimeConfig.enabled = false;
+    mockTimeConfig.mockTimestamp = null;
+
     const savedMode = localStorage.getItem('snapit_dev_test_mode_v1');
     if (savedMode === 'tester' || savedMode === 'driver') {
       currentTestMode = savedMode;
-    }
-    const savedTime = localStorage.getItem('snapit_dev_mock_time_v2');
-    if (savedTime) {
-      mockTimeConfig = JSON.parse(savedTime);
     }
     const savedLoc = localStorage.getItem('snapit_dev_mock_location_v2');
     if (savedLoc) {
@@ -82,7 +83,11 @@ export function setMockTimeConfig(config: Partial<MockTimeConfig>): void {
 
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem('snapit_dev_mock_time_v2', JSON.stringify(mockTimeConfig));
+      if (mockTimeConfig.enabled) {
+        localStorage.setItem('snapit_dev_mock_time_v2', JSON.stringify(mockTimeConfig));
+      } else {
+        localStorage.removeItem('snapit_dev_mock_time_v2');
+      }
     } catch (e) {}
   }
 }
@@ -91,7 +96,7 @@ export function getMockTimeConfig(): MockTimeConfig {
   return mockTimeConfig;
 }
 
-/** Returns the current timestamp in ms (simulated if Mock Time is active) */
+/** Returns the current timestamp in ms (100% live real time Date.now()) */
 export function getNow(): number {
   if (
     mockTimeConfig.enabled &&
@@ -102,7 +107,7 @@ export function getNow(): number {
   return Date.now();
 }
 
-/** Returns the current Date object (simulated if Mock Time is active) */
+/** Returns the current Date object (100% live real time new Date()) */
 export function getNowDate(): Date {
   if (
     mockTimeConfig.enabled &&

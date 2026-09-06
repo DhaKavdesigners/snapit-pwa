@@ -12,6 +12,30 @@ class SoundEngine {
   private handledOrders: Set<string> = new Set();
   private playedDeliveredOrders: Set<string> = new Set();
 
+  constructor() {
+    this.handledOrders = this.loadSet('snapit_handled_orders_v2');
+    this.playedDeliveredOrders = this.loadSet('snapit_delivered_sound_orders_v2');
+  }
+
+  private loadSet(key: string): Set<string> {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr)) return new Set(arr.map(String));
+      }
+    } catch {}
+    return new Set();
+  }
+
+  private saveSet(key: string, set: Set<string>) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(key, JSON.stringify(Array.from(set)));
+    } catch {}
+  }
+
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     if (!this.audioCtx) {
@@ -24,6 +48,14 @@ class SoundEngine {
       this.audioCtx.resume().catch(() => {});
     }
     return this.audioCtx;
+  }
+
+  /**
+   * Check if order was already handled (accepted or declined)
+   */
+  public isOrderHandled(orderId?: string | null): boolean {
+    if (!orderId) return false;
+    return this.handledOrders.has(String(orderId).trim());
   }
 
   /**
@@ -85,18 +117,20 @@ class SoundEngine {
 
   /**
    * Start looping incoming order buzzer
-   * Deduplicates by orderId to prevent multiple overlapping audio loops.
+   * Strictly avoids buzzing if already handled, delivered, or already buzzing.
    */
   public startIncomingOrderBuzzer(orderId?: string | null) {
     const idKey = orderId ? String(orderId).trim() : 'pending-order';
 
     // If order was already handled (accepted or declined), NEVER buzz again
     if (orderId && this.handledOrders.has(idKey)) {
+      this.stopIncomingOrderBuzzer();
       return;
     }
 
     // If already delivered, NEVER buzz
     if (orderId && this.playedDeliveredOrders.has(idKey)) {
+      this.stopIncomingOrderBuzzer();
       return;
     }
 
@@ -121,7 +155,7 @@ class SoundEngine {
   }
 
   /**
-   * Immediately stops incoming order notification buzzer
+   * Immediately stops incoming order notification buzzer and cancels any scheduled output
    */
   public stopIncomingOrderBuzzer() {
     this.isBuzzerActive = false;
@@ -156,11 +190,13 @@ class SoundEngine {
 
   /**
    * Mark an order as handled (Accepted or Declined).
-   * Stops buzzer immediately and prevents this order from ever buzzing again.
+   * Stops buzzer immediately and permanently remembers this order ID so it never buzzes again.
    */
   public markOrderHandled(orderId?: string | null) {
     if (orderId) {
-      this.handledOrders.add(String(orderId).trim());
+      const key = String(orderId).trim();
+      this.handledOrders.add(key);
+      this.saveSet('snapit_handled_orders_v2', this.handledOrders);
     }
     this.stopIncomingOrderBuzzer();
   }
@@ -207,49 +243,71 @@ class SoundEngine {
   }
 
   /**
-   * Play celebratory cashout / delivery completed payout chime
-   * Non-looping, single shot.
+   * Play crisp, satisfying golden coin collection sound
+   * Classic two-tone metallic chime with high shimmer overtone
    */
-  public playPayoutChime() {
+  public playCoinSound() {
+    this.stopIncomingOrderBuzzer();
     try {
       const ctx = this.getContext();
       if (!ctx) return;
       const now = ctx.currentTime;
 
-      // Coin shimmer 1
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.5, now);
+      masterGain.connect(ctx.destination);
+
+      // Note 1: Pickup note (B5: 987.77 Hz)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(987.77, now); // B5
-      osc1.frequency.exponentialRampToValueAtTime(1318.51, now + 0.15); // E6
-      gain1.gain.setValueAtTime(0.3, now);
-      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc1.frequency.setValueAtTime(987.77, now);
+      gain1.gain.setValueAtTime(0.35, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
       osc1.connect(gain1);
-      gain1.connect(ctx.destination);
+      gain1.connect(masterGain);
       osc1.start(now);
-      osc1.stop(now + 0.3);
+      osc1.stop(now + 0.08);
 
-      // Coin shimmer 2
+      // Note 2: Main bright coin note (E6: 1318.51 Hz)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(1567.98, now + 0.1); // G6
-      osc2.frequency.exponentialRampToValueAtTime(2093.0, now + 0.35); // C7
-      gain2.gain.setValueAtTime(0.35, now + 0.1);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1318.51, now + 0.07);
+      gain2.gain.setValueAtTime(0.45, now + 0.07);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
       osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(now + 0.1);
-      osc2.stop(now + 0.5);
+      gain2.connect(masterGain);
+      osc2.start(now + 0.07);
+      osc2.stop(now + 0.45);
+
+      // Note 3: High metallic shimmer harmonic (E7: 2637.02 Hz)
+      const osc3 = ctx.createOscillator();
+      const gain3 = ctx.createGain();
+      osc3.type = 'triangle';
+      osc3.frequency.setValueAtTime(2637.02, now + 0.07);
+      gain3.gain.setValueAtTime(0.18, now + 0.07);
+      gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.40);
+      osc3.connect(gain3);
+      gain3.connect(masterGain);
+      osc3.start(now + 0.07);
+      osc3.stop(now + 0.40);
 
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate([100, 50, 150]);
+        navigator.vibrate([80, 40, 100]);
       }
     } catch {}
   }
 
   /**
-   * Play ONE short coin/success sound when transitioning to DELIVERED.
+   * Play celebratory cashout / delivery completed payout chime
+   */
+  public playPayoutChime() {
+    this.playCoinSound();
+  }
+
+  /**
+   * Play ONE crisp coin sound when order delivery is completed.
    * Guarantees buzzer is stopped, does not loop, and deduplicates so it plays exactly once per order.
    */
   public playDeliveredSound(orderId?: string | null, orderNumber?: string | null) {
@@ -264,8 +322,9 @@ class SoundEngine {
 
     if (idKey) this.playedDeliveredOrders.add(idKey);
     if (numKey) this.playedDeliveredOrders.add(numKey);
+    this.saveSet('snapit_delivered_sound_orders_v2', this.playedDeliveredOrders);
 
-    this.playPayoutChime();
+    this.playCoinSound();
   }
 }
 
