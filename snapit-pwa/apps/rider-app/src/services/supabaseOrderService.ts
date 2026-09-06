@@ -1,6 +1,7 @@
 import { supabase, DbOrder, DbStore, DbRiderProfile } from '@/lib/supabase';
 import { Order, RiderProfile } from '@/types';
 import { calculateDeliveryFee, generateDeliveryPin } from '../../../../common_logic/deliveryLogic';
+import { formatOrderNumber } from '@/utils/orderUtils';
 
 /** Map a Supabase DB order row to Rider App Order object */
 export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
@@ -90,7 +91,7 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
 
   return {
     id: dbOrder.id,
-    orderNumber: String(dbOrder.id).slice(-5).toUpperCase(),
+    orderNumber: formatOrderNumber((dbOrder as any).order_number || (dbOrder as any).order_no || dbOrder.id),
     customerName: dbOrder.recipient_name || 'Customer',
     customerPhone: dbOrder.recipient_phone || storePhone,
     restaurantName: storeName,

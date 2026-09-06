@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { useRouter } from 'next/navigation';
 import { soundEngine } from '@/services/soundService';
+import { SlideButton } from '@/components/common/SlideButton';
 
 export const IncomingOrderModal: React.FC = () => {
   const { incomingOrder, acceptIncomingOrder, declineIncomingOrder } = useRider();
@@ -122,19 +123,21 @@ export const IncomingOrderModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 mt-4">
+          {/* High-Energy Action Buttons */}
+          <div className="grid grid-cols-3 gap-2.5 mt-4">
             <button
+              type="button"
               onClick={handleDecline}
-              className="flex-1 border border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 active:scale-95"
+              className="col-span-1 border border-slate-300 text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-all font-extrabold text-xs py-3.5 rounded-xl flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
-              Decline
+              <span>Pass</span>
             </button>
 
             <button
+              type="button"
               onClick={handleAccept}
-              className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg font-black text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 active:scale-95 ring-2 ring-emerald-500/30 transition-all"
+              className="col-span-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 text-white shadow-lg shadow-emerald-600/30 font-black text-xs py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-95 ring-2 ring-emerald-500/30 transition-all cursor-pointer tracking-wider"
             >
               <span
                 className="material-symbols-outlined text-[18px]"
@@ -142,7 +145,7 @@ export const IncomingOrderModal: React.FC = () => {
               >
                 check_circle
               </span>
-              Accept Order
+              <span>ACCEPT ORDER</span>
             </button>
           </div>
         </div>

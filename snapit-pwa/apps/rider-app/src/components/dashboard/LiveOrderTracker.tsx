@@ -6,6 +6,7 @@ import { SlideToConfirm } from '@/components/orders/SlideToConfirm';
 import { RouteTimeline } from '@/components/orders/RouteTimeline';
 import { Phone, Navigation, PackageCheck, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatOrderNumber } from '@/utils/orderUtils';
 
 export const LiveOrderTracker: React.FC = () => {
   const { activeOrder, advanceActiveOrderStatus } = useRider();
@@ -92,7 +93,7 @@ export const LiveOrderTracker: React.FC = () => {
                   : 'On the Way (Delivery)'}
               </span>
               <span className="text-[11px] font-mono font-bold text-secondary">
-                #{activeOrder.orderNumber}
+                #{formatOrderNumber(activeOrder.orderNumber)}
               </span>
             </div>
             <h2 className="font-bold text-base text-on-surface">

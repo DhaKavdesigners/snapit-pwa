@@ -95,6 +95,7 @@ import {
 } from '@/services/supabaseOrderService';
 import { verifyDeliveryPin } from '../../../../common_logic/deliveryLogic';
 import { soundEngine } from '@/services/soundService';
+import { formatOrderNumber } from '@/utils/orderUtils';
 
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
@@ -1506,7 +1507,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     addAlert({
       id: `alert-handover-${Date.now()}`,
       title: '🛍️ Handover Complete!',
-      message: `Order #${activeOrder.orderNumber} pickup verified. Now out for delivery!`,
+      message: `Order #${formatOrderNumber(activeOrder.orderNumber)} pickup verified. Now out for delivery!`,
       time: 'Just now',
       type: 'system',
       read: false,
@@ -1581,7 +1582,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     const newAlert: AlertNotification = {
       id: `alert-${Date.now()}`,
       title: '💰 Wallet Credited: ₹' + orderEarnings,
-      message: `Order #${activeOrder.orderNumber} delivered. ₹${orderEarnings} added to your Minnit Wallet.`,
+      message: `Order #${formatOrderNumber(activeOrder.orderNumber)} delivered. ₹${orderEarnings} added to your Minnit Wallet.`,
       time: 'Just now',
       type: 'payout',
       read: false,
@@ -1620,7 +1621,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     const randomDistance = (Math.random() * 2 + 1.2).toFixed(1);
     const mock: Order = {
       id: `req-${Date.now()}`,
-      orderNumber: `SN${Math.floor(10000 + Math.random() * 90000)}`,
+      orderNumber: String(Math.floor(100000 + Math.random() * 900000)),
       customerName: ['Rahul Sharma', 'Ananya Verma', 'Karthik Iyer', 'Sneha Patel'][Math.floor(Math.random() * 4)],
       customerPhone: '+91 98765 00000',
       customerAvatar:

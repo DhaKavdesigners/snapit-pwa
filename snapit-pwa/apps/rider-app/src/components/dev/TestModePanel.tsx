@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { getMockTimeConfig } from '@/services/mockService';
+import { formatOrderNumber } from '@/utils/orderUtils';
 import {
   MapPin,
   Navigation,
@@ -343,7 +344,7 @@ export const TestModePanel: React.FC = () => {
             {activeOrder && (
               <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5 text-[10px]">
                 <div className="flex justify-between items-center text-slate-300 font-mono">
-                  <span>Order #{activeOrder.orderNumber}</span>
+                  <span>Order #{formatOrderNumber(activeOrder.orderNumber)}</span>
                   <span className="text-amber-400 uppercase font-bold">{activeOrder.status}</span>
                 </div>
 

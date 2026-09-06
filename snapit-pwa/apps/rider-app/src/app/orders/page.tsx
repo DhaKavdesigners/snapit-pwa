@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { useRider } from '@/context/RiderContext';
 import { CheckCircle2, AlertCircle, Store, MapPin } from 'lucide-react';
+import { formatOrderNumber } from '@/utils/orderUtils';
 
 export default function OrdersPage() {
   const { ordersHistory, cancelledOrders } = useRider();
@@ -61,7 +62,7 @@ export default function OrdersPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-bold text-slate-900">
-                          #{item.orderNumber}
+                          #{formatOrderNumber(item.orderNumber)}
                         </span>
                         <span className="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-full border border-emerald-200">
                           Completed
@@ -132,7 +133,7 @@ export default function OrdersPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-bold text-slate-800">
-                          #{item.orderNumber}
+                          #{formatOrderNumber(item.orderNumber)}
                         </span>
                         <span className="bg-rose-50 text-rose-700 text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-full border border-rose-200">
                           Cancelled

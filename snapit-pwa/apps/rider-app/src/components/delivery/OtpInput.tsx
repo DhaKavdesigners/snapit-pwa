@@ -91,10 +91,10 @@ export const OtpInput: React.FC<OtpInputProps> = ({
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={handlePaste}
             disabled={disabled}
-            className={`w-14 h-16 sm:w-16 sm:h-20 text-center text-3xl font-extrabold bg-white border-2 rounded-2xl text-on-surface outline-none transition-all shadow-sm ${
+            className={`w-14 h-16 sm:w-16 sm:h-20 text-center text-3xl font-black bg-white rounded-2xl text-slate-900 outline-none transition-all shadow-xs ${
               digit
-                ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/20'
-                : 'border-outline-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/20'
+                ? 'border-2 border-emerald-500 bg-emerald-50/40 text-emerald-700 ring-2 ring-emerald-500/20'
+                : 'border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
             }`}
           />
         ))}
@@ -102,11 +102,11 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
       {/* Quick Test Helper for immediate user verification */}
       <div className="flex items-center gap-2">
-        <span className="text-[11px] text-secondary">Test OTP is </span>
+        <span className="text-[11px] font-bold text-slate-500">Test PIN is </span>
         <button
           type="button"
           onClick={quickFillSample}
-          className="text-xs font-mono font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md transition-colors"
+          className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/90 px-2 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
         >
           1234 (Click to autofill)
         </button>

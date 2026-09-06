@@ -3,21 +3,19 @@
 import React from 'react';
 import { Order } from '@/types';
 import { openGoogleMapsNavigation, hasValidCoordinates } from '@/utils/navigationLauncher';
-import { DeliveryProgressScooter } from './DeliveryProgressScooter';
+import { SlideButton } from '@/components/common/SlideButton';
 import {
-  Store,
   MapPin,
   Phone,
   Navigation,
   Clock,
   Package,
-  CheckCircle2,
   Check,
   ShieldCheck,
-  AlertCircle,
   ExternalLink,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatOrderNumber } from '@/utils/orderUtils';
 
 interface ActiveDeliveryCardProps {
   activeOrder: Order;
@@ -61,301 +59,304 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
       rawDbStatus === 'PICKED_UP') &&
     !isArrivedAtCustomer;
 
+  // Primary operational phase: Pickup vs Delivery
   const isPickupStage = isPreparing || isReadyForPickup || isOutOfShop;
 
-  // Coordinate check for shop
-  const hasShopCoords = hasValidCoordinates(
-    activeOrder.shopLocation?.lat,
-    activeOrder.shopLocation?.lng
-  );
+  // Navigation coordinate checks
   const canNavShop =
-    hasShopCoords ||
+    hasValidCoordinates(activeOrder.shopLocation?.lat, activeOrder.shopLocation?.lng) ||
     Boolean(
       activeOrder.restaurantAddress &&
         activeOrder.restaurantAddress.trim() &&
         activeOrder.restaurantAddress !== 'Store Location'
     );
 
-  // Coordinate check for customer
-  const hasCustCoords = hasValidCoordinates(
-    activeOrder.customerLocation?.lat,
-    activeOrder.customerLocation?.lng
-  );
   const canNavCust =
-    hasCustCoords ||
+    hasValidCoordinates(activeOrder.customerLocation?.lat, activeOrder.customerLocation?.lng) ||
     Boolean(
       activeOrder.deliveryAddress &&
         activeOrder.deliveryAddress.trim() &&
         activeOrder.deliveryAddress !== 'Customer Address'
     );
 
+  const storePhone = activeOrder.shopPhone || '8217649688';
+
   return (
-    <div className="bg-white rounded-3xl p-5 shadow-lg border-2 border-emerald-500/50 space-y-4 animate-fade-in">
-      {/* ── CARD HEADER: ACTIVE DELIVERY + ORDER # + PAYOUT ── */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+    <div
+      className={`bg-white text-slate-900 rounded-[28px] p-5 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-200/90 relative overflow-hidden space-y-4 animate-fade-in ${
+        isPickupStage ? 'ring-1 ring-emerald-500/20' : 'ring-1 ring-blue-500/20'
+      }`}
+    >
+      {/* ── CARD HEADER: PHASE BADGE + ORDER NUMBER + SLEEK PAYOUT ── */}
+      <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-700">
-              Active Delivery
+          <div className="flex items-center gap-2 mb-1">
+            {isPickupStage ? (
+              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+                </span>
+                Active Delivery
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 text-[10.5px] font-black uppercase px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600" />
+                </span>
+                Active Delivery
+              </span>
+            )}
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              {isPickupStage ? 'Step 1: Store Pickup' : 'Step 2: Drop-off'}
             </span>
           </div>
-          <h2 className="text-base font-black text-slate-900 font-mono">
-            Order #{activeOrder.orderNumber}
+
+          <h2 className="text-base font-black text-slate-900 font-mono tracking-tight">
+            Order #{formatOrderNumber(activeOrder.orderNumber)}
           </h2>
         </div>
 
-        <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-          ₹{activeOrder.earnings || 45} Payout
-        </span>
-      </div>
-
-      {/* ── 1. PICKUP SECTION ── */}
-      <div
-        className={`rounded-2xl p-3.5 border transition-all ${
-          isPickupStage
-            ? 'bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/15 shadow-xs'
-            : 'bg-slate-50/80 border-slate-200/80 opacity-90'
-        }`}
-      >
-        <div className="flex items-start justify-between gap-2 mb-2.5">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                isPickupStage
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              <Store className="w-4 h-4" />
-            </div>
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  Pickup Store
-                </span>
-                {/* Store Status Sub-badge */}
-                {isPreparing && (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                    <Clock className="w-2.5 h-2.5 text-amber-600" />
-                    Preparing
-                  </span>
-                )}
-                {isReadyForPickup && (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 border border-blue-300">
-                    <Package className="w-2.5 h-2.5 text-blue-600" />
-                    Ready
-                  </span>
-                )}
-                {isOutOfShop && (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 animate-pulse">
-                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
-                    Handed Over
-                  </span>
-                )}
-                {!isPickupStage && (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded bg-slate-200 text-slate-700">
-                    <Check className="w-2.5 h-2.5" />
-                    Collected
-                  </span>
-                )}
-              </div>
-
-              <h3 className="text-sm font-black text-slate-900 truncate">
-                {activeOrder.restaurantName}
-              </h3>
-              <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">
-                {activeOrder.restaurantAddress}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Pickup Action Buttons */}
-        <div className="flex gap-2 pt-1">
-          <a
-            href="tel:8217649688"
-            className="flex-1 py-2 bg-white border border-emerald-300 text-emerald-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs hover:bg-emerald-50 active:scale-95 transition-all"
+        {/* Clean Payout Badge */}
+        <div
+          className={`flex items-baseline gap-1.5 px-3.5 py-1.5 rounded-xl border shadow-2xs ${
+            isPickupStage
+              ? 'bg-emerald-50 border-emerald-200/90 text-emerald-800'
+              : 'bg-blue-50 border-blue-200/90 text-blue-800'
+          }`}
+        >
+          <span className="text-[10px] font-black uppercase tracking-wider">
+            Payout
+          </span>
+          <span
+            className={`text-xl font-black font-mono ${
+              isPickupStage ? 'text-emerald-600' : 'text-blue-600'
+            }`}
           >
-            <Phone className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Call Store</span>
-          </a>
-
-          {canNavShop ? (
-            <button
-              type="button"
-              onClick={() =>
-                openGoogleMapsNavigation(
-                  activeOrder.shopLocation?.lat,
-                  activeOrder.shopLocation?.lng,
-                  activeOrder.restaurantAddress
-                )
-              }
-              className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer transition-all"
-            >
-              <Navigation className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Navigate to Shop</span>
-              <ExternalLink className="w-3 h-3 text-slate-400" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="flex-1 py-2 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-200 cursor-not-allowed"
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
-              <span>Location unavailable</span>
-            </button>
-          )}
+            ₹{activeOrder.earnings || 45}
+          </span>
         </div>
       </div>
 
-      {/* ── 2. DELIVERY PROGRESS SCOOTER ANIMATION ── */}
-      <DeliveryProgressScooter order={activeOrder} />
+      {/* ────────────────────────────────────────────────────────────────── */}
+      {/* ── PHASE 1: PICKUP STAGE (Direct, Clean, No Nested Box) ── */}
+      {/* ────────────────────────────────────────────────────────────────── */}
+      {isPickupStage ? (
+        <div className="space-y-4">
+          {/* Store Name, Address & Trip Metadata */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
+                Pick Up Food At
+              </span>
 
-      {/* ── 3. DELIVERY SECTION (Privacy-conscious) ── */}
-      <div
-        className={`rounded-2xl p-3.5 border transition-all ${
-          !isPickupStage
-            ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/15 shadow-xs'
-            : 'bg-slate-50/80 border-slate-200/80'
-        }`}
-      >
-        <div className="flex items-start justify-between gap-2 mb-2.5">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                !isPickupStage
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-200 text-slate-600'
-              }`}
-            >
-              <MapPin className="w-4 h-4" />
+              {/* Status Indicator */}
+              {isPreparing && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                  <Clock className="w-3 h-3 text-amber-700 animate-spin" />
+                  Preparing Food
+                </span>
+              )}
+              {isReadyForPickup && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs">
+                  <Package className="w-3 h-3 text-blue-700" />
+                  Ready at Counter
+                </span>
+              )}
+              {isOutOfShop && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-2xs animate-pulse">
+                  <Check className="w-3 h-3 text-emerald-700 stroke-[3]" />
+                  Store Handed Over
+                </span>
+              )}
             </div>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  Delivery Location
-                </span>
-                {isArrivedAtCustomer && (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded bg-purple-100 text-purple-900 border border-purple-300 animate-pulse">
-                    <CheckCircle2 className="w-2.5 h-2.5 text-purple-600" />
-                    At Doorstep
-                  </span>
-                )}
-                {isOutForDelivery && (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    <Navigation className="w-2.5 h-2.5 text-emerald-600" />
-                    In Transit
-                  </span>
-                )}
-              </div>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+              {activeOrder.restaurantName}
+            </h3>
 
-              <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                {activeOrder.deliveryAddress}
-              </p>
+            <p className="text-xs text-slate-600 font-semibold mt-1 flex items-start gap-1.5">
+              <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{activeOrder.restaurantAddress}</span>
+            </p>
+
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-2.5">
+              <span className="text-slate-800">📍 {activeOrder.distanceKm || 2.2} km trip</span>
+              <span className="text-slate-300">•</span>
+              <span>⏱️ ~{activeOrder.estimatedMinutes || 12} mins</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-emerald-700 font-extrabold">Food Delivery</span>
             </div>
           </div>
-        </div>
 
-        {/* Customer Action Buttons */}
-        <div className="flex gap-2 pt-1">
-          {activeOrder.customerPhone ? (
+          {/* High-Impact Action Buttons (Call Store + Navigate) */}
+          <div className="grid grid-cols-3 gap-2.5 pt-1">
             <a
-              href={`tel:${activeOrder.customerPhone}`}
-              className="flex-1 py-2 bg-white border border-blue-300 text-blue-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs hover:bg-blue-50 active:scale-95 transition-all"
+              href={`tel:${storePhone}`}
+              className="col-span-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-2xl border border-slate-300/80 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
             >
-              <Phone className="w-3.5 h-3.5 text-blue-600" />
-              <span>Call Customer</span>
+              <Phone className="w-4 h-4 text-slate-700" />
+              <span>Call Store</span>
             </a>
-          ) : (
-            <button
-              disabled
-              className="flex-1 py-2 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-200 cursor-not-allowed"
-            >
-              <Phone className="w-3.5 h-3.5 text-slate-400" />
-              <span>Call Customer</span>
-            </button>
-          )}
 
-          {canNavCust ? (
-            <button
-              type="button"
-              onClick={() =>
-                openGoogleMapsNavigation(
-                  activeOrder.customerLocation?.lat,
-                  activeOrder.customerLocation?.lng,
-                  activeOrder.deliveryAddress
-                )
-              }
-              className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer transition-all"
-            >
-              <Navigation className="w-3.5 h-3.5 text-blue-400" />
-              <span>Navigate to Delivery</span>
-              <ExternalLink className="w-3 h-3 text-slate-400" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="flex-1 py-2 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-200 cursor-not-allowed"
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
-              <span>Location unavailable</span>
-            </button>
-          )}
+            {canNavShop ? (
+              <button
+                type="button"
+                onClick={() =>
+                  openGoogleMapsNavigation(
+                    activeOrder.shopLocation?.lat,
+                    activeOrder.shopLocation?.lng,
+                    activeOrder.restaurantAddress
+                  )
+                }
+                className="col-span-2 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 active:scale-95 cursor-pointer transition-all tracking-wider"
+              >
+                <Navigation className="w-4 h-4 fill-white" />
+                <span>Navigate to Store</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="col-span-2 py-3.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200"
+              >
+                <span>Location Unavailable</span>
+              </button>
+            )}
+          </div>
+
+          {/* Progression Slider or Live Packing Status */}
+          <div className="pt-1">
+            {isPreparing ? (
+              <div className="w-full py-3.5 bg-amber-50/90 border border-amber-200 text-amber-900 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-2xs">
+                <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                <span>Waiting for merchant to pack order...</span>
+              </div>
+            ) : isReadyForPickup ? (
+              <div className="w-full py-3.5 bg-blue-50/90 border border-blue-200 text-blue-900 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-2xs">
+                <Package className="w-4 h-4 text-blue-600" />
+                <span>Order packed • Awaiting store handover</span>
+              </div>
+            ) : isOutOfShop ? (
+              <SlideButton
+                label="SLIDE TO CONFIRM PICKUP"
+                variant="emerald"
+                onConfirm={onMarkPickedUp}
+              />
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ────────────────────────────────────────────────────────────────── */
+        /* ── PHASE 2: DELIVERY STAGE (Direct, Clean, No Nested Box) ── */
+        /* ────────────────────────────────────────────────────────────────── */
+        <div className="space-y-4">
+          {/* Destination Customer Address & Details */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700">
+                Deliver To Customer
+              </span>
 
-      {/* ── 4. STAGE-SPECIFIC PROGRESSION BUTTON (Exact Handshake & OTP Logic) ── */}
-      <div>
-        {isPreparing ? (
-          <button
-            disabled
-            className="w-full py-4 bg-amber-100 text-amber-900 font-bold text-xs rounded-2xl border border-amber-300 flex items-center justify-center gap-2 cursor-not-allowed opacity-90"
-          >
-            <Clock className="w-4 h-4 text-amber-700 animate-spin" />
-            <span>WAITING FOR MERCHANT TO PACK ORDER...</span>
-          </button>
-        ) : isReadyForPickup ? (
-          <button
-            disabled
-            className="w-full py-4 bg-blue-100 text-blue-900 font-bold text-xs rounded-2xl border border-blue-300 flex items-center justify-center gap-2 cursor-not-allowed opacity-90"
-          >
-            <Package className="w-4 h-4 text-blue-700" />
-            <span>ORDER PACKED • WAITING FOR MERCHANT HANDOVER</span>
-          </button>
-        ) : isOutOfShop ? (
-          <button
-            onClick={onMarkPickedUp}
-            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-2xl ring-4 ring-emerald-400/30 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer animate-pulse"
-          >
-            <Check className="w-5 h-5 stroke-[3]" />
-            <span>CONFIRM PARCEL PICKED UP ➔</span>
-          </button>
-        ) : isOutForDelivery ? (
-          <button
-            onClick={onAdvanceStatus}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <MapPin className="w-5 h-5" />
-            <span>ARRIVED AT CUSTOMER LOCATION ➔</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => router.push('/confirm-delivery')}
-            className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black text-sm rounded-2xl shadow-xl transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer animate-pulse"
-          >
-            <ShieldCheck className="w-5 h-5" />
-            <span>ENTER 4-DIGIT PIN TO COMPLETE ➔</span>
-          </button>
-        )}
-      </div>
+              {/* Status Indicator */}
+              {isOutForDelivery && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs">
+                  <Navigation className="w-3 h-3 text-blue-700" />
+                  In Transit
+                </span>
+              )}
+              {isArrivedAtCustomer && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs animate-pulse">
+                  <MapPin className="w-3 h-3 text-purple-700" />
+                  At Doorstep
+                </span>
+              )}
+            </div>
+
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+              {activeOrder.deliveryAddress}
+            </h3>
+
+            <p className="text-xs text-slate-700 font-semibold mt-1 flex items-start gap-1.5">
+              <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <span>Customer: <strong className="text-slate-900">{activeOrder.customerName || 'Customer'}</strong></span>
+            </p>
+
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-2.5">
+              <span>Picked up from {activeOrder.restaurantName}</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-blue-700 font-extrabold">Drop-off Stage</span>
+            </div>
+          </div>
+
+          {/* High-Impact Action Buttons (Call Customer + Navigate) */}
+          <div className="grid grid-cols-3 gap-2.5 pt-1">
+            {activeOrder.customerPhone ? (
+              <a
+                href={`tel:${activeOrder.customerPhone}`}
+                className="col-span-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-2xl border border-slate-300/80 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <Phone className="w-4 h-4 text-slate-700" />
+                <span>Call Customer</span>
+              </a>
+            ) : (
+              <button
+                disabled
+                className="col-span-1 py-3.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200"
+              >
+                <Phone className="w-4 h-4 text-slate-400" />
+                <span>Call</span>
+              </button>
+            )}
+
+            {canNavCust ? (
+              <button
+                type="button"
+                onClick={() =>
+                  openGoogleMapsNavigation(
+                    activeOrder.customerLocation?.lat,
+                    activeOrder.customerLocation?.lng,
+                    activeOrder.deliveryAddress
+                  )
+                }
+                className="col-span-2 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 border border-blue-500 ring-2 ring-blue-400/30 active:scale-95 cursor-pointer transition-all tracking-wider"
+              >
+                <Navigation className="w-4 h-4 fill-white" />
+                <span>Navigate to Delivery</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="col-span-2 py-3.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200"
+              >
+                <span>Location Unavailable</span>
+              </button>
+            )}
+          </div>
+
+          {/* Progression Slider Action */}
+          <div className="pt-1">
+            {isOutForDelivery ? (
+              <SlideButton
+                label="SLIDE: ARRIVED AT CUSTOMER"
+                variant="blue"
+                onConfirm={onAdvanceStatus}
+              />
+            ) : (
+              <SlideButton
+                label="SLIDE TO ENTER DELIVERY PIN"
+                variant="purple"
+                icon={<ShieldCheck className="w-5 h-5 text-white stroke-[2.5]" />}
+                onConfirm={() => router.push('/confirm-delivery')}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

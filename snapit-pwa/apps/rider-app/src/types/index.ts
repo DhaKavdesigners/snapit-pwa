@@ -32,6 +32,7 @@ export interface Order {
   customerAvatar?: string;
   restaurantName: string;
   restaurantAddress: string;
+  shopPhone?: string;
   deliveryAddress: string;
   distanceKm: number;
   estimatedMinutes: number;
