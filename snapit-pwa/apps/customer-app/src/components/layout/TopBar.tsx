@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 
 const WELCOME_PROMPTS = [
   "What are we getting today?",
-  "Our KGF essentials in 10 mins ",
+  "Our KGF essentials delivered to your door ",
   "Fresh fruits, veggies & more ",
   "Cravings sorted in a snap ",
   "Farm-fresh produce at your door ",

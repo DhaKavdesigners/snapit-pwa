@@ -1,17 +1,23 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
+import { useContextStore } from '../../store/contextStore';
+import { useAuthStore } from '../../store/authStore';
 import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
 import { useAllProducts } from '../../api/queries';
 import { formatCurrency } from '../../utils/currency';
-import { Plus, Minus, ArrowRight, ShoppingBag, Sparkles, Clock, Zap, Store } from 'lucide-react';
+import { Plus, Minus, ArrowRight, ShoppingBag, Sparkles, Clock, Zap, Store, UtensilsCrossed, Lock, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { calculateDeliveryFee } from '../../../../../common_logic/deliveryLogic';
 
 export const CartView: React.FC = () => {
   const { items, updateQuantity } = useCartStore();
+  const { activeContext, setContext } = useContextStore();
+  const { isLoggedIn, userProfile } = useAuthStore();
   const { data: allProducts = [...mockShoppingProducts, ...mockFoodProducts] } = useAllProducts();
   const navigate = useNavigate();
+
+  const isRegistered = isLoggedIn && !!userProfile;
 
   const cartItemsWithDetails = items.map(item => ({
     ...item,
@@ -22,11 +28,15 @@ export const CartView: React.FC = () => {
   const deliveryFee = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feePaise;
   const total       = itemTotal + deliveryFee;
 
-  // ── Empty Cart — Baby Mascot Hero ─────────────────────────
+  // Detect food mode: context is food OR any item in cart belongs to a food store (storeId starts with 'f')
+  const isFoodMode = activeContext === 'food' ||
+    cartItemsWithDetails.some(item => (item.product?.storeId || '').startsWith('f'));
+
+  // ── Empty Cart — Context-aware Mascot Hero ─────────────────────────────────
   if (items.length === 0) {
     return (
       <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-emerald-50/60 via-white to-gray-50 items-center justify-center px-6 pb-28 pt-10">
-        {/* Baby waiting illustration */}
+        {/* Mascot waiting illustration */}
         <motion.div
           initial={{ opacity: 0, y: 24, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -34,8 +44,8 @@ export const CartView: React.FC = () => {
           className="relative w-52 h-52 mb-6"
         >
           <img
-            src="/baby/empty_wating.jpg"
-            alt="Baby waiting with empty basket"
+            src={isFoodMode ? '/baby/boy_waiting_for_food.jpg' : '/baby/empty_wating.jpg'}
+            alt={isFoodMode ? 'Milo waiting for food order' : 'Catie waiting with empty basket'}
             className="w-full h-full object-contain drop-shadow-xl"
           />
           {/* Floating speech bubble */}
@@ -45,7 +55,9 @@ export const CartView: React.FC = () => {
             transition={{ delay: 0.5, type: 'spring', stiffness: 380 }}
             className="absolute -top-2 -right-4 bg-white rounded-2xl rounded-br-sm px-3 py-1.5 shadow-lg border border-emerald-100"
           >
-            <p className="text-[11px] font-black text-emerald-700 whitespace-nowrap">Let's shop, Mama! 🛒</p>
+            <p className="text-[11px] font-black text-emerald-700 whitespace-nowrap">
+              {isFoodMode ? 'What shall we eat? 🍔' : "Let's go shopping! 🛒"}
+            </p>
           </motion.div>
         </motion.div>
 
@@ -55,9 +67,13 @@ export const CartView: React.FC = () => {
           transition={{ delay: 0.25 }}
           className="text-center"
         >
-          <h2 className="font-black text-2xl text-gray-900 tracking-tight mb-2">Your basket is empty</h2>
+          <h2 className="font-black text-2xl text-gray-900 tracking-tight mb-2">
+            {isFoodMode ? 'No food ordered yet' : 'Your basket is empty'}
+          </h2>
           <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-[240px] mx-auto">
-            She's patiently waiting to carry your groceries 💚
+            {isFoodMode
+              ? 'Milo is hungry and waiting for your order! 🍽️'
+              : 'Catie is patiently waiting to fill the basket 💚'}
           </p>
         </motion.div>
 
@@ -66,11 +82,15 @@ export const CartView: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/')}
-          className="mt-8 flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-brand text-white font-black text-sm px-7 py-4 rounded-2xl shadow-lg shadow-emerald-500/30 uppercase tracking-wider"
+          onClick={() => {
+            if (isFoodMode) setContext('food');
+            else setContext('shopping');
+            navigate('/');
+          }}
+          className="mt-8 flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-brand text-white font-black text-sm px-7 py-4 rounded-2xl shadow-lg shadow-emerald-500/30 uppercase tracking-wider cursor-pointer"
         >
-          <ShoppingBag className="w-4 h-4" />
-          Explore Stores
+          {isFoodMode ? <UtensilsCrossed className="w-4 h-4" /> : <ShoppingBag className="w-4 h-4" />}
+          {isFoodMode ? 'Browse Food' : 'Explore Stores'}
         </motion.button>
       </div>
     );
@@ -82,7 +102,7 @@ export const CartView: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col relative pb-36">
       <div className="flex-1 p-4 pt-3">
-        {/* ── Ready-to-checkout baby banner — appears when cart has 3+ items */}
+        {/* ── Ready-to-checkout banner — Catie or Milo based on context */}
         <AnimatePresence>
           {isReadyForCheckout && (
             <motion.div
@@ -94,13 +114,17 @@ export const CartView: React.FC = () => {
               className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl px-4 py-3 mb-4 shadow-sm overflow-hidden relative"
             >
               <img
-                src="/baby/ready_to_checkout.jpg"
+                src={isFoodMode ? '/baby/boy_ready_to_checkout.jpg' : '/baby/ready_to_checkout.jpg'}
                 alt="Ready to checkout"
                 className="w-14 h-14 object-contain object-bottom shrink-0 -mb-3"
               />
               <div className="flex-1 min-w-0">
-                <p className="font-black text-sm text-emerald-900">All set! She's ready 🎉</p>
-                <p className="text-[11px] text-emerald-700 font-medium mt-0.5">Basket is packed — checkout when you are!</p>
+                <p className="font-black text-sm text-emerald-900">
+                  {isFoodMode ? 'All set! Milo says order up! 🎉' : 'All set! Basket is packed! 🎉'}
+                </p>
+                <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+                  {isFoodMode ? 'Your feast is ready — checkout now!' : 'Ready to go — checkout when you are!'}
+                </p>
               </div>
               <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
             </motion.div>
@@ -127,19 +151,19 @@ export const CartView: React.FC = () => {
           </div>
         )}
 
-        {/* ⚡ Lightning Delivery Promise Banner */}
-        <div className="bg-gradient-to-r from-emerald-500 via-brand to-teal-600 text-white rounded-2xl p-3.5 shadow-md shadow-emerald-500/20 mb-5 flex items-center justify-between">
+        {/* 🛍️ Direct Local Store Delivery Banner */}
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl p-3.5 shadow-md shadow-emerald-600/15 mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
-              <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+              <Store className="w-4 h-4 text-emerald-200" />
             </div>
             <div>
-              <p className="text-xs font-black tracking-wide leading-tight">Instant 10-15 Min Delivery</p>
-              <p className="text-[10px] text-emerald-100">Direct from local stores in KGF</p>
+              <p className="text-xs font-black tracking-wide leading-tight">Direct Local Store Delivery</p>
+              <p className="text-[10px] text-emerald-100 font-medium">Freshly picked & delivered from verified KGF stores</p>
             </div>
           </div>
           <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full uppercase tracking-wider">
-            Superfast
+            Local Drop
           </span>
         </div>
 
@@ -255,16 +279,54 @@ export const CartView: React.FC = () => {
           </div>
         </div>
 
+        {/* Where should we deliver prompt with direct Sign Up option */}
+        {!isRegistered && (
+          <div 
+            onClick={() => navigate('/profile?redirect=/cart')}
+            className="flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 via-white to-teal-50 border border-emerald-200/90 rounded-2xl px-4 py-2.5 mb-2.5 shadow-2xs cursor-pointer hover:border-emerald-300 transition-all active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-emerald-950 leading-tight">Where should we deliver?</p>
+                <p className="text-[10px] text-emerald-700 font-medium leading-tight mt-0.5">Quick address setup to receive your order</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); navigate('/profile?redirect=/cart'); }}
+              className="bg-emerald-600 text-white text-[11px] font-black px-3.5 py-1.5 rounded-xl uppercase tracking-wider shrink-0 shadow-2xs hover:bg-emerald-700 transition-colors cursor-pointer"
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
+
         <button
           disabled={hasOfflineItems}
           className={`w-full h-14 font-black text-sm rounded-2xl transition-all flex items-center justify-between px-6 uppercase tracking-wider ${
             hasOfflineItems 
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-              : 'bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_30px_rgba(5,150,105,0.5)] active:scale-[0.98]'
+              : 'bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_30px_rgba(5,150,105,0.5)] active:scale-[0.98] cursor-pointer'
           }`}
-          onClick={() => !hasOfflineItems && navigate('/checkout')}
+          onClick={() => {
+            if (hasOfflineItems) return;
+            if (!isRegistered) {
+              navigate('/profile?redirect=/cart');
+            } else {
+              navigate('/checkout');
+            }
+          }}
         >
-          <span>{hasOfflineItems ? 'Store is Offline' : 'Proceed to Checkout'}</span>
+          <span>
+            {hasOfflineItems 
+              ? 'Store is Offline' 
+              : !isRegistered 
+                ? 'Add Delivery Address & Order' 
+                : 'Proceed to Checkout'}
+          </span>
           <div className="flex items-center gap-2">
             <span className="font-mono">{formatCurrency(total)}</span>
             {!hasOfflineItems && <ArrowRight className="h-5 w-5 animate-pulse" />}

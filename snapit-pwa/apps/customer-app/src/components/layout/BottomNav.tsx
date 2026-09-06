@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { motion, useAnimation } from 'framer-motion';
 import { useCartStore } from '../../store/cartStore';
+import { useContextStore } from '../../store/contextStore';
 
 interface NavItem {
   path: string;
@@ -12,14 +13,18 @@ interface NavItem {
   activeTextColor?: string;
 }
 
-/** Animated baby mascot icon for the Cart tab */
-const BabyCartIcon: React.FC<{ isActive: boolean; cartCount: number }> = ({ isActive, cartCount }) => {
+/** Animated baby mascot icon for the Cart tab
+ *  Catie (girl) = Shopping mode  |  Milo (boy) = Food mode */
+const BabyCartIcon: React.FC<{ isActive: boolean; cartCount: number; isFood: boolean }> = ({
+  isActive,
+  cartCount,
+  isFood,
+}) => {
   const controls = useAnimation();
   const prevCount = useRef(cartCount);
 
   useEffect(() => {
     if (cartCount > prevCount.current) {
-      // Bounce-up delight animation when item is added (sequential async)
       (async () => {
         await controls.start({ scale: 1.35, rotate: -8, transition: { duration: 0.12, ease: 'easeOut' } });
         await controls.start({ scale: 0.9, rotate: 6, transition: { duration: 0.1 } });
@@ -30,13 +35,19 @@ const BabyCartIcon: React.FC<{ isActive: boolean; cartCount: number }> = ({ isAc
     prevCount.current = cartCount;
   }, [cartCount, controls]);
 
-  const img = cartCount > 0 ? '/baby/cart_with_item.jpg' : '/baby/cart_empty.jpg';
-  const label = cartCount > 0 ? 'Basket full!' : 'Waiting for Mama…';
+  // Catie (girl) for shopping, Milo (boy) for food
+  const img = isFood
+    ? cartCount > 0 ? '/baby/boy_cart_with_item.jpg' : '/baby/boy_cart_empty_food.jpg'
+    : cartCount > 0 ? '/baby/cart_with_item.jpg' : '/baby/cart_empty.jpg';
+
+  const label = isFood
+    ? cartCount > 0 ? 'Milo — food order ready!' : 'Milo waiting for your food order'
+    : cartCount > 0 ? 'Catie — basket is packed!' : 'Catie is waiting patiently';
 
   return (
     <motion.div animate={controls} className="relative">
       <div
-        className={`w-9 h-9 rounded-full overflow-hidden border-2 shadow-sm transition-all duration-200 ${
+        className={`w-9 h-9 rounded-full overflow-hidden border-2 shadow-sm transition-all duration-300 ${
           isActive
             ? 'border-emerald-500 shadow-emerald-200 ring-2 ring-emerald-300/50'
             : cartCount > 0
@@ -139,9 +150,11 @@ const navItems: NavItem[] = [
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
+  const { activeContext } = useContextStore();
   const cartItemsCount = useCartStore((state) =>
     state.items.reduce((acc, item) => acc + item.quantity, 0)
   );
+  const isFoodMode = activeContext === 'food';
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-gray-100/90 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] pb-safe z-50">
@@ -158,9 +171,9 @@ export const BottomNav: React.FC = () => {
               className="relative flex flex-col items-center justify-center flex-1 h-full py-0.5 select-none transition-transform active:scale-95 group"
               aria-label={item.label}
             >
-              {/* Cart tab: baby mascot icon */}
+              {/* Cart tab: Catie (shopping) or Milo (food) baby mascot */}
               {item.path === '/cart' ? (
-                <BabyCartIcon isActive={isActive} cartCount={cartItemsCount} />
+                <BabyCartIcon isActive={isActive} cartCount={cartItemsCount} isFood={isFoodMode} />
               ) : (
                 /* All other tabs: standard circular pill icon */
                 <div

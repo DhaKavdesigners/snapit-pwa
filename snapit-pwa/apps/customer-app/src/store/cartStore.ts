@@ -6,6 +6,7 @@ export interface LastOrder {
   total: number;       // in paise
   itemNames: string[]; // product names at time of order
   paymentMethod: 'upi' | 'upiDelivery';
+  isFood?: boolean;
 }
 
 interface CartState {

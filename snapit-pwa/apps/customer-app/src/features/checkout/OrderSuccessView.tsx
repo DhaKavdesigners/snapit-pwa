@@ -53,6 +53,8 @@ export const OrderSuccessView: React.FC = () => {
   const top2Items  = itemNames.slice(0, 2);
   const extraCount = itemNames.length - top2Items.length;
 
+  const isFoodOrder = lastOrder?.isFood ?? false;
+
   return (
     <div className="max-w-md mx-auto relative flex flex-col min-h-screen bg-gradient-to-b from-emerald-600 via-brand to-emerald-900 overflow-hidden text-white shadow-2xl">
       {confettiParticles.map((p) => (
@@ -174,7 +176,7 @@ export const OrderSuccessView: React.FC = () => {
           </button>
         </motion.div>
 
-        {/* ⑥ Baby "order on the way" floating mascot card */}
+        {/* ⑥ Mascot "order on the way" floating mascot card */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -182,14 +184,18 @@ export const OrderSuccessView: React.FC = () => {
           className="w-full mt-5 flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-3 overflow-hidden"
         >
           <img
-            src="/baby/order_on_the_toast.jpg"
-            alt="Your order is on its way"
+            src={isFoodOrder ? "/baby/boy_ready_to_checkout.jpg" : "/baby/order_on_the_toast.jpg"}
+            alt={isFoodOrder ? "Milo food order" : "Catie grocery order"}
             className="w-14 h-14 object-contain rounded-xl shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <p className="font-black text-sm text-white">Your order is on its way! 🚀</p>
+            <p className="font-black text-sm text-white">
+              {isFoodOrder ? "Your food is on its way! 🍽️" : "Your order is on its way! 🚀"}
+            </p>
             <p className="text-[11px] text-emerald-200 font-medium mt-0.5">
-              She waved goodbye to the rider — 10-15 mins!
+              {isFoodOrder
+                ? "Milo says your delicious meal is being rushed to your doorstep!"
+                : "Catie waved goodbye to the rider — on the way to your door!"}
             </p>
           </div>
           <Zap className="w-4 h-4 text-amber-300 fill-amber-300 shrink-0 animate-pulse" />

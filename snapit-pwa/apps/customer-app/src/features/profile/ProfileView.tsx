@@ -106,6 +106,10 @@ export const ProfileView: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTarget = searchParams.get('redirect') || (location.state as any)?.from;
+  const isFromOrderFlow = redirectTarget === '/cart' || redirectTarget === '/checkout';
+
   // If already registered, skip straight to dashboard.
   // Populate formData from persisted profile so the dashboard has the right name/phone.
   const [step, setStep] = useState<RegistrationStep>(
@@ -551,8 +555,15 @@ export const ProfileView: React.FC = () => {
       if (error) throw error;
 
       // 2. Persist user to global store
-      register(formData);
+      await register(formData);
       setShowOtpModal(false);
+
+      // If user came from cart / order flow because they tried to order without login, return immediately to cart:
+      if (redirectTarget) {
+        navigate(redirectTarget, { replace: true });
+        return;
+      }
+
       setStep('success');
     } catch (err: any) {
       console.error("Failed to register user to Supabase:", err);
@@ -577,6 +588,24 @@ export const ProfileView: React.FC = () => {
         <h2 className="font-black text-2xl text-text-primary mb-1 tracking-tight">Profile Registration</h2>
         <p className="text-text-secondary text-sm">Create your Minnit account</p>
       </div>
+
+      {isFromOrderFlow && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/90 rounded-2xl p-3.5 shadow-xs"
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <ShoppingBag className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-black text-xs text-emerald-900 leading-tight">Almost ready to place your order!</p>
+            <p className="text-[11px] text-emerald-700 font-medium leading-tight mt-0.5">
+              Please register your profile & delivery address. You will return directly to your cart to complete your order.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       <div className="space-y-4 bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
         
@@ -697,11 +726,27 @@ export const ProfileView: React.FC = () => {
         </div>
 
         <button 
-          onClick={() => { setStep('dashboard'); navigate('/'); }}
-          className="w-full h-14 text-sm font-black text-white bg-gradient-to-r from-emerald-500 to-brand shadow-[0_8px_20px_rgba(5,150,105,0.35)] hover:shadow-[0_10px_28px_rgba(5,150,105,0.45)] hover:scale-[1.02] transition-all rounded-2xl flex items-center justify-center gap-2 uppercase tracking-widest"
+          onClick={() => {
+            setStep('dashboard');
+            if (redirectTarget) {
+              navigate(redirectTarget, { replace: true });
+            } else {
+              navigate('/');
+            }
+          }}
+          className="w-full h-14 text-sm font-black text-white bg-gradient-to-r from-emerald-500 to-brand shadow-[0_8px_20px_rgba(5,150,105,0.35)] hover:shadow-[0_10px_28px_rgba(5,150,105,0.45)] hover:scale-[1.02] transition-all rounded-2xl flex items-center justify-center gap-2 uppercase tracking-widest cursor-pointer"
         >
-          <ShoppingBag className="w-5 h-5" />
-          Continue Shopping
+          {redirectTarget ? (
+            <>
+              <span>{redirectTarget === '/cart' ? 'Return to Cart' : 'Proceed to Checkout'}</span>
+              <ArrowRight className="w-5 h-5" />
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="w-5 h-5" />
+              <span>Continue Shopping</span>
+            </>
+          )}
         </button>
       </motion.div>
     </motion.div>
@@ -1022,6 +1067,27 @@ export const ProfileView: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Return to Cart/Checkout prompt if user was directed here to verify profile */}
+        {isFromOrderFlow && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-emerald-600 via-brand to-teal-700 rounded-3xl p-4 text-white shadow-lg flex items-center justify-between gap-3 mb-5"
+          >
+            <div>
+              <p className="font-black text-sm">Profile verified & active!</p>
+              <p className="text-xs text-emerald-100 mt-0.5">Ready to complete your pending order?</p>
+            </div>
+            <button
+              onClick={() => navigate(redirectTarget || '/cart')}
+              className="bg-white text-emerald-800 font-black text-xs px-4 py-2.5 rounded-xl shadow-md uppercase tracking-wider shrink-0 hover:bg-emerald-50 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>{redirectTarget === '/checkout' ? 'Checkout' : 'Back to Cart'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
 
         {/* ── 2×2 Action tiles ── */}
         <div className="grid grid-cols-2 gap-3.5 mb-5">

@@ -3,7 +3,8 @@ import { Product } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { useCartStore } from '../store/cartStore';
 import { useFavoritesStore } from '../store/favoritesStore';
-import { useBabyToastStore } from '../store/babyToastStore';
+import { useBabyToastStore, detectFoodToastType } from '../store/babyToastStore';
+import { useContextStore } from '../store/contextStore';
 import { Plus, Minus, Heart } from 'lucide-react';
 import { Button } from './ui/Button';
 import { motion } from 'framer-motion';
@@ -18,9 +19,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
   const { items, addItem, updateQuantity } = useCartStore();
   const { isFavorite, toggleFavorite } = useFavoritesStore();
   const { showToast } = useBabyToastStore();
+  const { activeContext } = useContextStore();
   const cartItem = items.find((i) => i.productId === product.id);
   const quantity = cartItem?.quantity || 0;
   const [imgSrc, setImgSrc] = useState(product.imageUrl);
+
+  // Detect if this product is food (storeId starts with 'f' or context is 'food')
+  const isFoodProduct = activeContext === 'food' || (product.storeId || '').startsWith('f');
 
   const stock = product.stockCount !== undefined ? product.stockCount : 99;
   const isStoreClosed = product.storeIsOpen === false;
@@ -86,7 +91,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
             const wasAlreadyFav = isFavorite(product.id);
             toggleFavorite(product.id);
             if (!wasAlreadyFav) {
-              showToast('favourite_saved', product.name);
+              showToast(isFoodProduct ? 'food_favourite' : 'favourite_saved', product.name);
             }
           }}
           aria-label={isFavorite(product.id) ? `Remove ${product.name} from favourites` : `Add ${product.name} to favourites`}
@@ -170,12 +175,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
                 const isMoreItems = items.length >= 2;
                 const success = addItem(product.id, stock);
                 if (success) {
-                  if (isFirstEverItem) {
-                    showToast('item_added_first', product.name);
-                  } else if (isMoreItems) {
-                    showToast('more_item', product.name);
+                  if (isFoodProduct) {
+                    // Milo (food boy) toasts — smart food name detection
+                    showToast(detectFoodToastType(product.name, isFirstEverItem, isMoreItems), product.name);
                   } else {
-                    showToast('item_added', product.name);
+                    // Catie (shopping girl) toasts
+                    if (isFirstEverItem) {
+                      showToast('item_added_first', product.name);
+                    } else if (isMoreItems) {
+                      showToast('more_item', product.name);
+                    } else {
+                      showToast('item_added', product.name);
+                    }
                   }
                 }
               }}

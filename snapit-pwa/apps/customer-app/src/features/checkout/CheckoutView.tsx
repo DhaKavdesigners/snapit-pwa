@@ -71,8 +71,15 @@ type PayMethod = 'online' | 'upiDelivery';
 export const CheckoutView: React.FC = () => {
   const { items, clearCart, saveLastOrder } = useCartStore();
   const { data: allProducts = [...mockShoppingProducts, ...mockFoodProducts] } = useAllProducts();
-  const { userProfile } = useAuthStore();
+  const { isLoggedIn, userProfile } = useAuthStore();
   const navigate = useNavigate();
+
+  // ── AUTH GUARD: Unregistered users cannot checkout or place orders ──
+  React.useEffect(() => {
+    if (!isLoggedIn || !userProfile) {
+      navigate('/profile?redirect=/checkout', { replace: true });
+    }
+  }, [isLoggedIn, userProfile, navigate]);
   
   const [paymentMethod, setPaymentMethod] = useState<PayMethod>('online');
   const [useCurrentLocation, setUseCurrentLocation] = useState(true);
@@ -125,6 +132,11 @@ export const CheckoutView: React.FC = () => {
 
   const handlePlaceOrder = async () => {
     if (isSubmitting) return;
+    if (!isLoggedIn || !userProfile) {
+      alert('Please register and verify your profile before placing an order.');
+      navigate('/profile?redirect=/checkout');
+      return;
+    }
     setIsSubmitting(true);
     orderPlacedRef.current = true;
     
@@ -207,11 +219,13 @@ export const CheckoutView: React.FC = () => {
       console.error("Order sync exception:", err);
     } finally {
       // 2. Persist last order details for the celebratory success screen
+      const isFoodOrder = cartItemsWithDetails.some(i => (i.product?.storeId || '').startsWith('f'));
       saveLastOrder({
         orderId: displayId,
         total,
         itemNames: cartItemsWithDetails.map(i => i.product!.name),
         paymentMethod: 'upi',
+        isFood: isFoodOrder,
       });
       
       clearCart();
@@ -236,6 +250,26 @@ export const CheckoutView: React.FC = () => {
     }
   }, [items.length, navigate]);
 
+  if (!isLoggedIn || !userProfile) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4 border border-emerald-100">
+          <Lock className="w-8 h-8 text-emerald-600 animate-pulse" />
+        </div>
+        <h2 className="font-black text-xl text-gray-900 mb-1">Registration Required</h2>
+        <p className="text-xs text-gray-500 max-w-xs mb-6 font-medium">
+          Please register your profile & delivery address before placing an order.
+        </p>
+        <button
+          onClick={() => navigate('/profile?redirect=/checkout')}
+          className="bg-emerald-600 text-white font-black text-xs px-6 py-3 rounded-xl shadow-md uppercase tracking-wider cursor-pointer hover:bg-emerald-700 active:scale-95 transition-all"
+        >
+          Go to Registration ➔
+        </button>
+      </div>
+    );
+  }
+
   if (items.length === 0 && !orderPlacedRef.current) {
     return null;
   }
@@ -256,7 +290,7 @@ export const CheckoutView: React.FC = () => {
             <h1 className="font-black text-xl text-text-primary tracking-tight">Checkout</h1>
             <p className="text-[10px] text-text-secondary font-bold flex items-center gap-1 text-emerald-700">
               <Sparkles className="w-3 h-3 text-emerald-500" />
-              100% Verified Fast Delivery
+              Direct Local Delivery
             </p>
           </div>
         </div>
@@ -277,7 +311,7 @@ export const CheckoutView: React.FC = () => {
               Delivery Address
             </h2>
             <span className="text-[10px] font-bold bg-brand/10 text-brand px-2 py-0.5 rounded-full uppercase tracking-wider">
-              10-15 Min Drop
+              Doorstep Drop
             </span>
           </div>
           
