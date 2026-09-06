@@ -3,7 +3,11 @@ import { AlertTriangle, Check } from 'lucide-react';
 import { useMerchantStore } from '../../store/useMerchantStore';
 
 export const LowStockWarningBanner: React.FC = () => {
-  const { products, acknowledgedLowStockIds, dismissLowStockAlert } = useMerchantStore();
+  const { products, acknowledgedLowStockIds, dismissLowStockAlert, activeStore } = useMerchantStore();
+
+  // If this store is FOOD category, never show low stock warnings (food outlets do not track numerical inventory stocks)
+  const isFoodCategory = activeStore?.category?.toLowerCase() === 'food' || activeStore?.category?.toLowerCase() === 'restaurant';
+  if (isFoodCategory) return null;
 
   // Find active products with stock <= 5 and > 0 that haven't been acknowledged yet
   const unacknowledgedLowStock = products.filter(

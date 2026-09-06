@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -22,28 +22,44 @@ export const LiveMenuManager: React.FC = () => {
     setEditingProduct,
     setIsAddProductOpen,
     setDeletingProductId,
+    activeStore,
   } = useMerchantStore();
+
+  const isFoodCategory = activeStore?.category?.toLowerCase() === 'food' || activeStore?.category?.toLowerCase() === 'restaurant';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [localStockEdits, setLocalStockEdits] = useState<Record<string, string>>({});
 
+  // If in food category store and LOW_STOCK was previously selected, reset to ALL
+  useEffect(() => {
+    if (isFoodCategory && selectedCategory === 'LOW_STOCK') {
+      setSelectedCategory('ALL');
+    }
+  }, [isFoodCategory, selectedCategory, setSelectedCategory]);
+
   // Dynamically compute category filters based on current store products
   const productCategories = Array.from(new Set(products.map((p) => p.category))).filter(Boolean);
-  const outOfStockCount = products.filter(
-    (p) => p.stockCount === 0 || p.availability === 'OUT OF STOCK' || !p.inStock
-  ).length;
-  const lowStockCount = products.filter(
-    (p) => p.stockCount > 0 && p.stockCount <= 5 && p.availability === 'AVAILABLE' && p.inStock !== false
-  ).length;
+  const outOfStockCount = isFoodCategory
+    ? products.filter((p) => p.availability === 'OUT OF STOCK' || !p.inStock).length
+    : products.filter(
+        (p) => p.stockCount === 0 || p.availability === 'OUT OF STOCK' || !p.inStock
+      ).length;
+  const lowStockCount = isFoodCategory
+    ? 0
+    : products.filter(
+        (p) => p.stockCount > 0 && p.stockCount <= 5 && p.availability === 'AVAILABLE' && p.inStock !== false
+      ).length;
 
   const filteredProducts = products.filter((prod) => {
     let matchesCategory = false;
     if (selectedCategory === 'ALL') {
       matchesCategory = true;
     } else if (selectedCategory === 'OUT_OF_STOCK') {
-      matchesCategory = prod.stockCount === 0 || prod.availability === 'OUT OF STOCK' || !prod.inStock;
+      matchesCategory = isFoodCategory
+        ? (prod.availability === 'OUT OF STOCK' || !prod.inStock)
+        : (prod.stockCount === 0 || prod.availability === 'OUT OF STOCK' || !prod.inStock);
     } else if (selectedCategory === 'LOW_STOCK') {
-      matchesCategory = prod.stockCount > 0 && prod.stockCount <= 5 && prod.availability === 'AVAILABLE' && prod.inStock !== false;
+      matchesCategory = !isFoodCategory && (prod.stockCount > 0 && prod.stockCount <= 5 && prod.availability === 'AVAILABLE' && prod.inStock !== false);
     } else {
       matchesCategory = prod.category.toLowerCase() === selectedCategory.toLowerCase();
     }
@@ -56,6 +72,25 @@ export const LiveMenuManager: React.FC = () => {
   });
 
   const getAvailabilityBadge = (item: ProductInventoryItem) => {
+    // For FOOD category: binary AVAILABLE or OUT OF STOCK only (no stock counts or low stock thresholds)
+    if (isFoodCategory) {
+      if (item.availability === 'AVAILABLE' && item.inStock !== false) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
+            <CheckCircle className="w-3 h-3 text-emerald-600" />
+            AVAILABLE
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-900">
+          <XCircle className="w-3 h-3 text-rose-600" />
+          OUT OF STOCK
+        </span>
+      );
+    }
+
+    // For GROCERY & DAIRY categories: preserve exact existing stock count logic and LOW STOCK badges
     if (item.availability === 'AVAILABLE' && item.stockCount > 5) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
@@ -94,7 +129,7 @@ export const LiveMenuManager: React.FC = () => {
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-            Direct stock editing & availability
+            {isFoodCategory ? 'Food catalog availability & controls' : 'Direct stock editing & availability'}
           </p>
         </div>
 
@@ -161,29 +196,31 @@ export const LiveMenuManager: React.FC = () => {
             )}
           </button>
 
-          {/* LOW STOCK (≤5) Tab */}
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('LOW_STOCK')}
-            className={`px-3 py-1 rounded-xl font-bold uppercase text-[11px] transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
-              selectedCategory === 'LOW_STOCK'
-                ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-500/30'
-                : lowStockCount > 0
-                ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <span>LOW STOCK (≤5)</span>
-            {lowStockCount > 0 && (
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                  selectedCategory === 'LOW_STOCK' ? 'bg-white text-amber-800' : 'bg-amber-500 text-white'
-                }`}
-              >
-                {lowStockCount}
-              </span>
-            )}
-          </button>
+          {/* LOW STOCK (≤5) Tab - Only for Grocery & Dairy categories */}
+          {!isFoodCategory && (
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('LOW_STOCK')}
+              className={`px-3 py-1 rounded-xl font-bold uppercase text-[11px] transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+                selectedCategory === 'LOW_STOCK'
+                  ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-500/30'
+                  : lowStockCount > 0
+                  ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <span>LOW STOCK (≤5)</span>
+              {lowStockCount > 0 && (
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                    selectedCategory === 'LOW_STOCK' ? 'bg-white text-amber-800' : 'bg-amber-500 text-white'
+                  }`}
+                >
+                  {lowStockCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Dynamic Category Tabs */}
           {productCategories.map((cat) => (
@@ -207,7 +244,9 @@ export const LiveMenuManager: React.FC = () => {
       <div className="space-y-3 pt-1 overflow-y-auto max-h-[620px] pr-0.5">
         {filteredProducts.length > 0 ? (
           filteredProducts.map((product) => {
-            const isAvailable = product.availability === 'AVAILABLE' && product.stockCount > 0;
+            const isAvailable = isFoodCategory
+              ? (product.availability === 'AVAILABLE' && product.inStock !== false)
+              : (product.availability === 'AVAILABLE' && product.stockCount > 0);
 
             return (
               <div
@@ -270,55 +309,65 @@ export const LiveMenuManager: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Row 2: Price, Stock Input Box, and Mark Out of Stock Red Block Button (Completely Unblocked!) */}
+                {/* Row 2: Price, Stock Input Box, and Mark Out of Stock / Available Button */}
                 <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
                   {/* Left: Price */}
                   <span className="text-base font-black text-emerald-700 font-sans">
                     {formatCurrency(product.price)}
                   </span>
 
-                  {/* Middle: Stock Editable Input Box */}
-                  <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
-                    <label className="text-xs font-bold text-slate-700">Stock:</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={localStockEdits[product.id] ?? product.stockCount}
-                      onChange={(e) =>
-                        setLocalStockEdits((prev) => ({ ...prev, [product.id]: e.target.value }))
-                      }
-                      onBlur={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val) && val >= 0) {
-                          updateProductStockCount(product.id, val);
+                  {/* Middle: Stock Editable Input Box (ONLY FOR GROCERY & DAIRY, HIDDEN FOR FOOD) */}
+                  {!isFoodCategory && (
+                    <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+                      <label className="text-xs font-bold text-slate-700">Stock:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={localStockEdits[product.id] ?? product.stockCount}
+                        onChange={(e) =>
+                          setLocalStockEdits((prev) => ({ ...prev, [product.id]: e.target.value }))
                         }
-                        setLocalStockEdits((prev) => {
-                          const next = { ...prev };
-                          delete next[product.id];
-                          return next;
-                        });
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
-                      className="w-12 text-center text-xs font-black text-slate-900 bg-white border border-slate-300 rounded-md py-0.5 outline-none shadow-2xs"
-                      placeholder="0"
-                    />
-                  </div>
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val) && val >= 0) {
+                            updateProductStockCount(product.id, val);
+                          }
+                          setLocalStockEdits((prev) => {
+                            const next = { ...prev };
+                            delete next[product.id];
+                            return next;
+                          });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        className="w-12 text-center text-xs font-black text-slate-900 bg-white border border-slate-300 rounded-md py-0.5 outline-none shadow-2xs"
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
 
-                  {/* Right: Red Block Mark Out of Stock Button */}
+                  {/* Right: Mark Out of Stock / Mark Available Toggle Button */}
                   <button
                     type="button"
                     onClick={() => toggleProductStock(product.id)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all active:scale-95 cursor-pointer border shadow-2xs flex-shrink-0 ${
-                      product.stockCount > 0
+                      (isFoodCategory
+                        ? product.availability === 'AVAILABLE' && product.inStock !== false
+                        : product.stockCount > 0)
                         ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
                         : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
                     }`}
                   >
-                    {product.stockCount > 0 ? 'Mark Out of Stock' : 'Mark Available (+50)'}
+                    {(isFoodCategory
+                      ? product.availability === 'AVAILABLE' && product.inStock !== false
+                      : product.stockCount > 0)
+                      ? 'Mark Out of Stock'
+                      : isFoodCategory
+                      ? 'Mark Available'
+                      : 'Mark Available (+50)'}
                   </button>
                 </div>
               </div>

@@ -30,6 +30,7 @@ export const AddEditProductModal: React.FC = () => {
   const [deliveryEta, setDeliveryEta] = useState<number>(15);
 
   // Compute all available categories dynamically
+  const isFoodCategory = activeStore?.category?.toLowerCase() === 'food' || activeStore?.category?.toLowerCase() === 'restaurant';
   const productCategories = Array.from(new Set(products.map((p) => p.category)));
   const allAvailableCategories = Array.from(
     new Set([...productCategories, ...customCategories])
@@ -103,13 +104,16 @@ export const AddEditProductModal: React.FC = () => {
 
     // Convert Rupees input to Integer Paise
     const paise = Math.round((parseFloat(priceRupees) || 0) * 100);
+    const finalStockCount = isFoodCategory
+      ? (availability === 'AVAILABLE' ? 100 : 0)
+      : stockCount;
 
     if (editingProduct) {
       updateProduct(editingProduct.id, {
         name: name.trim(),
         category: finalCategory,
         price: paise,
-        stockCount,
+        stockCount: finalStockCount,
         availability,
         inStock: availability === 'AVAILABLE',
         imageUrl: imageUrl.trim() || editingProduct.imageUrl,
@@ -121,7 +125,7 @@ export const AddEditProductModal: React.FC = () => {
         name: name.trim(),
         category: finalCategory,
         price: paise,
-        stockCount,
+        stockCount: finalStockCount,
         availability,
         inStock: availability === 'AVAILABLE',
         imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop&q=80',
@@ -254,8 +258,8 @@ export const AddEditProductModal: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. Price & Stock */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* 3. Price & Stock (Stock Quantity hidden for FOOD category) */}
+          <div className={isFoodCategory ? 'w-full' : 'grid grid-cols-2 gap-3'}>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Price (₹ Rupees) *
@@ -277,19 +281,21 @@ export const AddEditProductModal: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Stock Quantity
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={stockCount}
-                onChange={(e) => setStockCount(parseInt(e.target.value) || 0)}
-                placeholder="50"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-emerald-600 focus:bg-white rounded-xl text-sm font-bold text-slate-900 outline-none transition-all"
-              />
-            </div>
+            {!isFoodCategory && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Stock Quantity
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={stockCount}
+                  onChange={(e) => setStockCount(parseInt(e.target.value) || 0)}
+                  placeholder="50"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-emerald-600 focus:bg-white rounded-xl text-sm font-bold text-slate-900 outline-none transition-all"
+                />
+              </div>
+            )}
           </div>
 
           {/* 4. Availability Status */}

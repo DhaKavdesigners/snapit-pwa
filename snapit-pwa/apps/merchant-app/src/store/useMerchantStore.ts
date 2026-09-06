@@ -743,8 +743,9 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       prepModalOrderId: null,
     }));
 
-    // Deduct stock in real time for each ordered product
-    if (targetOrder && Array.isArray(targetOrder.items) && targetOrder.items.length > 0) {
+    // Deduct stock in real time for each ordered product (Only for Grocery & Dairy stores; skipped for Food)
+    const isFoodStore = get().activeStore?.category?.toLowerCase() === 'food' || get().activeStore?.category?.toLowerCase() === 'restaurant';
+    if (!isFoodStore && targetOrder && Array.isArray(targetOrder.items) && targetOrder.items.length > 0) {
       const currentProducts = [...get().products];
       const updatedProductsMap = new Map<
         string,
