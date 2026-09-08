@@ -4,6 +4,7 @@ import { TopHeader } from "./TopHeader";
 import { DashboardView } from "../../views/DashboardView";
 import { OrdersControlView } from "../../views/OrdersControlView";
 import { MerchantsView } from "../../views/MerchantsView";
+import { SettlementsView } from "../../views/SettlementsView";
 import { FleetView } from "../../views/FleetView";
 import { CatalogView } from "../../views/CatalogView";
 import { CustomersView } from "../../views/CustomersView";
@@ -11,6 +12,7 @@ import { SettingsView } from "../../views/SettingsView";
 
 export const AdminLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const [selectedStoreForSettlement, setSelectedStoreForSettlement] = useState<string>("ALL");
 
   const titles: Record<AdminTab, { title: string; subtitle: string }> = {
     dashboard: {
@@ -24,6 +26,10 @@ export const AdminLayout: React.FC = () => {
     merchants: {
       title: "Merchants & Store Partners",
       subtitle: "Manage partner grocery stores and restaurants, toggle active status & store catalogs",
+    },
+    settlements: {
+      title: "Store Ledgers & Daily Settlements",
+      subtitle: "Reconcile store sales, verify itemized order transactions, and execute merchant payouts",
     },
     fleet: {
       title: "Delivery Fleet & Riders",
@@ -55,7 +61,17 @@ export const AdminLayout: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-6 bg-slate-950/60">
           {activeTab === "dashboard" && <DashboardView setActiveTab={setActiveTab} />}
           {activeTab === "orders" && <OrdersControlView />}
-          {activeTab === "merchants" && <MerchantsView />}
+          {activeTab === "merchants" && (
+            <MerchantsView
+              onNavigateToSettlements={(storeId) => {
+                setSelectedStoreForSettlement(storeId || "ALL");
+                setActiveTab("settlements");
+              }}
+            />
+          )}
+          {activeTab === "settlements" && (
+            <SettlementsView initialStoreId={selectedStoreForSettlement} />
+          )}
           {activeTab === "fleet" && <FleetView />}
           {activeTab === "catalog" && <CatalogView />}
           {activeTab === "customers" && <CustomersView />}

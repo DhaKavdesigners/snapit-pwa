@@ -20,6 +20,8 @@ export interface OrderItem {
   price_paise?: number;
   price?: number;
   image_url?: string;
+  productId?: string;
+  product_id?: string;
 }
 
 export interface AdminOrder {
@@ -28,7 +30,7 @@ export interface AdminOrder {
   store_id: string;
   status: OrderStatus;
   items: OrderItem[];
-  estimated_total: number;
+  estimated_total: number; // in paise
   delivery_address: any;
   payment_method?: string;
   payment_status?: string;
@@ -38,21 +40,56 @@ export interface AdminOrder {
   delivery_fee?: number;
   rider_id?: string | null;
   created_at: string;
+  updated_at?: string;
   prep_time_minutes?: number;
   rejection_reason?: string;
+  rider_assignment?: string;
 }
 
 export interface AdminStore {
   id: string;
   name: string;
-  category: "grocery" | "food" | string;
+  category: "FOOD" | "GROCERY" | "DAIRY" | "food" | "grocery" | "dairy" | string;
   logo_url?: string;
   rating?: number;
   is_online?: boolean;
-  address?: string;
+  rush_mode?: boolean;
+  store_address?: string;
+  address?: string; // alias/fallback
+  store_location?: string;
+  lat?: number;
+  lng?: number;
   phone?: string;
+  landmark?: string;
   upi_id?: string;
   created_at?: string;
+  updated_at?: string;
+}
+
+export interface AdminMerchant {
+  id: string;
+  uid: string;
+  password: string;
+  store_id: string;
+  name: string;
+  phone?: string;
+  role?: string;
+  created_at?: string;
+}
+
+export interface StoreSettlementRecord {
+  id: string;
+  store_id: string;
+  store_name: string;
+  amount_rupees: number;
+  amount_paise: number;
+  utr_reference: string;
+  payment_method: "UPI" | "IMPS" | "NEFT" | "CASH" | string;
+  settled_at: string;
+  settled_by: string;
+  period_label: string;
+  orders_count: number;
+  notes?: string;
 }
 
 export interface AdminRider {
@@ -74,7 +111,7 @@ export interface AdminProduct {
   id: string;
   store_id: string;
   name: string;
-  price: number; // in paise or rupees
+  price: number; // in paise in Supabase
   category?: string;
   sub_category?: string;
   description?: string;
@@ -82,8 +119,10 @@ export interface AdminProduct {
   in_stock?: boolean;
   stock_count?: number;
   delivery_eta_minutes?: number;
+  availability?: "AVAILABLE" | "OUT OF STOCK" | string;
   is_active?: boolean;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface AdminCustomerProfile {
