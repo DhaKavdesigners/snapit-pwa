@@ -64,10 +64,10 @@ const DEFAULT_STORES_MAP: Record<string, string> = {
   s3: 'RR Bazar',
   d1: 'Nandhini KGF',
   s4: 'Nandhini KGF',
-  f1: 'Bakio',
-  f2: 'Mayura',
-  f3: 'Ambur Biriyani KGF',
-  f4: 'Al Baik',
+  f1: 'Ambur Biriyani KGF',
+  f2: 'MR & MRS KITCHEN',
+  f3: 'Babu Juice Shop',
+  f4: 'Cool Shop',
   f5: 'Al Naz',
 };
 
