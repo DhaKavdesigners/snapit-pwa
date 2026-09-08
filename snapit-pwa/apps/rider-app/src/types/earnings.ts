@@ -17,9 +17,10 @@ export interface RecentEarning {
 
 export interface PayoutRecord {
   id: string;
-  amount: number;
   date: string;
-  status: 'paid';
+  amount: number;
+  status: 'Paid';
+  monthKey?: string;
 }
 
 export interface WalletSummary {
@@ -32,4 +33,9 @@ export interface EarningsSummaryStats {
   today: number;
   thisWeek: number;
   thisMonth: number;
+}
+
+export interface MonthOption {
+  key: string;
+  label: string;
 }

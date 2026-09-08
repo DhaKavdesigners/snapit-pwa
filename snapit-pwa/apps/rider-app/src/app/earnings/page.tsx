@@ -1,23 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SnapitWalletSection } from '@/components/earnings/SnapitWalletSection';
-import { PayoutHistoryModal } from '@/components/earnings/PayoutHistoryModal';
 import { TodayEarningsSummary } from '@/components/earnings/TodayEarningsSummary';
 import { WeeklyEarningsChart } from '@/components/earnings/WeeklyEarningsChart';
-import { RecentEarningsList } from '@/components/earnings/RecentEarningsList';
-import { PaymentAccountCard } from '@/components/earnings/PaymentAccountCard';
+import { PayoutHistorySection } from '@/components/earnings/PayoutHistorySection';
 import {
   initialEarningsSummary,
   initialWeeklyEarnings,
   initialWalletData,
-  initialRecentEarnings,
-  initialPayoutHistory,
+  MONTH_OPTIONS,
+  MONTHLY_PAYOUTS,
 } from '@/services/earningsData';
 
 export default function EarningsPage() {
-  const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
+  const handleScrollToHistory = () => {
+    const el = document.getElementById('payout-history');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <AppShell>
@@ -28,10 +31,10 @@ export default function EarningsPage() {
           <p className="text-xs text-slate-500 mt-0.5">Track your delivery income & payouts</p>
         </div>
 
-        {/* ── 1. MINNIT WALLET (COMPACT & CLEAN, WITH HISTORY MODAL TRIGGER) ── */}
+        {/* ── 1. MINNIT WALLET CARD ── */}
         <SnapitWalletSection
           wallet={initialWalletData}
-          onOpenPayoutHistory={() => setIsPayoutModalOpen(true)}
+          onOpenPayoutHistory={handleScrollToHistory}
         />
 
         {/* ── 2. SUMMARY IN A SINGLE ROW: TODAY, THIS WEEK, THIS MONTH ── */}
@@ -40,17 +43,10 @@ export default function EarningsPage() {
         {/* ── 3. WEEKLY EARNINGS BAR GRAPH ── */}
         <WeeklyEarningsChart data={initialWeeklyEarnings} />
 
-        {/* ── 4. RECENT EARNINGS (COMPLETED DELIVERIES) ── */}
-        <RecentEarningsList earnings={initialRecentEarnings} />
-
-        {/* ── 5. PAYMENT ACCOUNT (UPI) ── */}
-        <PaymentAccountCard />
-
-        {/* ── 6. PAYOUT HISTORY MODAL WINDOW ── */}
-        <PayoutHistoryModal
-          isOpen={isPayoutModalOpen}
-          onClose={() => setIsPayoutModalOpen(false)}
-          payouts={initialPayoutHistory}
+        {/* ── 4. PAYOUT HISTORY (WITH MONTH SELECTOR) ── */}
+        <PayoutHistorySection
+          monthOptions={MONTH_OPTIONS}
+          monthlyPayouts={MONTHLY_PAYOUTS}
         />
       </div>
     </AppShell>
