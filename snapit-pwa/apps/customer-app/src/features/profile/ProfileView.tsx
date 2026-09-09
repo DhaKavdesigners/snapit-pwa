@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { useOrderStore } from '../../store/orderStore';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/currency';
 
@@ -842,20 +843,35 @@ export const ProfileView: React.FC = () => {
     const orderCount       = orders.length || (userProfile?.completedOrdersCount ?? 0);
     const isTrusted        = deliveryVerified || orderCount >= 1;
 
-    // Active vs Past Orders
-    const activeOrders = orders.filter(o => 
-      ['PLACED', 'PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'READY_FOR_PICKUP', 'OUT_OF_SHOP', 'HANDED_OVER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.status)
-    );
-    const pastOrders = orders.filter(o => 
-      ['DELIVERED', 'REJECTED', 'CANCELLED'].includes(o.status)
-    );
-    const topActiveOrder = activeOrders[0] || (orders.length > 0 && orders[0].status !== 'DELIVERED' && orders[0].status !== 'REJECTED' ? orders[0] : null);
+    // Active vs Past Orders — Any order not DELIVERED, REJECTED, or CANCELLED is live active
+    const activeOrders = orders.filter(o => {
+      const s = (o.status || '').toUpperCase();
+      return !['DELIVERED', 'REJECTED', 'CANCELLED'].includes(s);
+    });
+    const pastOrders = orders.filter(o => {
+      const s = (o.status || '').toUpperCase();
+      return ['DELIVERED', 'REJECTED', 'CANCELLED'].includes(s);
+    });
+    const topActiveOrder = activeOrders[0] || null;
+
+    const getOrderDeliveryPin = (ord: any) => {
+      if (ord.delivery_pin !== undefined && ord.delivery_pin !== null) {
+        const pinStr = String(ord.delivery_pin);
+        if (pinStr.length === 4) return pinStr;
+        return pinStr.padStart(4, '0');
+      }
+      const digits = (ord.id || '').replace(/\D/g, '');
+      if (digits.length >= 4) return digits.slice(-4);
+      return '4821';
+    };
 
     // Status Helper
     const getOrderStatusInfo = (status: string, prepTime?: number, rejectionReason?: string) => {
-      switch (status) {
+      const normalizedStatus = (status || '').toUpperCase();
+      switch (normalizedStatus) {
         case 'PLACED':
         case 'PENDING':
+        case 'CONFIRMED':
           return {
             stepIndex: 0,
             title: 'Order Sent to Counter 📥',
@@ -869,10 +885,13 @@ export const ProfileView: React.FC = () => {
             progress: 25,
             icon: Package,
             iconColor: 'text-emerald-600',
-            isHandedOver: false
+            isHandedOver: false,
+            isAtLocation: false
           };
         case 'ACCEPTED':
         case 'PREPARING':
+        case 'RIDER_ASSIGNED':
+        case 'RIDER_ARRIVING_TO_STORE':
           return {
             stepIndex: 1,
             title: 'Store is Preparing & Packing 🍳',
@@ -886,7 +905,8 @@ export const ProfileView: React.FC = () => {
             progress: 50,
             icon: ChefHat,
             iconColor: 'text-amber-600',
-            isHandedOver: false
+            isHandedOver: false,
+            isAtLocation: false
           };
         case 'READY':
         case 'READY_FOR_PICKUP':
@@ -903,7 +923,8 @@ export const ProfileView: React.FC = () => {
             progress: 75,
             icon: Package,
             iconColor: 'text-blue-600',
-            isHandedOver: false
+            isHandedOver: false,
+            isAtLocation: false
           };
         case 'OUT_OF_SHOP':
         case 'HANDED_OVER':
@@ -920,7 +941,8 @@ export const ProfileView: React.FC = () => {
             progress: 85,
             icon: Bike,
             iconColor: 'text-amber-600',
-            isHandedOver: true
+            isHandedOver: true,
+            isAtLocation: false
           };
         case 'PICKED_UP':
         case 'OUT_FOR_DELIVERY':
@@ -934,10 +956,34 @@ export const ProfileView: React.FC = () => {
             step1Label: 'Placed ✓',
             step2Label: 'Packed ✓',
             step3Label: 'On the Way 🛵',
-            progress: 95,
+            progress: 92,
             icon: Bike,
             iconColor: 'text-blue-600',
-            isHandedOver: true
+            isHandedOver: true,
+            isAtLocation: false
+          };
+        case 'RIDER_AT_LOC':
+        case 'RIDER_AT_LOCATION':
+        case 'ARRIVED_AT_CUSTOMER':
+        case 'ARRIVED':
+        case 'RIDER_ARRIVED':
+        case 'ARRIVED_AT_DROPOFF':
+        case 'AT_LOCATION':
+          return {
+            stepIndex: 3,
+            title: 'Rider Arrived at Specified Location! 🔔',
+            subtitle: 'Rider has arrived at your doorstep. Please share your delivery PIN.',
+            badgeText: 'RIDER AT LOCATION',
+            badgeClass: 'bg-purple-100 text-purple-900 border-purple-300 animate-pulse',
+            dotClass: 'bg-purple-600 animate-ping',
+            step1Label: 'Placed ✓',
+            step2Label: 'Packed ✓',
+            step3Label: 'Arrived 🔔',
+            progress: 98,
+            icon: Bike,
+            iconColor: 'text-purple-600',
+            isHandedOver: true,
+            isAtLocation: true
           };
         case 'DELIVERED':
           return {
@@ -1301,18 +1347,63 @@ export const ProfileView: React.FC = () => {
 
                                 <div className="flex items-center gap-3">
                                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
-                                    statusInfo.stepIndex >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'
+                                    statusInfo.stepIndex >= 2 
+                                      ? (statusInfo.isAtLocation ? 'bg-purple-600 text-white animate-bounce' : 'bg-blue-600 text-white') 
+                                      : 'bg-gray-100 text-gray-400'
                                   }`}>
-                                    {statusInfo.stepIndex >= 2 ? '✓' : '3'}
+                                    {statusInfo.stepIndex >= 2 ? (statusInfo.isAtLocation ? '🔔' : '✓') : '3'}
                                   </div>
                                   <div className="flex-1">
-                                    <p className={`font-bold text-xs ${statusInfo.stepIndex >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                      Store Handover to Rider Complete 🛵
+                                    <p className={`font-bold text-xs ${statusInfo.stepIndex >= 2 ? (statusInfo.isAtLocation ? 'text-purple-950 font-black' : 'text-gray-900') : 'text-gray-400'}`}>
+                                      {statusInfo.isAtLocation 
+                                        ? 'Rider Arrived at Specified Location 🔔' 
+                                        : 'Store Handover to Rider Complete 🛵'}
                                     </p>
-                                    <p className="text-[10px] text-gray-400">Rider rolling to your address</p>
+                                    <p className={`text-[10px] ${statusInfo.isAtLocation ? 'text-purple-700 font-semibold' : 'text-gray-400'}`}>
+                                      {statusInfo.isAtLocation 
+                                        ? 'Rider is at your doorstep waiting for PIN handshake' 
+                                        : 'Rider rolling to your address'}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
+
+                              {/* Handshake Delivery PIN Card */}
+                              {(statusInfo.isHandedOver || statusInfo.isAtLocation || order.status === 'OUT_FOR_DELIVERY') && (
+                                <div className={`mt-3 p-3.5 rounded-2xl border-2 shadow-xs transition-all ${
+                                  statusInfo.isAtLocation 
+                                    ? 'bg-gradient-to-br from-purple-50 via-white to-purple-50/50 border-purple-300 ring-2 ring-purple-400/20' 
+                                    : 'bg-emerald-50/70 border-emerald-200'
+                                }`}>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
+                                      <ShieldCheck className={`w-3.5 h-3.5 ${statusInfo.isAtLocation ? 'text-purple-600' : 'text-emerald-600'}`} />
+                                      Delivery Handshake PIN
+                                    </span>
+                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                      statusInfo.isAtLocation 
+                                        ? 'bg-purple-600 text-white animate-pulse' 
+                                        : 'bg-emerald-100 text-emerald-800'
+                                    }`}>
+                                      {statusInfo.isAtLocation ? 'Rider at Doorstep' : 'Share with Rider'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-center gap-2 py-1">
+                                    {getOrderDeliveryPin(order).split('').map((digit: string, i: number) => (
+                                      <span key={i} className={`w-9 h-10 rounded-xl bg-white border-2 shadow-2xs flex items-center justify-center font-mono font-black text-xl ${
+                                        statusInfo.isAtLocation ? 'border-purple-300 text-purple-950' : 'border-emerald-300 text-emerald-950'
+                                      }`}>
+                                        {digit}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className={`text-[10px] text-center font-medium mt-1 ${statusInfo.isAtLocation ? 'text-purple-700 font-bold' : 'text-gray-500'}`}>
+                                    {statusInfo.isAtLocation 
+                                      ? '🔔 Rider is waiting at your doorstep! Share this PIN to receive your package.' 
+                                      : 'Share this 4-digit PIN with the delivery rider upon arrival.'}
+                                  </p>
+                                </div>
+                              )}
                             </div>
 
                             {/* Items Summary */}
@@ -1337,14 +1428,14 @@ export const ProfileView: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleRequestBill(order.id)}
-                                  className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-2xs"
+                                  className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-xl hover:bg-emerald-100 transition-colors flex items-center gap-1.5 shadow-2xs"
                                 >
                                   <Receipt className="w-3.5 h-3.5 text-emerald-600" />
                                   <span>View Bill</span>
                                 </button>
                                 <button
                                   onClick={() => window.open(`https://wa.me/918217649688?text=Hi%20Minnit,%20need%20help%20with%20order%20${order.id}`, '_blank')}
-                                  className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-xl hover:bg-gray-200 transition-colors"
+                                  className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-3.5 py-1.5 rounded-xl hover:bg-gray-200 transition-colors"
                                 >
                                   Need Help?
                                 </button>
@@ -1687,11 +1778,19 @@ export const ProfileView: React.FC = () => {
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
                         billModalOrder.status === 'DELIVERED'
                           ? 'bg-emerald-100 text-emerald-800'
+                          : billModalOrder.status === 'RIDER_AT_LOC' || billModalOrder.status === 'RIDER_AT_LOCATION'
+                          ? 'bg-purple-100 text-purple-900 border border-purple-300'
                           : billModalOrder.status === 'CANCELLED' || billModalOrder.status === 'REJECTED'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-amber-100 text-amber-800'
                       }`}>
-                        {billModalOrder.status === 'DELIVERED' ? 'Delivered ✓' : billModalOrder.status === 'CANCELLED' ? 'Cancelled' : billModalOrder.status}
+                        {billModalOrder.status === 'DELIVERED' 
+                          ? 'Delivered ✓' 
+                          : billModalOrder.status === 'RIDER_AT_LOC' || billModalOrder.status === 'RIDER_AT_LOCATION'
+                          ? 'Rider At Location 🔔'
+                          : billModalOrder.status === 'CANCELLED' 
+                          ? 'Cancelled' 
+                          : billModalOrder.status}
                       </span>
                     </div>
 

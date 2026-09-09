@@ -21,6 +21,8 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     if (dbOrder.delivery_address.lng) dropLng = Number(dbOrder.delivery_address.lng);
   }
 
+  if (!dropLat && (dbOrder as any).lat) dropLat = Number((dbOrder as any).lat);
+  if (!dropLng && (dbOrder as any).lng) dropLng = Number((dbOrder as any).lng);
   if (!dropLat && (dbOrder as any).drop_lat) dropLat = Number((dbOrder as any).drop_lat);
   if (!dropLng && (dbOrder as any).drop_lng) dropLng = Number((dbOrder as any).drop_lng);
   if (!dropLat && (dbOrder as any).latitude) dropLat = Number((dbOrder as any).latitude);

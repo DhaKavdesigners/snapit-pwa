@@ -9,11 +9,13 @@ import { useAllProducts } from '../../api/queries';
 import {
   ChevronLeft, MapPin, CreditCard, Banknote,
   CheckCircle2, ArrowRight, X, User, Plus, ShieldCheck,
-  Zap, Sparkles, Lock, Gift, Check
+  Zap, Sparkles, Lock, Gift, Check, Phone, LocateFixed,
+  UserCheck, Compass, CheckCircle
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { calculateDeliveryFee, generateDeliveryPin } from '../../../../../common_logic/deliveryLogic';
+import { LocationPickerModal } from '../../components/checkout/LocationPickerModal';
 
 // ── KGF Known Address Coordinates ───────────────────────────────────────────
 // Static lookup for addresses we know; avoids geocoding API calls for common addresses.
@@ -91,6 +93,11 @@ export const CheckoutView: React.FC = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [isSomeoneElse, setIsSomeoneElse] = useState(false);
   
+  // Alternate Phone & Doorstep GPS Pinning
+  const [alternatePhone, setAlternatePhone] = useState('');
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [pinnedCoords, setPinnedCoords] = useState<{ lat: number; lng: number; addressHint?: string } | null>(null);
+
   // Recipient States
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
@@ -143,23 +150,27 @@ export const CheckoutView: React.FC = () => {
     const displayId = `ORD-${Date.now().toString().slice(-6)}`;
     const storeId = cartItemsWithDetails[0]?.product?.storeId || 'g1';
 
-    // ── Geocode the selected delivery address so the rider map is accurate ──
-    // This resolves real lat/lng for whichever address the customer picked,
-    // NOT the customer's current GPS location.
-    const resolvedCoords = await geocodeDeliveryAddress(
-      displayAddressLine,
-      displayPin,
-      displayLandmark
-    );
+    // ── Geocode or resolve delivery coordinates ──
+    // Doorstep map pin takes highest priority; falls back to address geocoding
+    const resolvedCoords = pinnedCoords
+      ? { lat: pinnedCoords.lat, lng: pinnedCoords.lng }
+      : await geocodeDeliveryAddress(
+          displayAddressLine,
+          displayPin,
+          displayLandmark
+        );
 
     const activeAddressObject = {
       title: displayTitle,
       line1: displayAddressLine,
       landmark: displayLandmark,
       pincode: displayPin,
-      // ✅ Rider map drop pin coordinates — based on the selected delivery address
+      // ✅ Rider map drop pin coordinates — exact doorstep or geocoded address
       lat: resolvedCoords.lat,
       lng: resolvedCoords.lng,
+      is_doorstep_pinned: !!pinnedCoords,
+      address_hint: pinnedCoords?.addressHint || undefined,
+      alternate_phone: alternatePhone.trim() || undefined,
     };
 
     const itemsJson = cartItemsWithDetails.map(item => ({
@@ -189,19 +200,21 @@ export const CheckoutView: React.FC = () => {
       const { pinNumber } = generateDeliveryPin(displayId);
       const feeRupees = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feeRupees;
 
-      // 1. Insert with extended columns (delivery_pin as numeric, delivery_fee as int2)
+      // 1. Insert with direct lat & lng columns + delivery_pin and delivery_fee
       const { data: insertedOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
           ...basePayload,
+          lat: resolvedCoords.lat,
+          lng: resolvedCoords.lng,
           delivery_pin: pinNumber,
           delivery_fee: feeRupees,
         })
         .select();
 
       if (orderError) {
-        console.warn("Extended columns not present in Supabase, inserting with base columns:", orderError.message);
-        // Fallback insert with base columns
+        console.warn("Direct lat/lng or extended columns not present in Supabase table yet, falling back to base payload:", orderError.message);
+        // Resilient fallback insert with base columns
         const { data: fallbackOrder, error: fallbackError } = await supabase
           .from('orders')
           .insert(basePayload)
@@ -210,10 +223,10 @@ export const CheckoutView: React.FC = () => {
         if (fallbackError) {
           console.error("Supabase Order Base Insert Error:", fallbackError);
         } else {
-          console.info("Order successfully placed in Supabase:", fallbackOrder);
+          console.info("Order successfully placed in Supabase (base columns):", fallbackOrder);
         }
       } else {
-        console.info("Order successfully placed in Supabase:", insertedOrder);
+        console.info("Order successfully placed in Supabase with lat/lng:", insertedOrder);
       }
     } catch (err) {
       console.error("Order sync exception:", err);
@@ -303,50 +316,132 @@ export const CheckoutView: React.FC = () => {
 
       <div className="p-4 flex flex-col gap-5 overflow-y-auto">
 
-        {/* ── 1. Delivery Address Card ── */}
-        <section>
-          <div className="flex items-center justify-between mb-2 px-1">
-            <h2 className="font-black text-xs uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-brand" />
-              Delivery Address
+        {/* ── 1. Signed In User Card ── */}
+        <section className="bg-white rounded-3xl p-4 border border-emerald-100 shadow-[0_4px_20px_rgba(5,150,105,0.04)] relative overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-black text-[11px] uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-brand" />
+              Signed In User
             </h2>
-            <span className="text-[10px] font-bold bg-brand/10 text-brand px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Doorstep Drop
+            <span className="text-[10px] font-black bg-emerald-100/70 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              Verified
             </span>
           </div>
-          
+
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20 font-black text-base">
+              {(userProfile?.name || 'V')[0]?.toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-black text-sm text-gray-900 truncate">
+                {userProfile?.name || 'Vishva D'}
+              </h3>
+              <p className="text-xs text-gray-600 font-medium flex items-center gap-1.5 mt-0.5">
+                <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                <span>Primary Phone: <strong className="text-gray-900 font-mono">+91 {userProfile?.phone || ''}</strong></span>
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 2. Alternate Phone Number (Optional) ── */}
+        <section className="bg-white rounded-3xl p-4 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="font-black text-[11px] uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+              Alternate Phone Number <span className="text-[10px] text-gray-400 font-normal lowercase">(optional)</span>
+            </label>
+          </div>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-600 font-black text-xs font-mono">
+              +91
+            </div>
+            <input
+              type="tel"
+              value={alternatePhone}
+              onChange={(e) => setAlternatePhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+              placeholder="e.g. 98765 43210 (Rider calls if primary unreachable)"
+              maxLength={10}
+              className="w-full bg-gray-50/80 border-2 border-gray-200 focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 rounded-2xl pl-12 pr-4 py-2.5 text-xs font-semibold text-gray-900 placeholder-gray-400 transition-all outline-none"
+            />
+          </div>
+          <p className="text-[10px] text-gray-500 font-medium px-1">
+            Rider will call this backup number if primary number is unreachable at your doorstep.
+          </p>
+        </section>
+
+        {/* ── 3. Select Delivery Address & Doorstep Pinning ── */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-black text-xs uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-brand" />
+              Select Delivery Address
+            </h2>
+            <span className="text-[10px] font-bold bg-brand/10 text-brand px-2 py-0.5 rounded-full uppercase tracking-wider">
+              {pinnedCoords ? 'Doorstep Pinned' : 'Doorstep Drop'}
+            </span>
+          </div>
+
+          {/* Active Address Card */}
           {hasProfile || isUsingNewAddress ? (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 rounded-3xl p-5 shadow-[0_8px_30px_rgba(5,150,105,0.07)] border-2 border-emerald-200/90 relative overflow-hidden"
+              className={`bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 rounded-3xl p-4 shadow-[0_8px_30px_rgba(5,150,105,0.07)] border-2 transition-all relative overflow-hidden ${
+                pinnedCoords ? 'border-brand ring-4 ring-brand/10' : 'border-emerald-200/90'
+              }`}
             >
               <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-emerald-400 to-brand" />
-              <div className="flex gap-3.5 pl-1">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
-                  <MapPin className="w-5 h-5 text-white animate-bounce [animation-duration:2s]" />
+              
+              <div className="flex gap-3 pl-1">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
+                  <MapPin className="w-5 h-5 text-white" />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black text-base text-gray-900 truncate">{finalRecipientName}</h3>
-                      <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow-xs">
-                        {displayTitle}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="bg-brand text-white text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-xs">
+                      {displayTitle}
+                    </span>
+                    
+                    {pinnedCoords && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
+                        Exact Pin Set
                       </span>
-                    </div>
+                    )}
                   </div>
 
-                  <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                  <p className="text-xs text-gray-700 leading-relaxed font-medium mt-1">
                     {displayAddressLine}
                     {displayLandmark && <span className="block text-gray-500 font-normal mt-0.5">Near: {displayLandmark}</span>}
                     {displayPin && <span className="inline-block mt-1 font-mono font-bold text-gray-800 bg-emerald-100/60 px-1.5 py-0.5 rounded text-[11px]">PIN: {displayPin}</span>}
                   </p>
 
-                  {finalRecipientPhone && (
-                    <div className="mt-2.5 pt-2 border-t border-emerald-100/80 flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Recipient:</span>
-                      <span className="text-xs font-mono font-bold text-gray-800">+91 {finalRecipientPhone}</span>
+                  {/* Pinned Coordinates Indicator (Hiding raw coordinates from consumer) */}
+                  {pinnedCoords && (
+                    <div className="mt-2.5 p-2.5 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 text-emerald-950 font-bold min-w-0">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-700 shrink-0">
+                          <LocateFixed className="w-3.5 h-3.5 text-brand shrink-0" />
+                        </div>
+                        <div className="truncate">
+                          <span className="block font-black text-xs text-emerald-950">
+                            Exact Doorstep Location Pinned ✓
+                          </span>
+                          <span className="block text-[10px] text-emerald-700 font-medium truncate">
+                            {pinnedCoords.addressHint ? `Near: ${pinnedCoords.addressHint}` : 'Rider will deliver directly to this pinned spot'}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsMapModalOpen(true)}
+                        className="text-brand font-black text-xs bg-white border border-emerald-300 px-3 py-1.5 rounded-xl hover:bg-emerald-50 active:scale-95 transition-all shadow-2xs shrink-0 ml-2"
+                      >
+                        Relocate Pin
+                      </button>
                     </div>
                   )}
                 </div>
@@ -365,29 +460,95 @@ export const CheckoutView: React.FC = () => {
             </div>
           )}
 
-          {/* Quick address action pills */}
-          <div className="flex gap-2.5 mt-3">
+          {/* Ordering for someone else toggle */}
+          <div className="bg-white rounded-2xl p-3.5 border border-emerald-100/80 shadow-xs">
+            <label className="flex items-center justify-between cursor-pointer select-none">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-brand" />
+                <span className="font-bold text-xs text-gray-800">Ordering for someone else?</span>
+              </div>
+              <input 
+                type="checkbox" 
+                className="w-4 h-4 text-brand rounded border-gray-300 focus:ring-brand accent-emerald-600 cursor-pointer"
+                checked={isSomeoneElse}
+                onChange={(e) => setIsSomeoneElse(e.target.checked)}
+              />
+            </label>
+
+            <AnimatePresence>
+              {isSomeoneElse && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2.5 pt-3 mt-3 border-t border-emerald-50 overflow-hidden"
+                >
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                      Recipient Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Rahul Sharma"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                      Recipient Phone Number *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-mono text-xs">
+                        +91
+                      </div>
+                      <input
+                        type="tel"
+                        placeholder="98765 43210"
+                        maxLength={10}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Action Buttons: Pin on Map & Add Address */}
+          <div className="grid grid-cols-2 gap-2.5">
             <button 
-              onClick={() => setUseCurrentLocation(!useCurrentLocation)}
-              className={`flex-1 font-black py-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs transition-all border-2 shadow-xs ${
-                useCurrentLocation 
-                  ? 'bg-gradient-to-r from-emerald-600 to-brand text-white border-emerald-600 shadow-md shadow-emerald-500/20' 
-                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-              }`}
+              type="button"
+              onClick={() => setIsMapModalOpen(true)}
+              className="bg-gradient-to-r from-emerald-600 to-brand text-white font-black py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all hover:brightness-105"
             >
-              <MapPin className="w-3.5 h-3.5" /> 
-              {useCurrentLocation ? 'Using Live Location ✓' : 'Use Live Location'}
+              <Compass className="w-4 h-4 animate-spin [animation-duration:8s]" />
+              <span>{pinnedCoords ? 'Relocate Pin on Map' : '🗺️ Pin on Map'}</span>
             </button>
             
             <button 
-              onClick={() => {
-                setIsAddressModalOpen(true);
-                setUseCurrentLocation(false);
-              }}
-              className="flex-1 bg-white border-2 border-emerald-200 text-emerald-800 font-black py-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs hover:bg-emerald-50 transition-all shadow-xs"
+              type="button"
+              onClick={() => setIsAddressModalOpen(true)}
+              className="bg-white border-2 border-emerald-200 text-emerald-800 font-black py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs hover:bg-emerald-50 active:scale-95 transition-all shadow-xs"
             >
-              <Plus className="w-4 h-4 text-brand" /> Add Address
+              <Plus className="w-4 h-4 text-brand" />
+              <span>+ Add Address</span>
             </button>
+          </div>
+
+          {/* Destination Status Pill (Consumer-friendly: coordinates hidden) */}
+          <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+            <span className="text-[11px] font-bold text-emerald-900 truncate">
+              {pinnedCoords 
+                ? `📍 Delivering to: ${displayTitle} • Exact Doorstep Pinned ✓`
+                : `📍 Delivering to: ${displayTitle} (${displayPin})`
+              }
+            </span>
           </div>
         </section>
 
@@ -613,13 +774,24 @@ export const CheckoutView: React.FC = () => {
                     </label>
                   )}
 
-                  <button 
-                    onClick={() => setIsAddingNew(true)}
-                    className="w-full border-2 border-dashed border-emerald-300 bg-emerald-50/50 text-emerald-800 font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-50 transition-colors mt-2 text-xs uppercase tracking-wider"
-                  >
-                    <Plus className="w-4 h-4 text-brand" />
-                    Add New Address
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <button 
+                      type="button"
+                      onClick={() => setIsAddingNew(true)}
+                      className="border-2 border-dashed border-emerald-300 bg-emerald-50/60 text-emerald-800 font-black py-3.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-emerald-50 active:scale-95 transition-all text-xs uppercase tracking-wider"
+                    >
+                      <Plus className="w-4 h-4 text-brand shrink-0" />
+                      <span>Add Address</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setIsMapModalOpen(true)}
+                      className="bg-gradient-to-r from-emerald-600 to-brand text-white font-black py-3.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all text-xs uppercase tracking-wider"
+                    >
+                      <MapPin className="w-4 h-4 text-white shrink-0" />
+                      <span>{pinnedCoords ? 'Relocate Pin' : 'Pin on Map'}</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
@@ -656,6 +828,34 @@ export const CheckoutView: React.FC = () => {
                     value={newPin}
                     onChange={(e) => setNewPin(e.target.value)}
                   />
+
+                  {/* Pin Location on Map Option inside Add Address Form */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsMapModalOpen(true)}
+                      className={`w-full py-3 px-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all ${
+                        pinnedCoords
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-emerald-50/50 hover:border-emerald-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className={`w-4 h-4 shrink-0 ${pinnedCoords ? 'text-brand' : 'text-gray-500'}`} />
+                        <span className="truncate">
+                          {pinnedCoords ? 'Exact Doorstep Location Pinned ✓' : 'Pin Doorstep Location on Map'}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-brand font-black shrink-0 underline ml-2">
+                        {pinnedCoords ? 'Relocate' : 'Set Pin'}
+                      </span>
+                    </button>
+                    {pinnedCoords?.addressHint && (
+                      <p className="text-[10px] text-emerald-700 font-medium px-1 mt-1 truncate">
+                        📍 Pinned near: {pinnedCoords.addressHint}
+                      </p>
+                    )}
+                  </div>
 
                   <div className="mt-6 pt-4 border-t border-gray-100">
                     <label className="flex items-center gap-3 cursor-pointer mb-4">
@@ -700,7 +900,22 @@ export const CheckoutView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── Doorstep Location Pin Map Modal ── */}
+      <LocationPickerModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        initialCoords={pinnedCoords || { lat: 12.9340, lng: 78.2680 }}
+        onConfirm={(coords) => {
+          setPinnedCoords(coords);
+          if (coords.addressHint && !newLandmark) {
+            setNewLandmark(coords.addressHint);
+          }
+          setIsMapModalOpen(false);
+        }}
+      />
     </div>
   );
 };
+
 

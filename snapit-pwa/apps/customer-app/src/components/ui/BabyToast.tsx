@@ -92,10 +92,12 @@ export const BabyToast: React.FC = () => {
           >
             <div className="flex items-center gap-3 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.18)] border border-gray-100 pr-4 overflow-hidden max-w-[320px] w-[290px]">
               {/* Mascot avatar */}
-              <div className={`w-16 h-16 shrink-0 bg-gradient-to-br ${config.accent} relative overflow-hidden`}>
+              <div className={`w-16 h-16 shrink-0 bg-gradient-to-br ${config.accent} relative overflow-hidden flex items-center justify-center`}>
                 <img
                   src={config.img}
                   alt="Minnit mascot"
+                  loading="eager"
+                  decoding="sync"
                   className="w-full h-full object-cover object-top"
                 />
               </div>

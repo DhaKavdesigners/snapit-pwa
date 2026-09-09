@@ -4,14 +4,14 @@ import { useOrderStore, getActiveOrders } from '../../store/orderStore';
 import riderIconImg from '../../assets/rider_icon.jpg';
 
 export const FloatingRiderBubble: React.FC = () => {
-  const { orders, storesMap, setTrackerOpen } = useOrderStore();
+  const { orders, storesMap, setTrackerOpen, isTrackerOpen } = useOrderStore();
   const activeOrders = getActiveOrders(orders);
 
   // Snapping side state: 'right' | 'left'
   const [snapSide, setSnapSide] = useState<'right' | 'left'>('right');
 
-  // If no active orders, don't show the bubble
-  if (activeOrders.length === 0) return null;
+  // If no active orders or full tracker modal is open, don't show the floating bubble
+  if (activeOrders.length === 0 || isTrackerOpen) return null;
 
   const topOrder = activeOrders[0];
   const storeName = storesMap[topOrder.store_id] || 'Minnit Store';
@@ -76,7 +76,7 @@ export const FloatingRiderBubble: React.FC = () => {
   return (
     <AnimatePresence>
       {/* Mobile Shell Contained Wrapper (Never jumps to desktop sides) */}
-      <div className="fixed bottom-24 inset-x-0 mx-auto max-w-md pointer-events-none z-40">
+      <div className="fixed bottom-24 inset-x-0 mx-auto max-w-md pointer-events-none z-[70]">
         <motion.div
           drag
           dragConstraints={{ top: -450, bottom: 0, left: -20, right: 20 }}

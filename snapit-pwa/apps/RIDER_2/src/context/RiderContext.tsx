@@ -1,0 +1,2209 @@
+'use client';
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  ReactNode,
+} from 'react';
+import {
+  RiderProfile,
+  Order,
+  EarningsSummary,
+  DeliveryZone,
+  AlertNotification,
+  DeliveryStatus,
+  NavigationStage,
+  // New types
+  AdminConfig,
+  RiderSlot,
+  RiderBreak,
+  OrderAcceptanceEvent,
+  OrderAcceptanceResponse,
+  OrderAcceptanceExceptionReason,
+  ZoneStatus,
+  DemandCapacityStatus,
+  SlotBookingEligibility,
+} from '@/types';
+import { DEFAULT_ADMIN_CONFIG } from '@/services/adminConfig';
+import {
+  generateDailySlots,
+  generateAllSlots,
+  getTodayDateString,
+  findNextSlot,
+  buildExtendedSlot,
+  isSlotOnlineReady,
+  timeToTodayMs,
+  calculateAvailableRiderCapacity,
+  evaluateHighDemandState,
+  checkSlotBookingEligibility,
+  RiderAvailabilityItem,
+} from '@/services/slotService';
+import {
+  checkZoneStatus,
+  startWatchingZone,
+  stopWatchingZone,
+  setMockLocationConfig,
+  getMockLocationConfig,
+} from '@/services/zoneService';
+import {
+  getNow,
+  getNowDate,
+  setMockTimeConfig,
+  getMockTimeConfig,
+  resetMockEnvironment as resetMockEnv,
+  TestAppMode,
+  setTestMode as setTestModeService,
+  getTestMode,
+} from '@/services/mockService';
+import {
+  createSlotBookedAlert,
+  createSlotReminderAlert,
+  createSlotActiveAlert,
+  createSlotEndingAlert,
+  createSlotEndedAlert,
+  createSlotExtendedAlert,
+  createSlotCancelledAlert,
+  createZoneEnteredAlert,
+  createZoneExitedAlert,
+  createBreakStartedAlert,
+  createBreakEndingAlert,
+  createBreakExceededAlert,
+  createBreakEmergencyAlert,
+  createAcceptanceWarningAlert,
+  createWaitlistAvailableAlert,
+} from '@/services/notificationService';
+import {
+  fetchStores,
+  fetchLiveOrders,
+  fetchAllRiders,
+  fetchRiderDeliveredStats,
+  assignRiderToOrder,
+  updateDbOrderStatus,
+  updateDbOrderHandover,
+  subscribeToOrders,
+  mapDbOrderToAppOrder,
+  registerRiderInDb,
+  loginRiderWithMpin,
+  loginRiderWithMpinOnly,
+  fetchRiderProfileFromDb,
+  updateRiderLiveLocation,
+  updateRiderOnlineStatus,
+} from '@/services/supabaseOrderService';
+import { verifyDeliveryPin } from '../../../../common_logic/deliveryLogic';
+import { soundEngine } from '@/services/soundService';
+import { formatOrderNumber } from '@/utils/orderUtils';
+import { setRiderAvailability, recordSessionOrderCompleted } from '@/services/sessionService';
+import {
+  getCurrentWindow,
+  isCurrentlyInPreferredWindow,
+  savePreferencesToSupabase,
+  PreferenceWindow,
+} from '@/services/preferenceService';
+
+
+
+// ─── Context Type ─────────────────────────────────────────────────────────────
+
+interface CanGoOnlineResult {
+  canGo: boolean;
+  reason: string;
+}
+
+interface RiderContextType {
+  // ── Existing ──
+  rider: RiderProfile;
+  isOnline: boolean;
+  activeOrder: Order | null;
+  incomingOrder: Order | null;
+  ordersHistory: Order[];
+  cancelledOrders: Order[];
+  earnings: EarningsSummary;
+  zones: DeliveryZone[];
+  alerts: AlertNotification[];
+  desktopFrame: boolean;
+  toggleOnline: () => void;
+  toggleDesktopFrame: () => void;
+  setOnlineStatus: (status: boolean) => void;
+  acceptIncomingOrder: () => void;
+  declineIncomingOrder: () => void;
+  advanceActiveOrderStatus: () => void;
+  setActiveOrderStatus: (status: DeliveryStatus) => void;
+  startNavigation: () => void;
+  markOrderPickedUp: () => void;
+  confirmRiderPickup: () => void;
+  setNavStage: (stage: NavigationStage) => void;
+  completeDeliveryWithOtp: (otp: string) => boolean;
+  triggerMockOrder: () => void;
+  simulateMerchantReadyForPickup: (ready?: boolean) => void;
+  simulateShopkeeperHandover: (confirmed?: boolean) => void;
+  resetActiveOrder: () => void;
+  updateRiderProfile: (updates: Partial<RiderProfile>) => void;
+  simulateApproval: () => void;
+  resetOnboarding: () => void;
+  transferWalletToBank: (amount: number) => boolean;
+  markAlertAsRead: (id: string) => void;
+  loginWithMpin: (phone: string, mpin: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithMpinOnly: (mpin: string) => Promise<{ success: boolean; error?: string }>;
+  registerRider: (data: {
+    name: string;
+    phone: string;
+    mpin: string;
+    dob?: string;
+    vehicleType?: string;
+    vehicleNumber?: string;
+    selectedZone?: string;
+    selectedZoneId?: string;
+    altPhone?: string;
+    email?: string;
+    address?: string;
+    aadhaarNumber?: string;
+    aadhaarDocUrl?: string;
+    panNumber?: string;
+    panDocUrl?: string;
+    dlNumber?: string;
+    dlDocUrl?: string;
+    upiId?: string;
+    avatarUrl?: string;
+    selfieCapturedUrl?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  isHydrated: boolean;
+  // ── New ──
+  adminConfig: AdminConfig;
+  slots: RiderSlot[];
+  bookedSlotIds: string[];
+  activeSlot: RiderSlot | null;
+  upcomingSlot: RiderSlot | null;
+  riderBreak: RiderBreak | null;
+  zoneStatus: ZoneStatus;
+  gpsCoords: { lat: number; lng: number } | null;
+  orderAcceptanceEvents: OrderAcceptanceEvent[];
+  nonAcceptanceCount: number;
+  bookSlot: (slotId: string, zoneId: string, zoneName: string) => void;
+  cancelSlot: (slotId: string) => void;
+  extendSlot: (currentSlotId: string, nextSlotId: string) => void;
+  addSlotToWaitlist: (slotId: string) => void;
+  startBreak: () => void;
+  endBreak: () => void;
+  startEmergencyBreak: (reason: string) => void;
+  canGoOnline: () => CanGoOnlineResult;
+  recordOrderAcceptance: (
+    orderId: string,
+    response: OrderAcceptanceResponse,
+    exceptionReason?: OrderAcceptanceExceptionReason
+  ) => void;
+  refreshZoneStatus: () => void;
+  refreshSlots: () => void;
+  // Dev Mock Location & Time & Mode
+  testMode: TestAppMode;
+  setTestMode: (mode: TestAppMode) => void;
+  demandStatus: DemandCapacityStatus;
+  getSlotEligibility: (slot: RiderSlot) => SlotBookingEligibility;
+  simulatedDemand: { active: boolean; isHighDemand: boolean; ordersDemand?: number; capacity?: number } | null;
+  setSimulatedDemand: (override: { active: boolean; isHighDemand: boolean; ordersDemand?: number; capacity?: number } | null) => void;
+  isMockLocationEnabled: boolean;
+  mockZoneId: string | null;
+  enableMockLocation: (zoneId?: string, customCoords?: { lat: number; lng: number }) => void;
+  disableMockLocation: () => void;
+  setMockZone: (zoneId: string) => void;
+  isMockTimeEnabled: boolean;
+  mockTimestamp: number | null;
+  enableMockTime: (timeStr: string, dateStr?: string) => void;
+  disableMockTime: () => void;
+  setMockTimePreset: (preset: 'booked_slot_start' | 'active_slot' | 'slot_expiry' | 'cutoff_passed' | 'morning_10am') => void;
+  resetTestEnvironment: () => void;
+  // ── Work Session (RIDER_2) ──
+  activeSession: import('@/services/sessionService').RiderSession | null;
+  sessionEnded: boolean;
+  startSession: (durationMins: number, zoneId: string, zoneName: string, lat?: number, lng?: number) => Promise<void>;
+  endSession: (endedEarly: boolean) => Promise<void>;
+  // ── Availability Preferences (RIDER_2) ──
+  ridingPreferences: string[];
+  updateRidingPreferences: (prefs: string[]) => Promise<void>;
+  currentWindow: import('@/services/preferenceService').PreferenceWindow | null;
+  isCurrentWindowPreferred: boolean;
+}
+
+
+
+// ─── Default Data ─────────────────────────────────────────────────────────────
+
+// ─── Default Data ─────────────────────────────────────────────────────────────
+
+const defaultRider: RiderProfile = {
+  name: '',
+  dob: '',
+  phone: '',
+  altPhone: '',
+  email: '',
+  address: '',
+  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+  selfieCapturedUrl: '',
+  aadhaarNumber: '',
+  aadhaarDoc: '',
+  panNumber: '',
+  panDoc: '',
+  dlNumber: '',
+  dlDoc: '',
+  walletBalance: 0,
+  upiId: '',
+  rating: 5.0,
+  totalDeliveries: 0,
+  acceptanceRate: 100,
+  vehicleType: 'Bike',
+  vehicleNumber: '',
+  selectedZone: 'Robertsonpet',
+  selectedZoneId: 'zone-1',
+  isVerified: true,
+  verificationStep: 4,
+  isAuthenticated: false,
+};
+
+const initialIncomingOrder: Order | null = null;
+
+const initialEarnings: EarningsSummary = {
+  today: 0,
+  todayTarget: 1500,
+  todayDeliveries: 0,
+  todayTargetDeliveries: 10,
+  thisWeek: 0,
+  weekDeliveries: 0,
+  thisMonth: 0,
+  monthDeliveries: 0,
+  baseFare: 0,
+  incentives: 0,
+  tips: 0,
+  dailyTrend: [
+    { day: 'Monday', dayShort: 'M', amount: 0, deliveries: 0 },
+    { day: 'Tuesday', dayShort: 'T', amount: 0, deliveries: 0 },
+    { day: 'Wednesday', dayShort: 'W', amount: 0, deliveries: 0 },
+    { day: 'Thursday', dayShort: 'T', amount: 0, deliveries: 0, isToday: true },
+    { day: 'Friday', dayShort: 'F', amount: 0, deliveries: 0 },
+    { day: 'Saturday', dayShort: 'S', amount: 0, deliveries: 0 },
+    { day: 'Sunday', dayShort: 'S', amount: 0, deliveries: 0 },
+  ],
+};
+
+const availableZones: DeliveryZone[] = [
+  {
+    id: 'zone-1',
+    name: 'Robertsonpet',
+    radius: '5km radius',
+    demand: 'HIGH',
+    estDailyEarnings: '₹800 - ₹1,200/day',
+    activeRiders: 18,
+    centerLat: 12.9602,
+    centerLng: 78.2711,
+    radiusMeters: 5000,
+    capacity: 20,
+    booked: 0,
+  },
+  {
+    id: 'zone-2',
+    name: 'Andersonpet',
+    radius: '6km radius',
+    demand: 'HIGH',
+    estDailyEarnings: '₹600 - ₹950/day',
+    activeRiders: 12,
+    centerLat: 12.9358,
+    centerLng: 78.2678,
+    radiusMeters: 6000,
+    capacity: 15,
+    booked: 0,
+  },
+  {
+    id: 'zone-3',
+    name: 'BEML',
+    radius: '5km radius',
+    demand: 'NORMAL',
+    estDailyEarnings: '₹550 - ₹850/day',
+    activeRiders: 10,
+    centerLat: 12.9815,
+    centerLng: 78.2589,
+    radiusMeters: 5000,
+    capacity: 12,
+    booked: 0,
+  },
+  {
+    id: 'zone-4',
+    name: 'Bangarpet',
+    radius: '8km radius',
+    demand: 'HIGH',
+    estDailyEarnings: '₹700 - ₹1,100/day',
+    activeRiders: 14,
+    centerLat: 12.9984,
+    centerLng: 78.1963,
+    radiusMeters: 8000,
+    capacity: 18,
+    booked: 0,
+  },
+];
+
+const initialAlerts: AlertNotification[] = [];
+
+const completedOrdersSeed: Order[] = [];
+
+// ─── Context ──────────────────────────────────────────────────────────────────
+
+const RiderContext = createContext<RiderContextType | undefined>(undefined);
+
+export const RiderProvider = ({ children }: { children: ReactNode }) => {
+  // ── Existing state ──
+  const [rider, setRider] = useState<RiderProfile>(defaultRider);
+  const [isOnline, setIsOnline] = useState<boolean>(false); // Default offline — slot gate
+  const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [incomingOrder, setIncomingOrder] = useState<Order | null>(null);
+  const [ordersHistory, setOrdersHistory] = useState<Order[]>(completedOrdersSeed);
+  const [cancelledOrders, setCancelledOrders] = useState<Order[]>([]);
+  const [earnings, setEarnings] = useState<EarningsSummary>(initialEarnings);
+  const [zones] = useState<DeliveryZone[]>(availableZones);
+  const [alerts, setAlerts] = useState<AlertNotification[]>(initialAlerts);
+  const [desktopFrame, setDesktopFrame] = useState<boolean>(false);
+  const handledOrderIdsRef = useRef<Set<string>>(new Set());
+  const activeOrderRef = useRef<Order | null>(null);
+  activeOrderRef.current = activeOrder;
+
+  // ── New state ──
+  const [adminConfig] = useState<AdminConfig>(DEFAULT_ADMIN_CONFIG);
+  const [bookedSlotIds, setBookedSlotIds] = useState<string[]>([]);
+  const [slots, setSlots] = useState<RiderSlot[]>([]);
+  const [activeSlot, setActiveSlot] = useState<RiderSlot | null>(null);
+  const [upcomingSlot, setUpcomingSlot] = useState<RiderSlot | null>(null);
+  const [riderBreak, setRiderBreak] = useState<RiderBreak | null>(null);
+  const [zoneStatus, setZoneStatus] = useState<ZoneStatus>('unknown');
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [orderAcceptanceEvents, setOrderAcceptanceEvents] = useState<OrderAcceptanceEvent[]>([]);
+  const [nonAcceptanceCount, setNonAcceptanceCount] = useState<number>(0);
+  // ── Work Session (RIDER_2) ──
+  const [activeSession, setActiveSession] = useState<import('@/services/sessionService').RiderSession | null>(null);
+  const [sessionEnded, setSessionEnded] = useState<boolean>(false);
+  // ── Availability Preferences (RIDER_2) ──
+  const [ridingPreferences, setRidingPreferences] = useState<string[]>([]);
+  const [currentWindow, setCurrentWindow] = useState<PreferenceWindow | null>(getCurrentWindow());
+  const [isCurrentWindowPreferred, setIsCurrentWindowPreferred] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkWin = () => {
+      const now = new Date();
+      const win = getCurrentWindow(now);
+      setCurrentWindow(win);
+      if (win && ridingPreferences.includes(win.id)) {
+        setIsCurrentWindowPreferred(true);
+      } else {
+        setIsCurrentWindowPreferred(false);
+      }
+    };
+    checkWin();
+    const t = setInterval(checkWin, 60000);
+    return () => clearInterval(t);
+  }, [ridingPreferences]);
+
+
+
+  // ── Demand & Rider Capacity state ──
+  const [demandStatus, setDemandStatus] = useState<DemandCapacityStatus>({
+    availableRiderCapacity: 0,
+    activeOrdersDemand: 0,
+    isHighDemand: false,
+    totalOnlineRiders: 0,
+    busyRiders: 0,
+    breakRiders: 0,
+    outsideZoneRiders: 0,
+    offlineRiders: 0,
+    zoneId: 'zone-1',
+    lastUpdated: Date.now(),
+  });
+  const [simulatedDemand, setSimulatedDemandState] = useState<{
+    active: boolean;
+    isHighDemand: boolean;
+    ordersDemand?: number;
+    capacity?: number;
+  } | null>(null);
+  const cachedDbOrdersRef = useRef<any[]>([]);
+  const cachedDbRidersRef = useRef<any[]>([]);
+
+  // ── Refs for notification de-duplication ──
+  const sentReminderRef = useRef<Set<string>>(new Set());
+  const sentEndingRef = useRef<Set<string>>(new Set());
+  const sentActiveRef = useRef<Set<string>>(new Set());
+  const sentEndedRef = useRef<Set<string>>(new Set());
+  const breakWarn5Ref = useRef<Set<string>>(new Set());
+  const breakWarn1Ref = useRef<Set<string>>(new Set());
+  const breakExceededRef = useRef<Set<string>>(new Set());
+  const prevZoneStatusRef = useRef<ZoneStatus>('unknown');
+
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  // ─── LocalStorage hydration ────────────────────────────────────────────────
+
+  useEffect(() => {
+    try {
+      const savedRider = localStorage.getItem('snapit_rider_profile_v2');
+      if (savedRider) setRider(JSON.parse(savedRider));
+
+      const savedOnline = localStorage.getItem('snapit_online_status_v2');
+      if (savedOnline !== null) setIsOnline(JSON.parse(savedOnline));
+
+      const savedActive = localStorage.getItem('snapit_active_order_v2');
+      if (savedActive) setActiveOrder(JSON.parse(savedActive));
+
+      const savedEarnings = localStorage.getItem('snapit_earnings_v2');
+      if (savedEarnings) setEarnings(JSON.parse(savedEarnings));
+
+      const savedBookedIds = localStorage.getItem('snapit_booked_slot_ids_v1');
+      if (savedBookedIds) setBookedSlotIds(JSON.parse(savedBookedIds));
+
+      const savedBreak = localStorage.getItem('snapit_rider_break_v1');
+      if (savedBreak) setRiderBreak(JSON.parse(savedBreak));
+
+      const savedAcceptance = localStorage.getItem('snapit_acceptance_events_v1');
+      if (savedAcceptance) setOrderAcceptanceEvents(JSON.parse(savedAcceptance));
+
+      const savedNonAcceptance = localStorage.getItem('snapit_non_acceptance_count_v1');
+      if (savedNonAcceptance) setNonAcceptanceCount(JSON.parse(savedNonAcceptance));
+
+      const savedCancelled = localStorage.getItem('snapit_cancelled_orders_v2');
+      if (savedCancelled) setCancelledOrders(JSON.parse(savedCancelled));
+
+      // Restore handled order IDs to prevent repeat buzzing across reloads
+      const savedHandled = localStorage.getItem('snapit_handled_orders_v2');
+      if (savedHandled) {
+        try {
+          const parsed = JSON.parse(savedHandled);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((id: any) => handledOrderIdsRef.current.add(String(id).trim()));
+          }
+        } catch {}
+      }
+      if (savedCancelled) {
+        try {
+          const parsedCancelled = JSON.parse(savedCancelled);
+          if (Array.isArray(parsedCancelled)) {
+            parsedCancelled.forEach((o: any) => {
+              if (o?.id) handledOrderIdsRef.current.add(String(o.id).trim());
+            });
+          }
+        } catch {}
+      }
+      if (savedActive) {
+        try {
+          const parsedActive = JSON.parse(savedActive);
+          if (parsedActive?.id) {
+            handledOrderIdsRef.current.add(String(parsedActive.id).trim());
+          }
+        } catch {}
+      }
+
+      // Restore active work session
+      const savedSession = localStorage.getItem('snapit_active_session_v1');
+      if (savedSession) {
+        try {
+          const parsedSession = JSON.parse(savedSession);
+          if (parsedSession && parsedSession.committedUntil) {
+            if (Date.now() < parsedSession.committedUntil) {
+              setActiveSession(parsedSession);
+            } else {
+              localStorage.removeItem('snapit_active_session_v1');
+              localStorage.setItem('snapit_online_status_v2', JSON.stringify(false));
+              setIsOnline(false);
+              setSessionEnded(true);
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Restore riding preferences
+      const savedPrefs = localStorage.getItem('snapit_riding_preferences_v1');
+      if (savedPrefs) {
+        try {
+          const parsed = JSON.parse(savedPrefs);
+          if (Array.isArray(parsed)) setRidingPreferences(parsed);
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('Could not read local storage', e);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  // ─── LocalStorage persistence ──────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(rider));
+      localStorage.setItem('snapit_online_status_v2', JSON.stringify(isOnline));
+      localStorage.setItem('snapit_active_order_v2', JSON.stringify(activeOrder));
+      localStorage.setItem('snapit_earnings_v2', JSON.stringify(earnings));
+      localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(bookedSlotIds));
+      localStorage.setItem('snapit_rider_break_v1', JSON.stringify(riderBreak));
+      localStorage.setItem('snapit_acceptance_events_v1', JSON.stringify(orderAcceptanceEvents));
+      localStorage.setItem('snapit_non_acceptance_count_v1', JSON.stringify(nonAcceptanceCount));
+      localStorage.setItem('snapit_active_session_v1', JSON.stringify(activeSession));
+      localStorage.setItem('snapit_riding_preferences_v1', JSON.stringify(ridingPreferences));
+    } catch (e) {
+      console.warn('Could not write local storage', e);
+    }
+  }, [isHydrated, rider, isOnline, activeOrder, earnings, bookedSlotIds, riderBreak, orderAcceptanceEvents, nonAcceptanceCount, activeSession, ridingPreferences]);
+
+
+
+  // ─── Slot Generation & Active/Upcoming Tracking ────────────────────────────
+
+  const refreshSlots = useCallback((customBookedIds?: string[], customZoneId?: string, customZoneName?: string) => {
+    const currentBooked = customBookedIds !== undefined ? customBookedIds : bookedSlotIds;
+    const targetZoneId = customZoneId || rider.selectedZoneId || 'zone-1';
+    const selectedZone = zones.find((z) => z.id === targetZoneId) || zones[0];
+    const targetZoneName = customZoneName || selectedZone.name;
+
+    const generated = generateAllSlots(
+      adminConfig.slot,
+      currentBooked,
+      selectedZone.id,
+      targetZoneName
+    );
+    setSlots(generated);
+
+    const now = getNow();
+    const earlyWindow = adminConfig.slot.earlyOnlineWindowMinutes * 60000;
+
+    // Active slot: currently within start–end window (including early window)
+    const active = generated.find(
+      (s) =>
+        currentBooked.includes(s.id) &&
+        now >= s.startTimestamp - earlyWindow &&
+        now < s.endTimestamp
+    ) || null;
+    setActiveSlot(active);
+
+    // Upcoming slot: next booked slot that hasn't started early window yet
+    const upcoming = generated.find(
+      (s) =>
+        currentBooked.includes(s.id) &&
+        now < s.startTimestamp - earlyWindow
+    ) || null;
+    setUpcomingSlot(upcoming);
+  }, [bookedSlotIds, adminConfig.slot, zones, rider.selectedZoneId]);
+
+  useEffect(() => {
+    refreshSlots();
+  }, [refreshSlots]);
+
+  // ─── Demand & Capacity Calculation ─────────────────────────────────────────
+
+  const recalculateDemandStatus = useCallback((ordersList?: any[], ridersList?: any[]) => {
+    const currentZoneId = rider.selectedZoneId || 'zone-1';
+
+    if (ordersList) cachedDbOrdersRef.current = ordersList;
+    if (ridersList) cachedDbRidersRef.current = ridersList;
+
+    if (simulatedDemand?.active) {
+      const ordersDemand = simulatedDemand.ordersDemand ?? (simulatedDemand.isHighDemand ? 8 : 1);
+      const capacity = simulatedDemand.capacity ?? (simulatedDemand.isHighDemand ? 2 : 4);
+      setDemandStatus({
+        availableRiderCapacity: capacity,
+        activeOrdersDemand: ordersDemand,
+        isHighDemand: simulatedDemand.isHighDemand,
+        totalOnlineRiders: capacity + (simulatedDemand.isHighDemand ? 2 : 1),
+        busyRiders: simulatedDemand.isHighDemand ? 2 : 1,
+        breakRiders: 0,
+        outsideZoneRiders: 0,
+        offlineRiders: 2,
+        zoneId: currentZoneId,
+        lastUpdated: Date.now(),
+      });
+      return;
+    }
+
+    const orders = cachedDbOrdersRef.current || [];
+    const riders = cachedDbRidersRef.current || [];
+
+    // Active unfulfilled orders in system
+    const activeOrdersInDb = orders.filter((o: any) => {
+      const s = (o.status || '').toUpperCase();
+      return !['DELIVERED', 'CANCELLED', 'REJECTED'].includes(s);
+    });
+    const ordersDemandCount = Math.max(activeOrdersInDb.length, incomingOrder ? 1 : 0);
+
+    // Build fleet representation
+    const fleet: RiderAvailabilityItem[] = [
+      {
+        id: rider.phone || 'current-rider',
+        name: rider.name || 'Current Rider',
+        isOnline,
+        isVerified: rider.isVerified !== false,
+        isOnBreak: Boolean(riderBreak && !riderBreak.endedAt),
+        isInsideZone: zoneStatus === 'inside' || zoneStatus === 'low_accuracy' || zoneStatus === 'unknown',
+        hasActiveOrder: Boolean(activeOrder),
+        selectedZoneId: currentZoneId,
+      },
+    ];
+
+    const otherRidersFromDb = riders.filter((r: any) => r.phone !== rider.phone && r.id !== rider.phone);
+    if (otherRidersFromDb.length > 0) {
+      for (const r of otherRidersFromDb) {
+        const isBusy = orders.some(
+          (o: any) => (o.rider_id === r.phone || o.rider_id === r.id) &&
+          !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase())
+        );
+        fleet.push({
+          id: r.id || r.phone,
+          name: r.name,
+          isOnline: Boolean(r.is_online),
+          isVerified: r.is_verified !== false,
+          isOnBreak: false,
+          isInsideZone: true,
+          hasActiveOrder: isBusy,
+          selectedZoneId: r.selected_zone_id || currentZoneId,
+        });
+      }
+    } else {
+      // Dynamic baseline fleet for zone
+      const fellowBusy = ordersDemandCount >= 2;
+      fleet.push(
+        {
+          id: 'rider-peer-1',
+          name: 'Peer Rider 1',
+          isOnline: true,
+          isVerified: true,
+          isOnBreak: false,
+          isInsideZone: true,
+          hasActiveOrder: fellowBusy,
+          selectedZoneId: currentZoneId,
+        },
+        {
+          id: 'rider-peer-2',
+          name: 'Peer Rider 2',
+          isOnline: true,
+          isVerified: true,
+          isOnBreak: false,
+          isInsideZone: true,
+          hasActiveOrder: ordersDemandCount >= 4,
+          selectedZoneId: currentZoneId,
+        }
+      );
+    }
+
+    const capacityStats = calculateAvailableRiderCapacity(fleet, currentZoneId);
+    const isHigh = evaluateHighDemandState(ordersDemandCount, capacityStats.availableCapacity);
+
+    setDemandStatus({
+      availableRiderCapacity: capacityStats.availableCapacity,
+      activeOrdersDemand: ordersDemandCount,
+      isHighDemand: isHigh,
+      totalOnlineRiders: capacityStats.totalOnline,
+      busyRiders: capacityStats.busyCount,
+      breakRiders: capacityStats.breakCount,
+      outsideZoneRiders: capacityStats.outsideZoneCount,
+      offlineRiders: capacityStats.offlineCount,
+      zoneId: currentZoneId,
+      lastUpdated: Date.now(),
+    });
+  }, [simulatedDemand, rider.selectedZoneId, rider.phone, rider.name, rider.isVerified, isOnline, riderBreak, zoneStatus, activeOrder, incomingOrder]);
+
+  const setSimulatedDemand = useCallback((override: { active: boolean; isHighDemand: boolean; ordersDemand?: number; capacity?: number } | null) => {
+    setSimulatedDemandState(override);
+  }, []);
+
+  const getSlotEligibility = useCallback((slot: RiderSlot): SlotBookingEligibility => {
+    const now = getNow();
+    return checkSlotBookingEligibility(slot, now, adminConfig.slot, demandStatus);
+  }, [adminConfig.slot, demandStatus]);
+
+  useEffect(() => {
+    recalculateDemandStatus();
+  }, [recalculateDemandStatus]);
+
+  // ─── Slot Timer: Notifications + Auto-Offline ──────────────────────────────
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshSlots();
+
+      const now = getNow();
+      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
+
+      // Check if there is any currently active booked slot running right now
+      const hasActiveBookedSlot = generated.some(
+        (s) => bookedSlotIds.includes(s.id) && now >= s.startTimestamp && now < s.endTimestamp
+      );
+
+      for (const slot of generated) {
+        if (!bookedSlotIds.includes(slot.id)) continue;
+
+        const startsIn = slot.startTimestamp - now;
+        const endsIn = slot.endTimestamp - now;
+
+        // 10-min pre-slot reminder
+        if (startsIn > 0 && startsIn <= 10 * 60000 && !sentReminderRef.current.has(slot.id)) {
+          sentReminderRef.current.add(slot.id);
+          addAlert(createSlotReminderAlert(slot));
+        }
+
+        // Slot became active
+        if (
+          startsIn <= 0 &&
+          endsIn > 0 &&
+          !sentActiveRef.current.has(slot.id)
+        ) {
+          sentActiveRef.current.add(slot.id);
+          addAlert(createSlotActiveAlert(slot));
+        }
+
+        // 10-min slot ending warning
+        if (endsIn > 0 && endsIn <= 10 * 60000 && !sentEndingRef.current.has(slot.id)) {
+          sentEndingRef.current.add(slot.id);
+          const nextSlot = findNextSlot(slot, generated);
+          const nextAvailable = nextSlot !== null && nextSlot.status === 'available';
+          addAlert(createSlotEndingAlert(slot, nextAvailable));
+        }
+
+        // Slot expired
+        if (endsIn <= 0 && !sentEndedRef.current.has(slot.id)) {
+          sentEndedRef.current.add(slot.id);
+
+          // Only auto-offline if rider does NOT have another currently active slot
+          if (!hasActiveBookedSlot) {
+            if (isOnline && !activeOrder) {
+              setIsOnline(false);
+              addAlert(createSlotEndedAlert(slot));
+            } else if (isOnline && activeOrder) {
+              // Has active order — stay online until order delivery completes
+            }
+          }
+        }
+      }
+    }, 2000); // live real-time check every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [bookedSlotIds, adminConfig.slot, isOnline, activeOrder, zones, rider.selectedZoneId]);
+
+  // ─── Break Timer: Warnings ─────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!riderBreak || riderBreak.status === 'completed' || riderBreak.endedAt) return;
+
+    const interval = setInterval(() => {
+      const now = getNow();
+      const elapsed = now - riderBreak.startedAt;
+      const allowedMs = adminConfig.break.allowedBreakMinutes * 60000;
+      const graceMs = adminConfig.break.gracePeriodMinutes * 60000;
+
+      // 5-min remaining warning
+      if (elapsed >= (allowedMs - 5 * 60000) && !breakWarn5Ref.current.has(riderBreak.id)) {
+        breakWarn5Ref.current.add(riderBreak.id);
+        addAlert(createBreakEndingAlert(5));
+      }
+
+      // 1-min remaining warning
+      if (elapsed >= (allowedMs - 60000) && !breakWarn1Ref.current.has(riderBreak.id)) {
+        breakWarn1Ref.current.add(riderBreak.id);
+        addAlert(createBreakEndingAlert(1));
+      }
+
+      // Allowance ended
+      if (elapsed >= allowedMs && !breakExceededRef.current.has(riderBreak.id)) {
+        breakExceededRef.current.add(riderBreak.id);
+        addAlert(createBreakExceededAlert());
+        setRiderBreak((prev) =>
+          prev ? { ...prev, status: 'grace', gracePeriodEndAt: riderBreak.startedAt + allowedMs + graceMs } : prev
+        );
+      }
+
+      // Grace period ended — auto-resume
+      if (elapsed >= allowedMs + graceMs) {
+        setRiderBreak((prev) =>
+          prev
+            ? {
+                ...prev,
+                endedAt: riderBreak.startedAt + allowedMs + graceMs,
+                actualDurationMs: allowedMs + graceMs,
+                excessDurationMs: graceMs,
+                status: 'completed',
+              }
+            : prev
+        );
+        setIsOnline(true);
+        clearInterval(interval);
+      }
+    }, 10000); // check every 10s
+
+    return () => clearInterval(interval);
+  }, [riderBreak, adminConfig.break]);
+
+  // ─── Zone Watching ─────────────────────────────────────────────────────────
+
+  const refreshZoneStatus = useCallback(async () => {
+    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+    const result = await checkZoneStatus(selectedZone);
+    const newStatus = result.status;
+
+    setZoneStatus(newStatus);
+
+    // Zone transition alerts
+    if (prevZoneStatusRef.current !== 'inside' && newStatus === 'inside') {
+      addAlert(createZoneEnteredAlert(selectedZone.name));
+    } else if (prevZoneStatusRef.current === 'inside' && newStatus === 'outside') {
+      addAlert(createZoneExitedAlert(selectedZone.name));
+    }
+    prevZoneStatusRef.current = newStatus;
+  }, [zones, rider.selectedZoneId]);
+
+  useEffect(() => {
+    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+
+    startWatchingZone(selectedZone, (result) => {
+      const newStatus = result.status;
+      setZoneStatus((prev) => {
+        if (prev !== 'inside' && newStatus === 'inside') {
+          addAlert(createZoneEnteredAlert(selectedZone.name));
+        } else if (prev === 'inside' && newStatus === 'outside') {
+          addAlert(createZoneExitedAlert(selectedZone.name));
+        }
+        prevZoneStatusRef.current = newStatus;
+        return newStatus;
+      });
+    });
+
+    return () => {
+      stopWatchingZone();
+    };
+  }, [rider.selectedZoneId, zones]);
+
+  // ─── Real Device GPS Tracking & Live Supabase Location Broadcasting ───────
+  useEffect(() => {
+    if (!isOnline || typeof window === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+
+    let lastBroadcastTs = 0;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setGpsCoords({ lat: latitude, lng: longitude });
+
+        // Throttle broadcast to Supabase rider_profiles every 6 seconds
+        const now = Date.now();
+        if (now - lastBroadcastTs > 6000 && rider.phone) {
+          lastBroadcastTs = now;
+          updateRiderLiveLocation(rider.phone, latitude, longitude, true);
+        }
+      },
+      (err) => {
+        console.warn('Real device GPS watch notice:', err.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000,
+      }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isOnline, rider.phone]);
+
+  // ─── Dev Test Mode ─────────────────────────────────────────────────────────
+
+  const [testMode, setTestModeState] = useState<TestAppMode>(getTestMode());
+
+  const setTestMode = useCallback(
+    (mode: TestAppMode) => {
+      setTestModeState(mode);
+      setTestModeService(mode);
+      if (mode === 'driver') {
+        setIsMockLocationEnabled(false);
+        setMockZoneId(null);
+        setIsMockTimeEnabled(false);
+        setMockTimestamp(null);
+        setGpsCoords(null);
+      }
+      setTimeout(() => {
+        refreshSlots();
+        refreshZoneStatus();
+      }, 50);
+    },
+    [refreshSlots, refreshZoneStatus]
+  );
+
+  // ─── Dev Mock Location ─────────────────────────────────────────────────────
+
+  const [isMockLocationEnabled, setIsMockLocationEnabled] = useState<boolean>(false);
+  const [mockZoneId, setMockZoneId] = useState<string | null>(null);
+
+  const enableMockLocation = useCallback(
+    (zoneId?: string, customCoords?: { lat: number; lng: number }) => {
+      const targetZoneId = zoneId || rider.selectedZoneId || 'zone-1';
+      const targetZone = zones.find((z) => z.id === targetZoneId) || zones[0];
+      const coords = customCoords || {
+        lat: targetZone.centerLat ?? 12.9602,
+        lng: targetZone.centerLng ?? 78.2711,
+      };
+      setIsMockLocationEnabled(true);
+      setMockZoneId(targetZoneId);
+      setGpsCoords(coords);
+      setMockLocationConfig({
+        enabled: true,
+        coords,
+        zoneId: targetZoneId,
+      });
+    },
+    [rider.selectedZoneId, zones]
+  );
+
+  const disableMockLocation = useCallback(() => {
+    setIsMockLocationEnabled(false);
+    setMockZoneId(null);
+    setGpsCoords(null);
+    setMockLocationConfig({
+      enabled: false,
+      coords: null,
+    });
+    refreshZoneStatus();
+  }, [refreshZoneStatus]);
+
+  const setMockZone = useCallback(
+    (zoneId: string) => {
+      enableMockLocation(zoneId);
+    },
+    [enableMockLocation]
+  );
+
+  // ─── Dev Mock Time ─────────────────────────────────────────────────────────
+
+  const [isMockTimeEnabled, setIsMockTimeEnabled] = useState<boolean>(false);
+  const [mockTimestamp, setMockTimestamp] = useState<number | null>(null);
+
+  const enableMockTime = useCallback(
+    (timeStr: string, dateStr?: string) => {
+      const targetDate = dateStr || getTodayDateString();
+      const ts = timeToTodayMs(timeStr, targetDate);
+      setIsMockTimeEnabled(true);
+      setMockTimestamp(ts);
+      setMockTimeConfig({
+        enabled: true,
+        mockTimestamp: ts,
+        simulatedTimeStr: timeStr,
+        simulatedDateStr: targetDate,
+      });
+      setTimeout(refreshSlots, 50);
+    },
+    [refreshSlots]
+  );
+
+  const disableMockTime = useCallback(() => {
+    setIsMockTimeEnabled(false);
+    setMockTimestamp(null);
+    setMockTimeConfig({
+      enabled: false,
+      mockTimestamp: null,
+    });
+    setTimeout(refreshSlots, 50);
+  }, [refreshSlots]);
+
+  const setMockTimePreset = useCallback(
+    (preset: 'booked_slot_start' | 'active_slot' | 'slot_expiry' | 'cutoff_passed' | 'morning_10am') => {
+      const today = getTodayDateString();
+
+      if (preset === 'morning_10am') {
+        enableMockTime('10:00', today);
+        return;
+      }
+
+      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const allSlots = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
+      const booked = allSlots.find((s) => bookedSlotIds.includes(s.id)) || allSlots[2] || allSlots[0];
+
+      if (!booked) {
+        enableMockTime('10:00', today);
+        return;
+      }
+
+      if (preset === 'booked_slot_start') {
+        const targetTs = booked.startTimestamp - 15 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      } else if (preset === 'active_slot') {
+        const targetTs = booked.startTimestamp + 30 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      } else if (preset === 'slot_expiry') {
+        const targetTs = booked.endTimestamp + 5 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      } else if (preset === 'cutoff_passed') {
+        const targetTs = booked.startTimestamp - 15 * 60000;
+        const d = new Date(targetTs);
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        enableMockTime(`${h}:${m}`, today);
+      }
+    },
+    [enableMockTime, zones, rider.selectedZoneId, adminConfig.slot, bookedSlotIds]
+  );
+
+  const resetTestEnvironment = useCallback(() => {
+    disableMockTime();
+    disableMockLocation();
+    resetMockEnv();
+    setTimeout(() => {
+      refreshSlots();
+      refreshZoneStatus();
+    }, 100);
+  }, [disableMockTime, disableMockLocation, refreshSlots, refreshZoneStatus]);
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  const addAlert = (alert: AlertNotification) => {
+    setAlerts((prev) => [alert, ...prev]);
+  };
+
+  // ─── Slot Methods ──────────────────────────────────────────────────────────
+
+  const bookSlot = (slotId: string, zoneId: string, zoneName: string) => {
+    const slot = slots.find((s) => s.id === slotId);
+    if (slot) {
+      const eligibility = getSlotEligibility(slot);
+      if (!eligibility.canBook) {
+        addAlert({
+          id: `alert-booking-blocked-${Date.now()}`,
+          title: '⚠️ Slot Booking Closed',
+          message: eligibility.reason || 'This slot is currently not open for instant booking.',
+          time: 'Just now',
+          type: 'system',
+          read: false,
+          priority: 'high',
+        });
+        return;
+      }
+    }
+
+    const nextBooked = bookedSlotIds.includes(slotId) ? bookedSlotIds : [...bookedSlotIds, slotId];
+    setBookedSlotIds(nextBooked);
+    try {
+      localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(nextBooked));
+    } catch (e) {}
+
+    setRider((prev) => {
+      const updated = {
+        ...prev,
+        selectedZone: zoneName,
+        selectedZoneId: zoneId,
+      };
+      try {
+        localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    // Synchronous immediate refresh to avoid race conditions/delayed state updates
+    refreshSlots(nextBooked, zoneId, zoneName);
+
+    if (slot) {
+      addAlert(createSlotBookedAlert({ ...slot, zoneId, zoneName }));
+    }
+
+    setTimeout(() => {
+      recalculateDemandStatus();
+    }, 50);
+  };
+
+  const cancelSlot = (slotId: string) => {
+    const slot = slots.find((s) => s.id === slotId);
+    const nextBooked = bookedSlotIds.filter((id) => id !== slotId);
+    setBookedSlotIds(nextBooked);
+    try {
+      localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(nextBooked));
+    } catch (e) {}
+
+    if (slot) {
+      addAlert(createSlotCancelledAlert(slot));
+    }
+    // If this was the active slot, go offline
+    if (activeSlot?.id === slotId && !activeOrder) {
+      setIsOnline(false);
+    }
+    refreshSlots(nextBooked);
+  };
+
+  const extendSlot = (currentSlotId: string, nextSlotId?: string) => {
+    let targetSlotId = nextSlotId;
+    if (!targetSlotId) {
+      const current = slots.find((s) => s.id === currentSlotId);
+      if (current) {
+        const next = slots.find((s) => s.startTimestamp === current.endTimestamp);
+        if (next) {
+          targetSlotId = next.id;
+        } else {
+          const d = new Date(current.endTimestamp);
+          const h = d.getHours();
+          targetSlotId = `slot-${current.date}-${h}`;
+        }
+      }
+    }
+    if (!targetSlotId) return;
+
+    const nextBooked = bookedSlotIds.includes(targetSlotId) ? bookedSlotIds : [...bookedSlotIds, targetSlotId];
+    setBookedSlotIds(nextBooked);
+    try {
+      localStorage.setItem('snapit_booked_slot_ids_v1', JSON.stringify(nextBooked));
+    } catch (e) {}
+
+    const bookedSlot = slots.find((s) => s.id === targetSlotId);
+    if (bookedSlot) {
+      addAlert(createSlotExtendedAlert(bookedSlot.endTimestamp));
+    } else {
+      const current = slots.find((s) => s.id === currentSlotId);
+      if (current) {
+        addAlert(createSlotExtendedAlert(current.endTimestamp + 3600000));
+      }
+    }
+    refreshSlots(nextBooked);
+  };
+
+  const addSlotToWaitlist = (slotId: string) => {
+    // In a real backend this would add to waitlist
+    // For now, mark in bookedSlotIds with a special prefix
+    setSlots((prev) =>
+      prev.map((s) =>
+        s.id === slotId ? { ...s, onWaitlist: true } : s
+      )
+    );
+  };
+
+  // ─── Break Methods ─────────────────────────────────────────────────────────
+
+  const startBreak = () => {
+    if (riderBreak && !riderBreak.endedAt) return; // Already on break
+    if (!activeSlot) return;
+
+    const newBreak: RiderBreak = {
+      id: `break-${Date.now()}`,
+      slotId: activeSlot.id,
+      startedAt: Date.now(),
+      endedAt: null,
+      allowedDurationMs: adminConfig.break.allowedBreakMinutes * 60000,
+      actualDurationMs: null,
+      excessDurationMs: null,
+      status: 'active',
+      isEmergency: false,
+      emergencyReason: null,
+      gracePeriodEndAt: null,
+    };
+
+    setRiderBreak(newBreak);
+    setIsOnline(false); // Pause orders during break
+    if (incomingOrder) setIncomingOrder(null); // Clear any pending incoming
+    addAlert(createBreakStartedAlert());
+  };
+
+  const endBreak = () => {
+    if (!riderBreak) return;
+
+    const now = Date.now();
+    const elapsed = now - riderBreak.startedAt;
+    const excess = Math.max(0, elapsed - riderBreak.allowedDurationMs);
+
+    setRiderBreak({
+      ...riderBreak,
+      endedAt: now,
+      actualDurationMs: elapsed,
+      excessDurationMs: excess > 0 ? excess : null,
+      status: 'completed',
+    });
+
+    // Resume online if slot still active and inside zone
+    const canResume =
+      activeSlot &&
+      Date.now() < activeSlot.endTimestamp &&
+      (zoneStatus === 'inside' || zoneStatus === 'low_accuracy' || zoneStatus === 'unknown');
+
+    if (canResume) {
+      setIsOnline(true);
+    }
+  };
+
+  const startEmergencyBreak = (reason: string) => {
+    if (!activeSlot) return;
+
+    const newBreak: RiderBreak = {
+      id: `emergency-break-${Date.now()}`,
+      slotId: activeSlot.id,
+      startedAt: Date.now(),
+      endedAt: null,
+      allowedDurationMs: adminConfig.break.allowedBreakMinutes * 60000,
+      actualDurationMs: null,
+      excessDurationMs: null,
+      status: 'emergency',
+      isEmergency: true,
+      emergencyReason: reason,
+      gracePeriodEndAt: null,
+    };
+
+    setRiderBreak(newBreak);
+    setIsOnline(false);
+    addAlert(createBreakEmergencyAlert(reason));
+  };
+
+  // ─── Supabase Live Orders Listener ───────────────────────────────────────
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    // Flow: Customer places order (PLACED/PENDING) -> Merchant accepts order (status becomes ACCEPTED/PREPARING/PACKING)
+    // Rider receives order acceptance notification when merchant accepts
+    const isEligibleNotificationStatus = (statusStr?: string) => {
+      const s = (statusStr || '').toUpperCase();
+      return s === 'ACCEPTED' || s === 'PREPARING' || s === 'PACKING' || s === 'READY' || s === 'READY_FOR_PICKUP';
+    };
+
+    const setupLiveOrders = async () => {
+      try {
+        const dbStores = await fetchStores();
+        const dbOrders = await fetchLiveOrders();
+        const dbRiders = await fetchAllRiders();
+        recalculateDemandStatus(dbOrders, dbRiders);
+
+        // 1. Sync Active Order with Live Database: Clear stale cache if order is not in DB
+        setActiveOrder((currentActive) => {
+          if (!currentActive) {
+            // Check if any live order in DB is assigned to this rider
+            const myAssignedOrder = dbOrders.find((o) =>
+              (o.rider_id === rider.phone || o.rider_id === rider.name || o.rider_id === '9217649600' || o.rider_assignment === 'assigned') &&
+              !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase())
+            );
+            if (myAssignedOrder) {
+              const store = dbStores.find((s) => s.id === myAssignedOrder.store_id);
+              return mapDbOrderToAppOrder(myAssignedOrder, store);
+            }
+            return null;
+          }
+
+          // If we had a cached active order, check if it still exists in live DB orders
+          const liveMatching = dbOrders.find((o) => o.id === currentActive.id);
+          if (!liveMatching || ['DELIVERED', 'CANCELLED', 'REJECTED'].includes((liveMatching.status || '').toUpperCase())) {
+            try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+            return null;
+          }
+
+          const store = dbStores.find((s) => s.id === liveMatching.store_id);
+          return mapDbOrderToAppOrder(liveMatching, store);
+        });
+
+        // 2. Sync Incoming Orders (unassigned orders waiting for rider)
+        if (dbOrders && dbOrders.length > 0 && !activeOrderRef.current) {
+          const eligible = dbOrders.find((o) =>
+            isEligibleNotificationStatus(o.status) &&
+            (!o.rider_id || o.rider_id === rider.phone || o.rider_assignment !== 'assigned') &&
+            !handledOrderIdsRef.current.has(String(o.id).trim()) &&
+            !soundEngine.isOrderHandled(String(o.id).trim())
+          );
+          if (eligible) {
+            const store = dbStores.find((s) => s.id === eligible.store_id);
+            const mapped = mapDbOrderToAppOrder(eligible, store);
+            setIncomingOrder((prev) => prev || mapped);
+          } else {
+            setIncomingOrder(null);
+          }
+        } else {
+          setIncomingOrder(null);
+        }
+
+        // 3. Sync live delivered statistics & history from Supabase
+        const stats = await fetchRiderDeliveredStats(rider.phone || rider.name);
+        setEarnings((prev) => ({
+          ...prev,
+          today: stats.todayEarnings,
+          todayDeliveries: stats.todayDeliveries,
+          thisWeek: stats.totalEarnings,
+          weekDeliveries: stats.totalDeliveries,
+          thisMonth: stats.totalEarnings,
+          monthDeliveries: stats.totalDeliveries,
+          baseFare: stats.todayEarnings,
+        }));
+        if (stats.orders.length > 0) {
+          setOrdersHistory(stats.orders);
+        }
+
+        unsubscribe = subscribeToOrders(
+          (newOrder) => {
+            const newId = String(newOrder.id).trim();
+            // Do not notify if rider already has an active order or already handled this order
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(newId) || soundEngine.isOrderHandled(newId)) return;
+            if (newOrder.rider_id && newOrder.rider_id !== rider.phone && newOrder.rider_assignment === 'assigned') return;
+
+            // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
+            if (isEligibleNotificationStatus(newOrder.status)) {
+              const store = dbStores.find((s) => s.id === newOrder.store_id);
+              const mapped = mapDbOrderToAppOrder(newOrder, store);
+              setIncomingOrder(mapped);
+            }
+          },
+          (updatedOrder) => {
+            const updatedId = String(updatedOrder.id).trim();
+            const s = (updatedOrder.status || '').toUpperCase();
+
+            // If order completed or cancelled -> clear active order immediately
+            if (['DELIVERED', 'CANCELLED', 'REJECTED'].includes(s)) {
+              setActiveOrder((currentActive) => {
+                if (currentActive && String(currentActive.id).trim() === updatedId) {
+                  try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+                  return null;
+                }
+                return currentActive;
+              });
+              return;
+            }
+
+            // Realtime Handover Sync for Active Order
+            setActiveOrder((currentActive) => {
+              if (!currentActive || String(currentActive.id).trim() !== updatedId) return currentActive;
+
+              const store = dbStores.find((s) => s.id === updatedOrder.store_id);
+              return mapDbOrderToAppOrder(updatedOrder, store);
+            });
+
+            // Do NOT re-trigger incoming order notification if already active or already handled
+            if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedId) || soundEngine.isOrderHandled(updatedId)) {
+              return;
+            }
+            if (updatedOrder.rider_id && updatedOrder.rider_id !== rider.phone && updatedOrder.rider_assignment === 'assigned') {
+              return;
+            }
+
+            // Trigger notification when merchant accepts and order reaches PREPARING
+            if (isEligibleNotificationStatus(updatedOrder.status)) {
+              const store = dbStores.find((s) => s.id === updatedOrder.store_id);
+              const mapped = mapDbOrderToAppOrder(updatedOrder, store);
+              setIncomingOrder((prev) => (prev?.id === updatedOrder.id ? mapped : (prev || mapped)));
+            }
+          }
+        );
+      } catch (err) {
+        console.warn('Live order sync error:', err);
+      }
+    };
+
+    setupLiveOrders();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // ─── Online Gate (Relaxed for testing) ────────────────────────────────────
+
+  const canGoOnline = useCallback((): CanGoOnlineResult => {
+    return { canGo: true, reason: '' };
+  }, []);
+
+  // ─── Online Toggle ─────────────────────────────────────────────────────────
+
+  const toggleOnline = () => {
+    setIsOnline((prev) => {
+      const next = !prev;
+      if (rider.phone) {
+        updateRiderOnlineStatus(rider.phone, next);
+      }
+      return next;
+    });
+  };
+
+  const setOnlineStatus = (status: boolean) => {
+    setIsOnline(status);
+    if (!status) setIncomingOrder(null);
+    if (rider.phone) {
+      updateRiderOnlineStatus(rider.phone, status);
+    }
+  };
+
+  const toggleDesktopFrame = () => {
+    setDesktopFrame((prev) => !prev);
+  };
+
+  const markOrderHandledLocally = (orderId: string) => {
+    const idKey = String(orderId).trim();
+    handledOrderIdsRef.current.add(idKey);
+    soundEngine.markOrderHandled(idKey);
+    try {
+      localStorage.setItem(
+        'snapit_handled_orders_v2',
+        JSON.stringify(Array.from(handledOrderIdsRef.current))
+      );
+    } catch {}
+  };
+
+  // ─── Incoming Order Sound Effect (Strict Lifecycle) ───────────────────────
+  useEffect(() => {
+    const orderId = incomingOrder ? String(incomingOrder.id).trim() : null;
+    // Only play buzzer while order is waiting for rider response AND no active order exists AND not handled
+    if (orderId && !activeOrder && !handledOrderIdsRef.current.has(orderId) && !soundEngine.isOrderHandled(orderId)) {
+      soundEngine.startIncomingOrderBuzzer(orderId);
+    } else {
+      soundEngine.stopIncomingOrderBuzzer();
+    }
+    return () => {
+      soundEngine.stopIncomingOrderBuzzer();
+    };
+  }, [incomingOrder?.id, Boolean(activeOrder)]);
+
+  // ─── Order Methods ─────────────────────────────────────────────────────────
+
+  const acceptIncomingOrder = () => {
+    if (!incomingOrder) return;
+    const orderId = String(incomingOrder.id).trim();
+    markOrderHandledLocally(orderId);
+    soundEngine.stopIncomingOrderBuzzer();
+    soundEngine.playSuccessChime();
+    recordOrderAcceptance(orderId, 'accepted');
+    const orderWithActiveStatus: Order = {
+      ...incomingOrder,
+      status: 'picking_up',
+      navStage: 'to_shop',
+      riderPickupConfirmed: false,
+      shopkeeperHandoverConfirmed: Boolean(incomingOrder.shopkeeperHandoverConfirmed),
+      dbStatus: incomingOrder.dbStatus || 'PREPARING',
+      shopLocation: incomingOrder.shopLocation || { lat: 12.9365, lng: 78.2672, name: incomingOrder.restaurantName, address: incomingOrder.restaurantAddress },
+      customerLocation: incomingOrder.customerLocation || { lat: 12.9550, lng: 78.2720, name: incomingOrder.customerName, address: incomingOrder.deliveryAddress },
+      riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9602, lng: 78.2711 },
+    };
+    activeOrderRef.current = orderWithActiveStatus;
+    setActiveOrder(orderWithActiveStatus);
+    const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
+    assignRiderToOrder(orderId, cleanPhone);
+    setRiderAvailability(cleanPhone, false);
+    setIncomingOrder(null);
+  };
+
+
+  const declineIncomingOrder = () => {
+    if (!incomingOrder) return;
+    const orderId = String(incomingOrder.id).trim();
+    markOrderHandledLocally(orderId);
+    soundEngine.stopIncomingOrderBuzzer();
+    recordOrderAcceptance(orderId, 'declined');
+    const declinedOrder: Order = {
+      ...incomingOrder,
+      status: 'cancelled',
+      timestamp: 'Declined just now',
+    };
+    setCancelledOrders((prev) => {
+      const updated = [declinedOrder, ...prev];
+      try {
+        localStorage.setItem('snapit_cancelled_orders_v2', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    setIncomingOrder(null);
+  };
+
+  const recordOrderAcceptance = (
+    orderId: string,
+    response: OrderAcceptanceResponse,
+    exceptionReason?: OrderAcceptanceExceptionReason
+  ) => {
+    const validExceptions = adminConfig.orderAcceptance.validExceptionReasons;
+    const isValidException = exceptionReason && validExceptions.includes(exceptionReason);
+    const shouldCount =
+      (response === 'declined' || response === 'timeout') && !isValidException;
+
+    const event: OrderAcceptanceEvent = {
+      id: `accept-${Date.now()}`,
+      orderId,
+      slotId: activeSlot?.id || null,
+      assignedAt: Date.now() - 25000,
+      respondedAt: Date.now(),
+      response,
+      countedAsNonAcceptance: shouldCount,
+      exceptionReason: exceptionReason || null,
+    };
+
+    setOrderAcceptanceEvents((prev) => [event, ...prev]);
+
+    if (shouldCount) {
+      setNonAcceptanceCount((prev) => {
+        const newCount = prev + 1;
+        const { warning1Threshold, warning2Threshold, maxNonAcceptances } = adminConfig.orderAcceptance;
+
+        if (newCount === warning1Threshold || newCount === warning2Threshold || newCount >= maxNonAcceptances) {
+          addAlert(createAcceptanceWarningAlert(newCount, maxNonAcceptances));
+        }
+        return newCount;
+      });
+    }
+  };
+
+  const setActiveOrderStatus = (status: DeliveryStatus) => {
+    if (!activeOrder) return;
+    setActiveOrder({ ...activeOrder, status });
+    updateDbOrderStatus(activeOrder.id, status);
+  };
+
+  const startNavigation = () => {
+    if (!activeOrder) return;
+    const isAlreadyAtShop =
+      activeOrder.status === 'arrived_at_pickup' ||
+      activeOrder.status === 'in_transit' ||
+      activeOrder.navStage === 'to_customer';
+    const nextStage = isAlreadyAtShop ? 'to_customer' : 'to_shop';
+    const nextStatus = isAlreadyAtShop ? 'in_transit' : 'picking_up';
+    setActiveOrder({ ...activeOrder, status: nextStatus, navStage: nextStage });
+  };
+
+  /** Rider confirms physical pickup ("Confirm Parcel Picked Up") */
+  const confirmRiderPickup = () => {
+    if (!activeOrder) return;
+
+    setActiveOrder({
+      ...activeOrder,
+      status: 'in_transit',
+      navStage: 'to_customer',
+      riderPickupConfirmed: true,
+      shopkeeperHandoverConfirmed: true,
+      dbStatus: 'OUT_FOR_DELIVERY',
+    });
+
+    updateDbOrderHandover(activeOrder.id, {
+      status: 'OUT_FOR_DELIVERY',
+      rider_pickup_confirmed: true,
+      shopkeeper_handover_confirmed: true,
+    });
+    updateDbOrderStatus(activeOrder.id, 'OUT_FOR_DELIVERY');
+
+    addAlert({
+      id: `alert-handover-${Date.now()}`,
+      title: '🛍️ Handover Complete!',
+      message: `Order #${formatOrderNumber(activeOrder.orderNumber)} pickup verified. Now out for delivery!`,
+      time: 'Just now',
+      type: 'system',
+      read: false,
+    });
+  };
+
+  const markOrderPickedUp = () => {
+    confirmRiderPickup();
+  };
+
+  const setNavStage = (stage: NavigationStage) => {
+    if (!activeOrder) return;
+    setActiveOrder({ ...activeOrder, navStage: stage });
+  };
+
+  const advanceActiveOrderStatus = () => {
+    if (!activeOrder) return;
+
+    const rawDbStatus = (activeOrder.dbStatus || '').toUpperCase();
+
+    if (rawDbStatus === 'OUT_OF_SHOP') {
+      confirmRiderPickup();
+    } else if (rawDbStatus === 'OUT_FOR_DELIVERY' || activeOrder.status === 'in_transit') {
+      setActiveOrder({
+        ...activeOrder,
+        status: 'arrived_at_dropoff',
+        dbStatus: 'RIDER_AT_LOC',
+        navStage: 'at_customer',
+      });
+      updateDbOrderStatus(activeOrder.id, 'RIDER_AT_LOC');
+    }
+  };
+
+  const completeDeliveryWithOtp = (enteredOtp: string): boolean => {
+    if (!activeOrder) return false;
+
+    // Strict Verification via common_logic
+    const expectedPin = activeOrder.delivery_pin || activeOrder.otp || '4821';
+    const isPinValid = verifyDeliveryPin(enteredOtp, expectedPin);
+
+    if (!isPinValid) {
+      return false;
+    }
+
+    const completedOrder: Order = { ...activeOrder, status: 'delivered', timestamp: 'Just now' };
+    setOrdersHistory((prev) => [completedOrder, ...prev.filter((o) => o.id !== activeOrder.id)]);
+    const orderEarnings = activeOrder.earnings || 45;
+
+    soundEngine.stopIncomingOrderBuzzer();
+    soundEngine.playDeliveredSound(String(activeOrder.id), String(activeOrder.orderNumber));
+    updateDbOrderStatus(activeOrder.id, 'DELIVERED');
+
+    setRider((prev) => ({
+      ...prev,
+      walletBalance: prev.walletBalance + orderEarnings,
+      totalDeliveries: prev.totalDeliveries + 1,
+    }));
+    setEarnings((prev) => ({
+      ...prev,
+      today: prev.today + orderEarnings,
+      todayDeliveries: prev.todayDeliveries + 1,
+      thisWeek: prev.thisWeek + orderEarnings,
+      weekDeliveries: prev.weekDeliveries + 1,
+      thisMonth: prev.thisMonth + orderEarnings,
+      monthDeliveries: prev.monthDeliveries + 1,
+      baseFare: prev.baseFare + orderEarnings,
+      dailyTrend: prev.dailyTrend.map((d) =>
+        d.isToday ? { ...d, amount: d.amount + orderEarnings, deliveries: d.deliveries + 1 } : d
+      ),
+    }));
+
+    const newAlert: AlertNotification = {
+      id: `alert-${Date.now()}`,
+      title: '💰 Wallet Credited: ₹' + orderEarnings,
+      message: `Order #${formatOrderNumber(activeOrder.orderNumber)} delivered. ₹${orderEarnings} added to your Minnit Wallet.`,
+      time: 'Just now',
+      type: 'payout',
+      read: false,
+      amount: orderEarnings,
+    };
+    setAlerts((prev) => [newAlert, ...prev]);
+    setActiveOrder(null);
+    try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+
+    const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
+
+    // Work session order tracking & expiry handling
+    if (activeSession) {
+      recordSessionOrderCompleted(activeSession.id);
+      setActiveSession((prev) => prev ? { ...prev, ordersCompleted: (prev.ordersCompleted || 0) + 1 } : null);
+
+      // Edge Case: Session expired while delivering an active order!
+      // Rider remained operational until order was done; now end the session.
+      if (Date.now() >= activeSession.committedUntil) {
+        endSession(false);
+      } else {
+        // Still has session time remaining — rider is available for next orders
+        setRiderAvailability(cleanPhone, true);
+      }
+    } else if (isOnline) {
+      setRiderAvailability(cleanPhone, true);
+    }
+
+    // Legacy slot check fallback
+    const now = getNow();
+    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+    const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
+    const hasActiveBookedSlot = generated.some(
+      (s) => bookedSlotIds.includes(s.id) && now >= s.startTimestamp && now < s.endTimestamp
+    );
+
+    if (activeSlot && now >= activeSlot.endTimestamp && !hasActiveBookedSlot && !activeSession) {
+      setIsOnline(false);
+      addAlert(createSlotEndedAlert(activeSlot));
+    }
+
+    return true;
+  };
+
+
+  const triggerMockOrder = () => {
+    // If rider is offline, auto turn online in test mode so user can test seamlessly
+    if (!isOnline) {
+      setIsOnline(true);
+    }
+
+    const randomEarn = Math.floor(Math.random() * 35) + 45;
+    const randomDistance = (Math.random() * 2 + 1.2).toFixed(1);
+    const mock: Order = {
+      id: `req-${Date.now()}`,
+      orderNumber: String(Math.floor(100000 + Math.random() * 900000)),
+      customerName: ['Rahul Sharma', 'Ananya Verma', 'Karthik Iyer', 'Sneha Patel'][Math.floor(Math.random() * 4)],
+      customerPhone: '+91 98765 00000',
+      customerAvatar:
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuBQm3F-EF8KMdfUn1CQ9_0AUu0c5Anids2usYM_zIsXx7e0kAQfYRu8ya1d-UFWak5O28XmbayOqGMxNHtc59lxyiIwhncjrY8XDG12i2tRQ5ZZnKkH5mEp0s_f52f09hRiNQGIcV2D4704CLIlRGfnLt7iMMRjWFYILDYbh8oZVpMKr6lbRp4SFioMcFer9PvsJgqi85zB3_zM1EKPWzOuaozxNddoYAjVKl88_tl8Ka9Dcu8_200q0w',
+      restaurantName: 'Spice Route Restaurant',
+      restaurantAddress: '124 Culinary Blvd, Food District',
+      deliveryAddress: 'Apt 4B, Serenity Towers, Park View',
+      distanceKm: parseFloat(randomDistance),
+      estimatedMinutes: Math.floor(parseFloat(randomDistance) * 3) + 4,
+      earnings: randomEarn,
+      items: [
+        { name: 'Chicken Tikka Masala', quantity: 1, price: 280 },
+        { name: 'Garlic Naan', quantity: 2, price: 90 },
+      ],
+      status: 'pending',
+      dbStatus: 'PREPARING',
+      riderPickupConfirmed: false,
+      shopkeeperHandoverConfirmed: false,
+      otp: '1234',
+      timestamp: 'Just now',
+      paymentMethod: 'Prepaid UPI',
+    };
+    setIncomingOrder(mock);
+  };
+
+  /** Simulation helper: merchant marks order ready for pickup */
+  const simulateMerchantReadyForPickup = (ready: boolean = true) => {
+    if (!activeOrder) return;
+    const newDbStatus = ready ? 'READY_FOR_PICKUP' : 'PREPARING';
+    setActiveOrder({
+      ...activeOrder,
+      dbStatus: newDbStatus,
+    });
+    updateDbOrderStatus(activeOrder.id, newDbStatus);
+    addAlert({
+      id: `alert-ready-${Date.now()}`,
+      title: ready ? '🏪 Order Ready for Pickup' : '🏪 Order Reset to Preparing',
+      message: ready
+        ? 'Merchant marked order as Packed & Ready for Pickup. Rider slider is now enabled!'
+        : 'Order status reset to Preparing.',
+      time: 'Just now',
+      type: 'system',
+      read: false,
+    });
+  };
+
+  /** Simulation helper for test mode */
+  const simulateShopkeeperHandover = (confirmed: boolean = true) => {
+    if (!activeOrder) return;
+    const isRiderConfirmed = Boolean(activeOrder.riderPickupConfirmed);
+
+    if (confirmed && isRiderConfirmed) {
+      setActiveOrder({
+        ...activeOrder,
+        status: 'in_transit',
+        navStage: 'to_customer',
+        shopkeeperHandoverConfirmed: true,
+        dbStatus: 'OUT_FOR_DELIVERY',
+      });
+      updateDbOrderHandover(activeOrder.id, {
+        status: 'OUT_FOR_DELIVERY',
+        shopkeeper_handover_confirmed: true,
+        rider_pickup_confirmed: true,
+      });
+      addAlert({
+        id: `alert-handover-${Date.now()}`,
+        title: '🛍️ Handover Complete!',
+        message: `Shopkeeper handed over & Rider confirmed. Order is now Out for Delivery!`,
+        time: 'Just now',
+        type: 'system',
+        read: false,
+      });
+    } else {
+      setActiveOrder({
+        ...activeOrder,
+        shopkeeperHandoverConfirmed: confirmed,
+        dbStatus: confirmed ? 'OUT_OF_SHOP' : activeOrder.dbStatus,
+      });
+      updateDbOrderHandover(activeOrder.id, {
+        shopkeeper_handover_confirmed: confirmed,
+      });
+      addAlert({
+        id: `alert-sim-shop-${Date.now()}`,
+        title: confirmed ? '🏪 Shopkeeper Handed Over' : '🏪 Shopkeeper Handover Reset',
+        message: confirmed
+          ? 'Simulated shopkeeper "Slide Out of Shop". Waiting for rider to Slide Order Picked.'
+          : 'Shopkeeper handover status cleared.',
+        time: 'Just now',
+        type: 'system',
+        read: false,
+      });
+    }
+  };
+
+  const resetActiveOrder = () => {
+    setActiveOrder(null);
+    setIncomingOrder(null);
+    try {
+      localStorage.removeItem('snapit_active_order_v2');
+    } catch (e) {}
+  };
+
+  const updateRiderProfile = (updates: Partial<RiderProfile>) => {
+    setRider((prev) => ({ ...prev, ...updates }));
+  };
+
+  const simulateApproval = () => {
+    setRider((prev) => ({ ...prev, isVerified: true, verificationStep: 4 }));
+  };
+
+  const resetOnboarding = () => {
+    setRider((prev) => ({ ...prev, isVerified: false, verificationStep: 1 }));
+    setActiveOrder(null);
+    setIncomingOrder(null);
+    setBookedSlotIds([]);
+    setRiderBreak(null);
+    setNonAcceptanceCount(0);
+  };
+
+  const transferWalletToBank = (amount: number): boolean => {
+    if (amount <= 0 || amount > rider.walletBalance) return false;
+    setRider((prev) => ({ ...prev, walletBalance: prev.walletBalance - amount }));
+    const newAlert: AlertNotification = {
+      id: `alert-cashout-${Date.now()}`,
+      title: '🏦 Bank Transfer Initiated',
+      message: `₹${amount} transferred from Wallet to primary bank/UPI account (${rider.upiId})`,
+      time: 'Just now',
+      type: 'payout',
+      read: false,
+      amount,
+    };
+    setAlerts((prev) => [newAlert, ...prev]);
+    return true;
+  };
+
+  const markAlertAsRead = (id: string) => {
+    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
+  };
+
+  const loginWithMpin = async (
+    phone: string,
+    mpin: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await loginRiderWithMpin(phone, mpin);
+      if (result.error || !result.profile) {
+        return { success: false, error: result.error || 'Invalid credentials' };
+      }
+
+      const p = result.profile;
+      const updatedProfile: RiderProfile = {
+        name: p.name,
+        dob: '',
+        phone: p.phone,
+        altPhone: p.alt_phone || '',
+        email: p.email || '',
+        address: p.address || '',
+        avatarUrl: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfieCapturedUrl: p.selfie_url || '',
+        aadhaarNumber: p.aadhaar_number || '',
+        panNumber: p.pan_number || '',
+        dlNumber: p.dl_number || '',
+        walletBalance: p.wallet_balance || 0,
+        upiId: p.upi_id || '',
+        rating: Number(p.rating || 5.0),
+        totalDeliveries: p.total_deliveries || 0,
+        acceptanceRate: p.acceptance_rate || 100,
+        vehicleType: p.vehicle_type || 'Bike',
+        vehicleNumber: p.vehicle_number || '',
+        selectedZone: p.selected_zone_name || 'Robertsonpet',
+        selectedZoneId: p.selected_zone_id || 'zone-1',
+        isVerified: true,
+        verificationStep: 4,
+        mpin: p.mpin,
+        isAuthenticated: true,
+      };
+
+      setRider(updatedProfile);
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
+    }
+  };
+
+  const loginWithMpinOnly = async (
+    mpin: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await loginRiderWithMpinOnly(mpin);
+      if (result.error || !result.profile) {
+        return { success: false, error: result.error || 'Incorrect MPIN' };
+      }
+
+      const p = result.profile;
+      const updatedProfile: RiderProfile = {
+        name: p.name,
+        dob: '',
+        phone: p.phone,
+        altPhone: p.alt_phone || '',
+        email: p.email || '',
+        address: p.address || '',
+        avatarUrl: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfieCapturedUrl: p.selfie_url || '',
+        aadhaarNumber: p.aadhaar_number || '',
+        panNumber: p.pan_number || '',
+        dlNumber: p.dl_number || '',
+        walletBalance: p.wallet_balance || 0,
+        upiId: p.upi_id || '',
+        rating: Number(p.rating || 5.0),
+        totalDeliveries: p.total_deliveries || 0,
+        acceptanceRate: p.acceptance_rate || 100,
+        vehicleType: p.vehicle_type || 'Bike',
+        vehicleNumber: p.vehicle_number || '',
+        selectedZone: p.selected_zone_name || 'Robertsonpet',
+        selectedZoneId: p.selected_zone_id || 'zone-1',
+        isVerified: true,
+        verificationStep: 4,
+        mpin: p.mpin,
+        isAuthenticated: true,
+      };
+
+      setRider(updatedProfile);
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
+    }
+  };
+
+  const registerRider = async (data: {
+    name: string;
+    phone: string;
+    mpin: string;
+    dob?: string;
+    vehicleType?: string;
+    vehicleNumber?: string;
+    selectedZone?: string;
+    selectedZoneId?: string;
+    altPhone?: string;
+    email?: string;
+    address?: string;
+    aadhaarNumber?: string;
+    aadhaarDocUrl?: string;
+    panNumber?: string;
+    panDocUrl?: string;
+    dlNumber?: string;
+    dlDocUrl?: string;
+    upiId?: string;
+    avatarUrl?: string;
+    selfieCapturedUrl?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await registerRiderInDb({
+        name: data.name,
+        phone: data.phone,
+        mpin: data.mpin,
+        dob: data.dob,
+        vehicle_type: data.vehicleType || 'Bike',
+        vehicle_number: data.vehicleNumber || '',
+        selected_zone_id: data.selectedZoneId || 'zone-1',
+        selected_zone_name: data.selectedZone || 'Robertsonpet',
+        alt_phone: data.altPhone,
+        email: data.email,
+        address: data.address,
+        aadhaar_number: data.aadhaarNumber,
+        aadhaar_doc_url: data.aadhaarDocUrl,
+        pan_number: data.panNumber,
+        pan_doc_url: data.panDocUrl,
+        dl_number: data.dlNumber,
+        dl_doc_url: data.dlDocUrl,
+        upi_id: data.upiId,
+        avatar_url: data.avatarUrl || data.selfieCapturedUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfie_url: data.selfieCapturedUrl,
+      });
+
+      if (result.error || !result.profile) {
+        return { success: false, error: result.error || 'Failed to register rider' };
+      }
+
+      const p = result.profile;
+      const updatedProfile: RiderProfile = {
+        name: p.name,
+        dob: data.dob || '',
+        phone: p.phone,
+        altPhone: p.alt_phone || '',
+        email: p.email || '',
+        address: p.address || '',
+        avatarUrl: p.avatar_url || data.selfieCapturedUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        selfieCapturedUrl: p.selfie_url || data.selfieCapturedUrl || '',
+        aadhaarNumber: p.aadhaar_number || '',
+        panNumber: p.pan_number || '',
+        dlNumber: p.dl_number || '',
+        walletBalance: p.wallet_balance || 0,
+        upiId: p.upi_id || '',
+        rating: Number(p.rating || 5.0),
+        totalDeliveries: p.total_deliveries || 0,
+        acceptanceRate: p.acceptance_rate || 100,
+        vehicleType: p.vehicle_type || 'Bike',
+        vehicleNumber: p.vehicle_number || '',
+        selectedZone: p.selected_zone_name || 'Robertsonpet',
+        selectedZoneId: p.selected_zone_id || 'zone-1',
+        isVerified: true,
+        verificationStep: 4,
+        mpin: data.mpin,
+        isAuthenticated: true,
+      };
+
+      setRider(updatedProfile);
+      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Registration failed' };
+    }
+  };
+
+  const logout = () => {
+    setIsOnline(false);
+    setActiveOrder(null);
+    setIncomingOrder(null);
+    setRider(defaultRider);
+    localStorage.removeItem('snapit_rider_profile_v2');
+    localStorage.removeItem('snapit_online_status_v2');
+    localStorage.removeItem('snapit_active_order_v2');
+  };
+
+  // ── Work Session Methods (RIDER_2) ──────────────────────────────────────────
+
+  const startSession = async (
+    durationMins: number,
+    zoneId: string,
+    zoneName: string,
+    lat?: number,
+    lng?: number
+  ) => {
+    const { startRiderSession } = await import('@/services/sessionService');
+    const riderId = rider.phone;
+    if (!riderId) return;
+
+    const { session } = await startRiderSession({ riderId, zoneId, zoneName, durationMins, lat, lng });
+    if (session) {
+      setActiveSession(session);
+      setSessionEnded(false);
+    }
+    setIsOnline(true);
+    // Update rider zone in context
+    setRider((prev) => ({ ...prev, selectedZone: zoneName, selectedZoneId: zoneId }));
+    // Persist to localStorage
+    try {
+      localStorage.setItem('snapit_active_session_v1', JSON.stringify(session));
+      localStorage.setItem('snapit_online_status_v2', JSON.stringify(true));
+    } catch (e) {}
+  };
+
+  const endSession = async (endedEarly: boolean) => {
+    const { endRiderSession } = await import('@/services/sessionService');
+    const riderId = rider.phone;
+    if (!riderId) {
+      setIsOnline(false);
+      setActiveSession(null);
+      setSessionEnded(true);
+      return;
+    }
+    const sessionId = activeSession?.id || 'local';
+    await endRiderSession(sessionId, riderId, endedEarly);
+    setIsOnline(false);
+    setActiveSession(null);
+    setSessionEnded(true);
+    try {
+      localStorage.removeItem('snapit_active_session_v1');
+      localStorage.setItem('snapit_online_status_v2', JSON.stringify(false));
+    } catch (e) {}
+  };
+
+  // ── Availability Preferences (RIDER_2) ──
+  const updateRidingPreferences = async (newPrefs: string[]) => {
+    setRidingPreferences(newPrefs);
+    try {
+      localStorage.setItem('snapit_riding_preferences_v1', JSON.stringify(newPrefs));
+    } catch {}
+    if (rider.phone) {
+      await savePreferencesToSupabase(rider.phone, newPrefs);
+    }
+  };
+
+  return (
+    <RiderContext.Provider
+      value={{
+        rider,
+        isOnline,
+        activeOrder,
+        incomingOrder,
+        ordersHistory,
+        cancelledOrders,
+        earnings,
+        zones,
+        alerts,
+        desktopFrame,
+        toggleOnline,
+        toggleDesktopFrame,
+        setOnlineStatus,
+        acceptIncomingOrder,
+        declineIncomingOrder,
+        advanceActiveOrderStatus,
+        setActiveOrderStatus,
+        startNavigation,
+        markOrderPickedUp,
+        confirmRiderPickup,
+        setNavStage,
+        completeDeliveryWithOtp,
+        triggerMockOrder,
+        simulateMerchantReadyForPickup,
+        simulateShopkeeperHandover,
+        resetActiveOrder,
+        updateRiderProfile,
+        simulateApproval,
+        resetOnboarding,
+        transferWalletToBank,
+        markAlertAsRead,
+        loginWithMpin,
+        loginWithMpinOnly,
+        registerRider,
+        logout,
+        isHydrated,
+        // New
+        adminConfig,
+        slots,
+        bookedSlotIds,
+        activeSlot,
+        upcomingSlot,
+        riderBreak,
+        zoneStatus,
+        gpsCoords,
+        orderAcceptanceEvents,
+        nonAcceptanceCount,
+        bookSlot,
+        cancelSlot,
+        extendSlot,
+        addSlotToWaitlist,
+        startBreak,
+        endBreak,
+        startEmergencyBreak,
+        canGoOnline,
+        recordOrderAcceptance,
+        refreshZoneStatus,
+        refreshSlots,
+        testMode,
+        setTestMode,
+        demandStatus,
+        getSlotEligibility,
+        simulatedDemand,
+        setSimulatedDemand,
+        isMockLocationEnabled,
+        mockZoneId,
+        enableMockLocation,
+        disableMockLocation,
+        setMockZone,
+        isMockTimeEnabled,
+        mockTimestamp,
+        enableMockTime,
+        disableMockTime,
+        setMockTimePreset,
+        resetTestEnvironment,
+        // ── Work Session (RIDER_2) ──
+        activeSession,
+        sessionEnded,
+        startSession,
+        endSession,
+        // ── Availability Preferences (RIDER_2) ──
+        ridingPreferences,
+        updateRidingPreferences,
+        currentWindow,
+        isCurrentWindowPreferred,
+      }}
+
+
+    >
+      {children}
+    </RiderContext.Provider>
+  );
+};
+
+export const useRider = () => {
+  const context = useContext(RiderContext);
+  if (!context) {
+    throw new Error('useRider must be used within a RiderProvider');
+  }
+  return context;
+};
