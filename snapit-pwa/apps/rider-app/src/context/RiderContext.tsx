@@ -27,6 +27,7 @@ import {
   ZoneStatus,
   DemandCapacityStatus,
   SlotBookingEligibility,
+  PreferenceWindowId,
 } from '@/types';
 import { DEFAULT_ADMIN_CONFIG } from '@/services/adminConfig';
 import {
@@ -96,6 +97,12 @@ import {
 import { verifyDeliveryPin } from '../../../../common_logic/deliveryLogic';
 import { soundEngine } from '@/services/soundService';
 import { formatOrderNumber } from '@/utils/orderUtils';
+import {
+  fetchRiderPreferences,
+  saveRiderPreferences,
+  getLocalPreferences,
+  saveLocalPreferences,
+} from '@/services/preferenceService';
 
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
@@ -207,6 +214,9 @@ interface RiderContextType {
   disableMockTime: () => void;
   setMockTimePreset: (preset: 'booked_slot_start' | 'active_slot' | 'slot_expiry' | 'cutoff_passed' | 'morning_10am') => void;
   resetTestEnvironment: () => void;
+  // Availability Preferences
+  ridingPreferences: PreferenceWindowId[];
+  saveRidingPreferences: (preferences: PreferenceWindowId[]) => Promise<boolean>;
 }
 
 // ─── Default Data ─────────────────────────────────────────────────────────────
@@ -390,6 +400,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const breakExceededRef = useRef<Set<string>>(new Set());
   const prevZoneStatusRef = useRef<ZoneStatus>('unknown');
 
+  const [ridingPreferences, setRidingPreferences] = useState<PreferenceWindowId[]>([]);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
   // ─── LocalStorage hydration ────────────────────────────────────────────────
@@ -397,7 +408,14 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       const savedRider = localStorage.getItem('snapit_rider_profile_v2');
-      if (savedRider) setRider(JSON.parse(savedRider));
+      if (savedRider) {
+        const parsedRider = JSON.parse(savedRider);
+        setRider(parsedRider);
+        const initialPrefs = getLocalPreferences(parsedRider.phone);
+        setRidingPreferences(initialPrefs);
+      } else {
+        setRidingPreferences(getLocalPreferences());
+      }
 
       const savedOnline = localStorage.getItem('snapit_online_status_v2');
       if (savedOnline !== null) setIsOnline(JSON.parse(savedOnline));
@@ -457,6 +475,33 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       setIsHydrated(true);
     }
   }, []);
+
+  // Fetch remote availability preferences when rider profile phone changes
+  useEffect(() => {
+    if (!rider.phone) return;
+    let isMounted = true;
+    fetchRiderPreferences(rider.phone).then((remotePrefs) => {
+      if (isMounted && remotePrefs && remotePrefs.length > 0) {
+        setRidingPreferences(remotePrefs);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [rider.phone]);
+
+  const saveRidingPreferences = useCallback(
+    async (prefs: PreferenceWindowId[]): Promise<boolean> => {
+      setRidingPreferences(prefs);
+      saveLocalPreferences(prefs, rider.phone);
+      if (rider.phone) {
+        const res = await saveRiderPreferences(rider.phone, prefs);
+        return res.success;
+      }
+      return true;
+    },
+    [rider.phone]
+  );
 
   // ─── LocalStorage persistence ──────────────────────────────────────────────
 
@@ -2026,6 +2071,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         disableMockTime,
         setMockTimePreset,
         resetTestEnvironment,
+        ridingPreferences,
+        saveRidingPreferences,
       }}
     >
       {children}

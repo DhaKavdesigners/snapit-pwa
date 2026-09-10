@@ -53,6 +53,38 @@ export interface Order {
   navStage?: NavigationStage;
 }
 
+// ─── Rider Availability & Preferences ─────────────────────────────────────────
+export type PreferenceWindowId = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'NIGHT';
+
+export interface AvailabilityWindow {
+  id: PreferenceWindowId;
+  label: string;
+  emoji: string;
+  timeRange: string;
+  description: string;
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+}
+
+export type RiderShiftSessionStatus = 'ACTIVE' | 'COMPLETED' | 'ENDED_EARLY';
+
+export interface RiderShiftSession {
+  id: string;
+  rider_id: string;
+  zone_id: string;
+  zone_name: string;
+  started_at: string;
+  committed_until: string;
+  ended_at?: string | null;
+  planned_duration_mins: number;
+  actual_duration_mins?: number | null;
+  status: RiderShiftSessionStatus;
+  ended_early: boolean;
+  orders_completed: number;
+}
+
 // ─── Rider Profile ───────────────────────────────────────────────────────────
 export interface RiderProfile {
   name: string;
@@ -96,6 +128,14 @@ export interface RiderProfile {
   verificationStep: number; // 1: submitted, 2: reviewing, 3: admin check, 4: approved
   mpin?: string;
   isAuthenticated?: boolean;
+
+  // Sessions & Availability Preferences
+  session_started_at?: string | null;
+  session_ends_at?: string | null;
+  session_duration_mins?: number | null;
+  available_for_order?: boolean;
+  current_session_id?: string | null;
+  riding_preferences?: PreferenceWindowId[];
 }
 
 // ─── Earnings ────────────────────────────────────────────────────────────────

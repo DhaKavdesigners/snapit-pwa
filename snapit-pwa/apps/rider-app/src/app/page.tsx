@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ZoneSelectionModal } from '@/components/slots/ZoneSelectionModal';
-import { HomeSlotCard } from '@/components/dashboard/HomeSlotCard';
+import { HomeAvailabilityCard } from '@/components/dashboard/HomeAvailabilityCard';
 import { ActiveDeliveryCard } from '@/components/dashboard/ActiveDeliveryCard';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
@@ -147,8 +147,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── 3. UPCOMING / ACTIVE BOOKED SLOT CARD ── */}
-        <HomeSlotCard />
+        {/* ── 2. LIVE AVAILABILITY & PRIORITY CARD ── */}
+        <HomeAvailabilityCard />
 
         {/* ── 4. MAIN INTERACTIVE ORDER COCKPIT ── */}
 
@@ -285,10 +285,10 @@ export default function DashboardPage() {
 
             <div className="pt-2">
               <Link
-                href="/slots"
+                href="/availability"
                 className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1 transition-colors"
               >
-                <span>Pick / Change 1-Hour Duty Slot</span>
+                <span>Manage Availability Preferences</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -322,10 +322,10 @@ export default function DashboardPage() {
               </button>
 
               <Link
-                href="/slots"
+                href="/availability"
                 className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
               >
-                📅 View & Book 1-Hour Slots
+                ⭐ Manage Availability Preferences
               </Link>
             </div>
           </div>

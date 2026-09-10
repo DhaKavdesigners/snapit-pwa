@@ -117,7 +117,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
                 {getGreeting()}, {firstName} 👋
               </h2>
               <Link
-                href="/slots"
+                href="/availability"
                 className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors mt-0.5 cursor-pointer truncate"
               >
                 <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />

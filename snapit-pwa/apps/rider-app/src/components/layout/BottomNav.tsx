@@ -27,10 +27,10 @@ export const BottomNav: React.FC = () => {
       active: pathname.startsWith('/orders'),
     },
     {
-      label: 'Slots',
-      href: '/slots',
-      icon: 'schedule',
-      active: pathname.startsWith('/slots'),
+      label: 'Availability',
+      href: '/availability',
+      icon: 'event_available',
+      active: pathname.startsWith('/availability') || pathname.startsWith('/slots'),
       badge: isBreakActive ? '⏸' : activeSlot ? '●' : hasSlotWarning ? '!' : undefined,
       badgeColor: isBreakActive
         ? 'bg-amber-500'

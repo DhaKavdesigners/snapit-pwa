@@ -71,6 +71,30 @@ export interface DbRiderProfile {
   rating?: number;
   total_deliveries?: number;
   acceptance_rate?: number;
+  // Work Sessions & Availability Preferences
+  session_started_at?: string | null;
+  session_ends_at?: string | null;
+  session_duration_mins?: number | null;
+  available_for_order?: boolean;
+  current_session_id?: string | null;
+  riding_preferences?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DbShiftSession {
+  id: string;
+  rider_id: string;
+  zone_id: string;
+  zone_name: string;
+  started_at: string;
+  committed_until: string;
+  ended_at?: string | null;
+  planned_duration_mins: number;
+  actual_duration_mins?: number | null;
+  status: 'ACTIVE' | 'COMPLETED' | 'ENDED_EARLY';
+  ended_early: boolean;
+  orders_completed: number;
   created_at?: string;
   updated_at?: string;
 }
