@@ -8,6 +8,7 @@ import {
   Users,
   Settings,
   Activity,
+  Receipt,
 } from "lucide-react";
 import { useAdminStore } from "../../store/useAdminStore";
 
@@ -15,6 +16,7 @@ export type AdminTab =
   | "dashboard"
   | "orders"
   | "merchants"
+  | "settlements"
   | "fleet"
   | "catalog"
   | "customers"
@@ -55,6 +57,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       icon: Store,
       badge: `${onlineStoresCount}/${stores.length}`,
       badgeColor: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+    },
+    {
+      id: "settlements" as AdminTab,
+      label: "Ledger & Settlements",
+      icon: Receipt,
+      badge: "11 PM Due",
+      badgeColor: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
     },
     {
       id: "fleet" as AdminTab,

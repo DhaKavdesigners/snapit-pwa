@@ -1,0 +1,108 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://satzvkmpatnbxpeiecvg.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_Dj9NK5v5Dn1LiNhhg9BKsA_5QN5rtXp';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+});
+
+export interface DbOrder {
+  id: string;
+  customer_id?: string;
+  store_id?: string;
+  rider_id?: string | null;
+  status: string;
+  items: Array<{ name: string; quantity: number; price?: number }>;
+  estimated_total: number;
+  delivery_address: any;
+  recipient_name: string;
+  recipient_phone: string;
+  cooking_instructions?: string;
+  payment_method?: string;
+  payment_status?: string;
+  shopkeeper_handover_confirmed?: boolean;
+  rider_pickup_confirmed?: boolean;
+  rider_assignment?: string;
+  delivery_pin?: string | number;
+  delivery_fee?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DbStore {
+  id: string;
+  name: string;
+  address?: string;
+  store_address?: string;
+  store_location?: string;
+  lat?: number;
+  lng?: number;
+  phone?: string;
+}
+
+export interface DbRiderProfile {
+  id: string;
+  user_id?: string;
+  name: string;
+  phone: string;
+  mpin?: string;
+  alt_phone?: string;
+  email?: string;
+  address?: string;
+  avatar_url?: string;
+  selfie_url?: string;
+  aadhaar_number?: string;
+  pan_number?: string;
+  dl_number?: string;
+  upi_id?: string;
+  vehicle_type?: string;
+  vehicle_number?: string;
+  selected_zone_id?: string;
+  selected_zone_name?: string;
+  is_verified?: boolean;
+  verification_step?: number;
+  is_online?: boolean;
+  current_lat?: number;
+  current_lng?: number;
+  wallet_balance?: number;
+  rating?: number;
+  total_deliveries?: number;
+  acceptance_rate?: number;
+  // ── Work Session columns (added in migration 20260908) ──
+  session_started_at?: string | null;   // ISO timestamp
+  session_ends_at?: string | null;      // ISO timestamp
+  session_duration_mins?: number | null; // 120 | 240 | 360
+  available_for_order?: boolean | null; // true = AVAILABLE, false = BUSY
+  current_session_id?: string | null;   // FK to rider_shift_sessions.id
+  riding_preferences?: string[] | null; // ['morning', 'afternoon', 'evening', 'night']
+  created_at?: string;
+  updated_at?: string;
+}
+
+
+/**
+ * Represents a row in rider_shift_sessions table.
+ * Records every work session a rider starts — used for reliability analytics.
+ */
+export interface DbRiderSession {
+  id: string;
+  rider_id: string;
+  zone_id: string;
+  zone_name: string;
+  started_at: string;           // ISO timestamp
+  committed_until: string;      // ISO timestamp — planned end
+  ended_at?: string | null;     // ISO timestamp — actual end
+  planned_duration_mins: number;
+  actual_duration_mins?: number | null;
+  status: 'ACTIVE' | 'COMPLETED' | 'ENDED_EARLY' | 'CANCELLED';
+  ended_early: boolean;
+  orders_completed: number;
+  created_at?: string;
+  updated_at?: string;
+}
+

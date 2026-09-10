@@ -21,6 +21,8 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     if (dbOrder.delivery_address.lng) dropLng = Number(dbOrder.delivery_address.lng);
   }
 
+  if (!dropLat && (dbOrder as any).lat) dropLat = Number((dbOrder as any).lat);
+  if (!dropLng && (dbOrder as any).lng) dropLng = Number((dbOrder as any).lng);
   if (!dropLat && (dbOrder as any).drop_lat) dropLat = Number((dbOrder as any).drop_lat);
   if (!dropLng && (dbOrder as any).drop_lng) dropLng = Number((dbOrder as any).drop_lng);
   if (!dropLat && (dbOrder as any).latitude) dropLat = Number((dbOrder as any).latitude);
@@ -31,10 +33,10 @@ export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
     d1: 'Nandhini KGF',
     s1: 'Mhetha Stores',
     s4: 'Nandhini KGF',
-    f1: 'Bakio - Pizza & Burgers',
-    f2: 'Mayura Pure Veg',
-    f3: 'Ambur Star Dum Biriyani',
-    f4: 'Al Baik Crunch Express',
+    f1: 'Ambur Biriyani KGF',
+    f2: 'MR & MRS KITCHEN',
+    f3: 'Babu Juice Shop',
+    f4: 'Cool Shop',
     f5: 'Al Naz Shawarma & Rolls',
   };
 
