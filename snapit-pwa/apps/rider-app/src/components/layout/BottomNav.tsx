@@ -7,7 +7,7 @@ import { useRider } from '@/context/RiderContext';
 
 export const BottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { activeOrder, activeSlot, riderBreak, alerts, nonAcceptanceCount, adminConfig } = useRider();
+  const { activeOrder, activeSlot, activeSession, riderBreak, alerts, nonAcceptanceCount, adminConfig } = useRider();
 
   const isBreakActive = riderBreak && !riderBreak?.endedAt;
   const hasSlotWarning = nonAcceptanceCount >= adminConfig.orderAcceptance.warning1Threshold;
@@ -31,13 +31,13 @@ export const BottomNav: React.FC = () => {
       href: '/availability',
       icon: 'event_available',
       active: pathname.startsWith('/availability') || pathname.startsWith('/slots'),
-      badge: isBreakActive ? '⏸' : activeSlot ? '●' : hasSlotWarning ? '!' : undefined,
+      badge: isBreakActive ? '⏸' : activeSession ? '●' : activeSlot ? '●' : hasSlotWarning ? '!' : undefined,
       badgeColor: isBreakActive
         ? 'bg-amber-500'
         : hasSlotWarning
         ? 'bg-red-500'
-        : activeSlot
-        ? 'bg-primary'
+        : activeSession || activeSlot
+        ? 'bg-emerald-600'
         : 'bg-primary',
     },
     {

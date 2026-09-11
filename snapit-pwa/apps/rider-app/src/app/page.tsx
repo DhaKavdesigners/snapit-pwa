@@ -5,18 +5,22 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ZoneSelectionModal } from '@/components/slots/ZoneSelectionModal';
 import { HomeAvailabilityCard } from '@/components/dashboard/HomeAvailabilityCard';
 import { ActiveDeliveryCard } from '@/components/dashboard/ActiveDeliveryCard';
+import { StartRidingSheet } from '@/components/dashboard/StartRidingSheet';
+import { ActiveSessionCard } from '@/components/dashboard/ActiveSessionCard';
+import { ExtendSessionModal } from '@/components/dashboard/ExtendSessionModal';
+import { EndSessionEarlyModal } from '@/components/dashboard/EndSessionEarlyModal';
+import { SessionCompleteCard } from '@/components/dashboard/SessionCompleteCard';
+import { BreakOrderPreviewCard } from '@/components/delivery/BreakOrderPreviewCard';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { soundEngine } from '@/services/soundService';
-import { SlideButton } from '@/components/common/SlideButton';
 import { formatOrderNumber } from '@/utils/orderUtils';
 import {
   TrendingUp,
   BarChart2,
   Clock,
   ChevronRight,
-  Navigation,
   Store,
   Home,
   Power,
@@ -27,30 +31,31 @@ export default function DashboardPage() {
   const {
     isOnline,
     toggleOnline,
-    setOnlineStatus,
     activeOrder,
     incomingOrder,
     acceptIncomingOrder,
     declineIncomingOrder,
     advanceActiveOrderStatus,
     markOrderPickedUp,
-    activeSlot,
-    upcomingSlot,
+    activeSession,
+    isStartRidingOpen,
+    openStartRiding,
+    closeStartRiding,
+    sessionCompletedData,
     rider,
     earnings,
     isHydrated,
+    riderBreak,
+    breakOrderPreview,
+    dismissBreakOrderPreview,
   } = useRider();
   const router = useRouter();
 
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
+  const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
+  const [isEndEarlyModalOpen, setIsEndEarlyModalOpen] = useState(false);
 
-  // Greeting by time of day
-  const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
+  const isBreakActive = Boolean(riderBreak && !riderBreak.endedAt);
 
   // Redirect to onboarding if not registered
   useEffect(() => {
@@ -70,15 +75,20 @@ export default function DashboardPage() {
   // Online timer calculation
   const [onlineSeconds, setOnlineSeconds] = useState(0);
   useEffect(() => {
-    if (!isOnline) { setOnlineSeconds(0); return; }
+    if (!isOnline) {
+      setOnlineSeconds(0);
+      return;
+    }
     const t = setInterval(() => setOnlineSeconds((s) => s + 1), 1000);
     return () => clearInterval(t);
   }, [isOnline]);
+
   const onlineHours = Math.floor(onlineSeconds / 3600);
   const onlineMins = Math.floor((onlineSeconds % 3600) / 60);
-  const onlineTimeStr = onlineSeconds > 0
-    ? `${onlineHours}h ${onlineMins.toString().padStart(2, '0')}m`
-    : '0h 00m';
+  const onlineTimeStr =
+    onlineSeconds > 0
+      ? `${onlineHours}h ${onlineMins.toString().padStart(2, '0')}m`
+      : '0h 00m';
 
   // 25s Countdown for incoming order
   const [countdown, setCountdown] = useState(25);
@@ -108,7 +118,10 @@ export default function DashboardPage() {
         {/* ── 1. TODAY'S OVERVIEW (3 METRIC TILES) ── */}
         <div className="grid grid-cols-3 gap-2">
           {/* Earnings */}
-          <Link href="/earnings" className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs flex flex-col justify-between active:scale-98 transition-transform">
+          <Link
+            href="/earnings"
+            className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs flex flex-col justify-between active:scale-98 transition-transform"
+          >
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center mb-1">
               <TrendingUp className="w-4 h-4" />
             </div>
@@ -121,7 +134,10 @@ export default function DashboardPage() {
           </Link>
 
           {/* Orders Delivered */}
-          <Link href="/orders" className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs flex flex-col justify-between active:scale-98 transition-transform">
+          <Link
+            href="/orders"
+            className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs flex flex-col justify-between active:scale-98 transition-transform"
+          >
             <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-1">
               <BarChart2 className="w-4 h-4" />
             </div>
@@ -150,9 +166,9 @@ export default function DashboardPage() {
         {/* ── 2. LIVE AVAILABILITY & PRIORITY CARD ── */}
         <HomeAvailabilityCard />
 
-        {/* ── 4. MAIN INTERACTIVE ORDER COCKPIT ── */}
+        {/* ── 3. MAIN INTERACTIVE ORDER / SESSION COCKPIT ── */}
 
-        {/* ─── SCENARIO A: INCOMING ORDER ALERT (Clean, Premium & Super Cool) ─── */}
+        {/* ─── SCENARIO A: INCOMING ORDER ALERT ─── */}
         {incomingOrder && !activeOrder && (
           <div className="bg-white text-slate-900 rounded-[28px] p-5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.12)] border border-slate-200/90 relative overflow-hidden animate-slide-up space-y-4 ring-2 ring-emerald-500/20">
             {/* Top Timer Bar */}
@@ -183,7 +199,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Restaurant Hero Title & Trip Specs Subline */}
+            {/* Restaurant Hero Title & Trip Specs */}
             <div>
               <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
                 {incomingOrder.restaurantName}
@@ -197,7 +213,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Clean Connected Route Timeline (No Redundant Restaurant Name) */}
+            {/* Connected Route Timeline */}
             <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/80 space-y-2">
               {/* Pickup Point */}
               <div className="flex items-start gap-3">
@@ -233,7 +249,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* High-Impact Action Buttons */}
+            {/* Action Buttons */}
             <div className="grid grid-cols-3 gap-3 pt-1">
               <button
                 type="button"
@@ -255,7 +271,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ─── SCENARIO B: ACTIVE ORDER IN PROGRESS (Home = What I need to do NOW) ─── */}
+        {/* ─── SCENARIO B: ACTIVE DELIVERY IN PROGRESS (Top Priority on Home) ─── */}
         {activeOrder && (
           <ActiveDeliveryCard
             activeOrder={activeOrder}
@@ -264,74 +280,84 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* ─── SCENARIO C: ONLINE & WAITING FOR ORDERS ─── */}
-        {!incomingOrder && !activeOrder && isOnline && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3">
-            <div className="relative w-20 h-20 flex items-center justify-center my-2">
-              <div className="absolute inset-0 bg-emerald-500/15 rounded-full animate-ping" />
-              <div className="relative z-10 w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center border-2 border-emerald-400 text-emerald-600 shadow-md">
-                <Navigation className="w-7 h-7 text-emerald-600 fill-emerald-100" />
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-black text-lg text-slate-900">
-                You are Online & Ready
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-[260px] leading-relaxed">
-                Listening for store orders in <strong className="text-slate-800">{rider.selectedZone || 'Robertsonpet'}</strong>. Orders will appear here automatically.
-              </p>
-            </div>
-
-            <div className="pt-2">
-              <Link
-                href="/availability"
-                className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1 transition-colors"
-              >
-                <span>Manage Availability Preferences</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
+        {/* ─── SCENARIO C: SESSION COMPLETED SUMMARY (After session finishes naturally) ─── */}
+        {!incomingOrder && !activeOrder && !isOnline && sessionCompletedData && (
+          <SessionCompleteCard onStartAnother={openStartRiding} />
         )}
 
-        {/* ─── SCENARIO D: OFFLINE STATE ─── */}
-        {!incomingOrder && !activeOrder && !isOnline && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-300 text-slate-400 my-1">
+        {/* ─── SCENARIO D: ONLINE & ACTIVE RIDING SESSION ─── */}
+        {!incomingOrder && !activeOrder && isOnline && (
+          <>
+            {/* Break-Mode Live Order Preview (Read-only ~3s preview) */}
+            {breakOrderPreview && isBreakActive && (
+              <BreakOrderPreviewCard
+                order={breakOrderPreview}
+                onDismiss={dismissBreakOrderPreview}
+              />
+            )}
+
+            <ActiveSessionCard
+              onOpenExtend={() => setIsExtendModalOpen(true)}
+            />
+          </>
+        )}
+
+        {/* ─── SCENARIO E: OFFLINE STATE (START RIDING CTA) ─── */}
+        {!incomingOrder && !activeOrder && !isOnline && !sessionCompletedData && (
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-400 my-1 shadow-2xs">
               <Power className="w-7 h-7" />
             </div>
 
             <div>
               <h3 className="font-black text-lg text-slate-900">
-                You are Currently Offline
+                You're Currently Offline
               </h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-[260px] leading-relaxed">
-                Toggle the switch in the top bar to go online and receive delivery orders.
+              <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
+                Ready to earn in <strong className="text-slate-800">{rider.selectedZone || 'Robertsonpet'}</strong>? Start a flexible riding session to receive delivery orders.
               </p>
             </div>
 
-            <div className="w-full max-w-[260px] pt-1 flex flex-col gap-2">
+            <div className="w-full max-w-xs pt-1 flex flex-col gap-2.5">
               <button
                 type="button"
-                onClick={toggleOnline}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={openStartRiding}
+                className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
               >
-                <Power className="w-4 h-4" />
-                <span>Go Online Now</span>
+                <Power className="w-5 h-5 stroke-[2.5]" />
+                <span>START RIDING</span>
               </button>
 
               <Link
                 href="/availability"
                 className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
               >
-                ⭐ Manage Availability Preferences
+                ⭐ Availability Preferences
               </Link>
             </div>
           </div>
         )}
 
-        {/* ── 5. Zone Selection Modal ── */}
+        {/* ── 4. Modals ── */}
+        {/* Start Riding Bottom Sheet */}
+        <StartRidingSheet
+          isOpen={isStartRidingOpen}
+          onClose={closeStartRiding}
+        />
+
+        {/* Extend Session Modal (+1h) */}
+        <ExtendSessionModal
+          isOpen={isExtendModalOpen}
+          onClose={() => setIsExtendModalOpen(false)}
+        />
+
+        {/* End Session Early Modal */}
+        <EndSessionEarlyModal
+          isOpen={isEndEarlyModalOpen}
+          onClose={() => setIsEndEarlyModalOpen(false)}
+        />
+
+        {/* Zone Selection Modal */}
         <ZoneSelectionModal
           isOpen={isZoneModalOpen}
           onClose={() => setIsZoneModalOpen(false)}

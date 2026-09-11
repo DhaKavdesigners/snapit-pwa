@@ -85,6 +85,13 @@ export interface RiderShiftSession {
   orders_completed: number;
 }
 
+export type RiderAvailabilityStatus =
+  | 'OFFLINE'
+  | 'ONLINE_IDLE'
+  | 'ONLINE_BUSY'
+  | 'ON_BREAK';
+
+
 // ─── Rider Profile ───────────────────────────────────────────────────────────
 export interface RiderProfile {
   name: string;

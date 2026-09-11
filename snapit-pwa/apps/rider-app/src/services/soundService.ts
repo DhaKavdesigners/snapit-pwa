@@ -243,6 +243,28 @@ class SoundEngine {
   }
 
   /**
+   * Play subtle, non-intrusive single ping for break-mode order preview
+   * Stops immediately, never buzzes, never loops
+   */
+  public playBreakPreviewBeep() {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {}
+  }
+
+  /**
    * Play crisp, satisfying golden coin collection sound
    * Classic two-tone metallic chime with high shimmer overtone
    */

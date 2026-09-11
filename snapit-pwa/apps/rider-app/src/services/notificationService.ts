@@ -112,11 +112,11 @@ export function createZoneRequiredAlert(zoneName: string): AlertNotification {
   );
 }
 
-export function createBreakStartedAlert(): AlertNotification {
+export function createBreakStartedAlert(minutes: number = 15): AlertNotification {
   return makeAlert(
     'break_started',
     '☕ Break Started',
-    'You are on a 15-minute break. No new orders will be assigned during this time.',
+    `You are on a ${minutes}-minute break. No new orders will be assigned during this time.`,
     { priority: 'low' }
   );
 }
@@ -130,11 +130,11 @@ export function createBreakEndingAlert(minutesLeft: number): AlertNotification {
   );
 }
 
-export function createBreakExceededAlert(): AlertNotification {
+export function createBreakExceededAlert(minutes: number = 15): AlertNotification {
   return makeAlert(
     'break_exceeded',
     '🔴 Break Allowance Exceeded',
-    'Your 15-minute break allowance has ended. Please resume Online now.',
+    `Your ${minutes}-minute break allowance has ended. Please resume Online now.`,
     { priority: 'critical' }
   );
 }

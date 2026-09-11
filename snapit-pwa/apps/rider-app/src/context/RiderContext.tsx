@@ -28,6 +28,9 @@ import {
   DemandCapacityStatus,
   SlotBookingEligibility,
   PreferenceWindowId,
+  RiderShiftSession,
+  RiderShiftSessionStatus,
+  RiderAvailabilityStatus,
 } from '@/types';
 import { DEFAULT_ADMIN_CONFIG } from '@/services/adminConfig';
 import {
@@ -103,6 +106,18 @@ import {
   getLocalPreferences,
   saveLocalPreferences,
 } from '@/services/preferenceService';
+import {
+  createShiftSession,
+  extendShiftSession,
+  endShiftSession,
+  getLocalShiftSession,
+  saveLocalShiftSession,
+  isSessionValidAndActive,
+  incrementSessionOrders,
+  getSessionRemainingMs,
+  getSessionBreakAllowanceMinutes,
+  formatRemainingBreakTime,
+} from '@/services/sessionService';
 
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
@@ -217,6 +232,22 @@ interface RiderContextType {
   // Availability Preferences
   ridingPreferences: PreferenceWindowId[];
   saveRidingPreferences: (preferences: PreferenceWindowId[]) => Promise<boolean>;
+  // Flexible Riding Session
+  activeSession: RiderShiftSession | null;
+  startSession: (zoneId: string, zoneName: string, durationHours: number) => Promise<RiderShiftSession>;
+  extendSession: (addHours?: number) => Promise<boolean>;
+  endSessionEarly: () => Promise<void>;
+  isStartRidingOpen: boolean;
+  openStartRiding: () => void;
+  closeStartRiding: () => void;
+  riderAvailabilityStatus: RiderAvailabilityStatus;
+  availableForOrder: boolean;
+  sessionCompletedData: { ordersCompleted: number; earnings: number; durationMinutes: number } | null;
+  dismissSessionCompleted: () => void;
+  sessionBreakUsedMs: number;
+  remainingBreakAllowanceMs: number;
+  breakOrderPreview: Order | null;
+  dismissBreakOrderPreview: () => void;
 }
 
 // ─── Default Data ─────────────────────────────────────────────────────────────
@@ -403,6 +434,77 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [ridingPreferences, setRidingPreferences] = useState<PreferenceWindowId[]>([]);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
+  // ── Flexible Riding Session state ──
+  const [activeSession, setActiveSession] = useState<RiderShiftSession | null>(null);
+  const [isStartRidingOpen, setIsStartRidingOpen] = useState<boolean>(false);
+  const [sessionCompletedData, setSessionCompletedData] = useState<{
+    ordersCompleted: number;
+    earnings: number;
+    durationMinutes: number;
+  } | null>(null);
+  const completedOrderIdsRef = useRef<Set<string>>(new Set());
+  const sessionExpiredPendingDeliveryRef = useRef<boolean>(false);
+
+  // ── Session Break Allowance State ──
+  const [sessionBreakUsedMs, setSessionBreakUsedMs] = useState<number>(0);
+  const sessionBreakAllowanceMins = getSessionBreakAllowanceMinutes(activeSession?.planned_duration_mins);
+  const totalBreakAllowanceMs = sessionBreakAllowanceMins * 60000;
+  const remainingBreakAllowanceMs = Math.max(0, totalBreakAllowanceMs - sessionBreakUsedMs);
+
+  // Computed availability status: OFFLINE | ONLINE_IDLE | ONLINE_BUSY | ON_BREAK
+  const isBreakActive = Boolean(riderBreak && !riderBreak.endedAt);
+  const riderAvailabilityStatus: RiderAvailabilityStatus = !isOnline
+    ? 'OFFLINE'
+    : isBreakActive
+    ? 'ON_BREAK'
+    : activeOrder
+    ? 'ONLINE_BUSY'
+    : 'ONLINE_IDLE';
+
+  const availableForOrder =
+    isOnline && !isBreakActive && !activeOrder && Boolean(activeSession && isSessionValidAndActive(activeSession));
+
+  // ── Break-Mode Live Order Preview State ──
+  const [breakOrderPreview, setBreakOrderPreview] = useState<Order | null>(null);
+  const breakPreviewTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const previewedOrderIdsRef = useRef<Set<string>>(new Set());
+  const isBreakActiveRef = useRef<boolean>(false);
+  isBreakActiveRef.current = isBreakActive;
+  const isOnlineRef = useRef<boolean>(false);
+  isOnlineRef.current = isOnline;
+
+  const dismissBreakOrderPreview = useCallback(() => {
+    if (breakPreviewTimerRef.current) {
+      clearTimeout(breakPreviewTimerRef.current);
+      breakPreviewTimerRef.current = null;
+    }
+    setBreakOrderPreview(null);
+  }, []);
+
+  const showBreakOrderPreview = useCallback((order: Order) => {
+    const orderId = String(order.id).trim();
+    // Do not show duplicate preview for the same order
+    if (previewedOrderIdsRef.current.has(orderId)) return;
+    previewedOrderIdsRef.current.add(orderId);
+
+    // Play subtle, non-intrusive single ping
+    try {
+      soundEngine.playBreakPreviewBeep();
+    } catch {}
+
+    setBreakOrderPreview(order);
+
+    if (breakPreviewTimerRef.current) {
+      clearTimeout(breakPreviewTimerRef.current);
+    }
+
+    breakPreviewTimerRef.current = setTimeout(() => {
+      setBreakOrderPreview(null);
+      breakPreviewTimerRef.current = null;
+    }, 5000);
+  }, []);
+
+
   // ─── LocalStorage hydration ────────────────────────────────────────────────
 
   useEffect(() => {
@@ -469,6 +571,39 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch {}
       }
+
+      // Reconstruct flexible riding session from timestamps
+      const savedSession = getLocalShiftSession();
+      if (savedSession && savedSession.status === 'ACTIVE') {
+        const now = Date.now();
+        const endMs = new Date(savedSession.committed_until).getTime();
+        if (now < endMs) {
+          setActiveSession(savedSession);
+          setIsOnline(true);
+          const savedBreakUsed = localStorage.getItem(`minnit_break_used_${savedSession.id}`);
+          if (savedBreakUsed) {
+            setSessionBreakUsedMs(Number(savedBreakUsed) || 0);
+          }
+        } else {
+          // Expired while backgrounded / closed
+          if (savedActive) {
+            // Expired during active delivery: allow completion
+            sessionExpiredPendingDeliveryRef.current = true;
+            setActiveSession(savedSession);
+            setIsOnline(true);
+          } else {
+            // Expired while idle: finalize session cleanly
+            endShiftSession(savedSession.id, false, savedSession.orders_completed);
+            setActiveSession(null);
+            setIsOnline(false);
+            setSessionCompletedData({
+              ordersCompleted: savedSession.orders_completed,
+              earnings: 0,
+              durationMinutes: savedSession.planned_duration_mins,
+            });
+          }
+        }
+      }
     } catch (e) {
       console.warn('Could not read local storage', e);
     } finally {
@@ -520,6 +655,154 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       console.warn('Could not write local storage', e);
     }
   }, [isHydrated, rider, isOnline, activeOrder, earnings, bookedSlotIds, riderBreak, orderAcceptanceEvents, nonAcceptanceCount]);
+
+  // ─── Flexible Session Expiry Monitoring (Timestamp-driven) ─────────────────
+  useEffect(() => {
+    if (!activeSession || activeSession.status !== 'ACTIVE') return;
+
+    const checkSessionExpiry = () => {
+      const now = Date.now();
+      const endMs = new Date(activeSession.committed_until).getTime();
+
+      if (now >= endMs) {
+        if (activeOrderRef.current) {
+          // Critical rule 13: Delivery in progress when session expires!
+          // NEVER kick offline, NEVER cancel or interrupt order.
+          sessionExpiredPendingDeliveryRef.current = true;
+        } else {
+          // Rule 14: Session expires while idle.
+          const completedCount = activeSession.orders_completed;
+          const duration = activeSession.planned_duration_mins;
+          endShiftSession(activeSession.id, false, completedCount, rider.phone);
+          setActiveSession(null);
+          setIsOnline(false);
+          setRiderBreak(null);
+          setSessionCompletedData({
+            ordersCompleted: completedCount,
+            earnings: 0,
+            durationMinutes: duration,
+          });
+          soundEngine.playSuccessChime();
+        }
+      }
+    };
+
+    checkSessionExpiry();
+    const interval = setInterval(checkSessionExpiry, 3000);
+    return () => clearInterval(interval);
+  }, [activeSession, rider.phone]);
+
+  // ─── Flexible Session Actions ──────────────────────────────────────────────
+
+  const openStartRiding = useCallback(() => {
+    setIsStartRidingOpen(true);
+  }, []);
+
+  const closeStartRiding = useCallback(() => {
+    setIsStartRidingOpen(false);
+  }, []);
+
+  const dismissSessionCompleted = useCallback(() => {
+    setSessionCompletedData(null);
+  }, []);
+
+  const startSession = async (
+    zoneId: string,
+    zoneName: string,
+    durationHours: number
+  ): Promise<RiderShiftSession> => {
+    const session = await createShiftSession({
+      riderId: rider.phone || 'guest-rider',
+      zoneId,
+      zoneName,
+      durationHours,
+    });
+
+    setActiveSession(session);
+    setIsOnline(true);
+    setRiderBreak(null);
+    setSessionBreakUsedMs(0);
+    setSessionCompletedData(null);
+    dismissBreakOrderPreview();
+    setIsStartRidingOpen(false);
+    sessionExpiredPendingDeliveryRef.current = false;
+
+    setRider((prev) => ({
+      ...prev,
+      selectedZone: zoneName,
+      selectedZoneId: zoneId,
+      session_started_at: session.started_at,
+      session_ends_at: session.committed_until,
+      session_duration_mins: session.planned_duration_mins,
+      current_session_id: session.id,
+      available_for_order: true,
+    }));
+
+    if (rider.phone) {
+      updateRiderOnlineStatus(rider.phone, true);
+    }
+
+    soundEngine.playSuccessChime();
+    return session;
+  };
+
+  const extendSession = async (addHours: number = 1): Promise<boolean> => {
+    if (!activeSession) return false;
+    const updated = await extendShiftSession(activeSession.id, addHours);
+    if (updated) {
+      setActiveSession(updated);
+      sessionExpiredPendingDeliveryRef.current = false;
+      soundEngine.playSuccessChime();
+      addAlert({
+        id: `alert-session-extend-${Date.now()}`,
+        title: '⏱️ Session Extended',
+        message: `Your riding session has been extended by ${addHours} hour. New end time: ${new Date(updated.committed_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+        time: 'Just now',
+        type: 'slot_extended',
+        read: false,
+      });
+      return true;
+    }
+    return false;
+  };
+
+  const endSessionEarly = async (): Promise<void> => {
+    if (!activeSession) {
+      setIsOnline(false);
+      if (rider.phone) updateRiderOnlineStatus(rider.phone, false);
+      return;
+    }
+
+    const { actualDurationMins, ordersCompleted, plannedDurationMins } = await endShiftSession(
+      activeSession.id,
+      true,
+      activeSession.orders_completed,
+      rider.phone
+    );
+
+    setActiveSession(null);
+    setIsOnline(false);
+    setRiderBreak(null);
+    sessionExpiredPendingDeliveryRef.current = false;
+
+    setRider((prev) => ({
+      ...prev,
+      session_started_at: null,
+      session_ends_at: null,
+      session_duration_mins: null,
+      current_session_id: null,
+      available_for_order: false,
+    }));
+
+    addAlert({
+      id: `alert-session-ended-early-${Date.now()}`,
+      title: 'Session Ended Early',
+      message: `Your riding session ended after ${actualDurationMins} mins (planned: ${plannedDurationMins} mins). No penalty applied.`,
+      time: 'Just now',
+      type: 'slot_ended',
+      read: false,
+    });
+  };
 
   // ─── Slot Generation & Active/Upcoming Tracking ────────────────────────────
 
@@ -1156,14 +1439,22 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const startBreak = () => {
     if (riderBreak && !riderBreak.endedAt) return; // Already on break
-    if (!activeSlot) return;
+    if (activeOrderRef.current) return; // Disallowed during active delivery
+    if (!activeSession && !activeSlot) return;
+
+    // Break allowance based on planned session hours (2h -> 15m single break, 3h -> 25m, 4h -> 30m)
+    const sessionAllowanceMins = getSessionBreakAllowanceMinutes(activeSession?.planned_duration_mins);
+    const totalAllowanceMs = sessionAllowanceMins * 60000;
+    const remainingAllowanceMs = Math.max(0, totalAllowanceMs - sessionBreakUsedMs);
+
+    if (remainingAllowanceMs <= 0) return; // Full break allowance consumed
 
     const newBreak: RiderBreak = {
       id: `break-${Date.now()}`,
-      slotId: activeSlot.id,
+      slotId: activeSession?.id || activeSlot?.id || 'session-break',
       startedAt: Date.now(),
       endedAt: null,
-      allowedDurationMs: adminConfig.break.allowedBreakMinutes * 60000,
+      allowedDurationMs: remainingAllowanceMs,
       actualDurationMs: null,
       excessDurationMs: null,
       status: 'active',
@@ -1173,13 +1464,19 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setRiderBreak(newBreak);
-    setIsOnline(false); // Pause orders during break
-    if (incomingOrder) setIncomingOrder(null); // Clear any pending incoming
-    addAlert(createBreakStartedAlert());
+    previewedOrderIdsRef.current.clear();
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('snapit_rider_break_v1', JSON.stringify(newBreak));
+      } catch {}
+    }
+    if (incomingOrder) setIncomingOrder(null);
+    addAlert(createBreakStartedAlert(Math.ceil(remainingAllowanceMs / 60000)));
   };
 
   const endBreak = () => {
     if (!riderBreak) return;
+    dismissBreakOrderPreview();
 
     const now = Date.now();
     const elapsed = now - riderBreak.startedAt;
@@ -1193,23 +1490,40 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       status: 'completed',
     });
 
-    // Resume online if slot still active and inside zone
-    const canResume =
+    setSessionBreakUsedMs((prev) => {
+      const updated = prev + elapsed;
+      if (activeSession?.id && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`minnit_break_used_${activeSession.id}`, String(updated));
+          localStorage.removeItem('snapit_rider_break_v1');
+        } catch {}
+      }
+      return updated;
+    });
+
+    // Resume online if active session or active slot is valid
+    const canResumeSession = Boolean(activeSession && isSessionValidAndActive(activeSession));
+    const canResumeSlot = Boolean(
       activeSlot &&
       Date.now() < activeSlot.endTimestamp &&
-      (zoneStatus === 'inside' || zoneStatus === 'low_accuracy' || zoneStatus === 'unknown');
+      (zoneStatus === 'inside' || zoneStatus === 'low_accuracy' || zoneStatus === 'unknown')
+    );
 
-    if (canResume) {
+    if (canResumeSession || canResumeSlot) {
       setIsOnline(true);
+      if (rider.phone) {
+        updateRiderOnlineStatus(rider.phone, true);
+      }
     }
   };
 
   const startEmergencyBreak = (reason: string) => {
-    if (!activeSlot) return;
+    if (activeOrderRef.current) return; // Disallowed during active delivery
+    if (!activeSession && !activeSlot) return;
 
     const newBreak: RiderBreak = {
       id: `emergency-break-${Date.now()}`,
-      slotId: activeSlot.id,
+      slotId: activeSession?.id || activeSlot?.id || 'session-break',
       startedAt: Date.now(),
       endedAt: null,
       allowedDurationMs: adminConfig.break.allowedBreakMinutes * 60000,
@@ -1222,7 +1536,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setRiderBreak(newBreak);
-    setIsOnline(false);
+    if (incomingOrder) setIncomingOrder(null);
     addAlert(createBreakEmergencyAlert(reason));
   };
 
@@ -1282,7 +1596,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           if (eligible) {
             const store = dbStores.find((s) => s.id === eligible.store_id);
             const mapped = mapDbOrderToAppOrder(eligible, store);
-            setIncomingOrder((prev) => prev || mapped);
+            if (isBreakActiveRef.current) {
+              showBreakOrderPreview(mapped);
+            } else if (isOnlineRef.current) {
+              setIncomingOrder((prev) => prev || mapped);
+            }
           } else {
             setIncomingOrder(null);
           }
@@ -1317,6 +1635,15 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             if (isEligibleNotificationStatus(newOrder.status)) {
               const store = dbStores.find((s) => s.id === newOrder.store_id);
               const mapped = mapDbOrderToAppOrder(newOrder, store);
+
+              // If rider is on break, show temporary 3s read-only gray preview
+              if (isBreakActiveRef.current) {
+                showBreakOrderPreview(mapped);
+                return;
+              }
+
+              if (!isOnlineRef.current) return;
+
               setIncomingOrder(mapped);
             }
           },
@@ -1356,6 +1683,15 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             if (isEligibleNotificationStatus(updatedOrder.status)) {
               const store = dbStores.find((s) => s.id === updatedOrder.store_id);
               const mapped = mapDbOrderToAppOrder(updatedOrder, store);
+
+              // If rider is on break, show temporary 3s read-only gray preview
+              if (isBreakActiveRef.current) {
+                showBreakOrderPreview(mapped);
+                return;
+              }
+
+              if (!isOnlineRef.current) return;
+
               setIncomingOrder((prev) => (prev?.id === updatedOrder.id ? mapped : (prev || mapped)));
             }
           }
@@ -1381,20 +1717,34 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Online Toggle ─────────────────────────────────────────────────────────
 
   const toggleOnline = () => {
-    setIsOnline((prev) => {
-      const next = !prev;
-      if (rider.phone) {
-        updateRiderOnlineStatus(rider.phone, next);
+    if (isOnline) {
+      setOnlineStatus(false);
+    } else {
+      if (activeSession && isSessionValidAndActive(activeSession)) {
+        setIsOnline(true);
+        if (rider.phone) updateRiderOnlineStatus(rider.phone, true);
+      } else {
+        setIsStartRidingOpen(true);
       }
-      return next;
-    });
+    }
   };
 
   const setOnlineStatus = (status: boolean) => {
-    setIsOnline(status);
-    if (!status) setIncomingOrder(null);
-    if (rider.phone) {
-      updateRiderOnlineStatus(rider.phone, status);
+    if (status) {
+      if (activeSession && isSessionValidAndActive(activeSession)) {
+        setIsOnline(true);
+        if (rider.phone) updateRiderOnlineStatus(rider.phone, true);
+      } else {
+        setIsStartRidingOpen(true);
+      }
+    } else {
+      setIsOnline(false);
+      setIncomingOrder(null);
+      if (activeSession) {
+        endSessionEarly();
+      } else if (rider.phone) {
+        updateRiderOnlineStatus(rider.phone, false);
+      }
     }
   };
 
@@ -1597,6 +1947,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    // Idempotency: prevent double counting if callback or verify fires multiple times
+    const orderKey = String(activeOrder.id).trim();
+    if (completedOrderIdsRef.current.has(orderKey)) {
+      return true;
+    }
+    completedOrderIdsRef.current.add(orderKey);
+
     const completedOrder: Order = { ...activeOrder, status: 'delivered', timestamp: 'Just now' };
     setOrdersHistory((prev) => [completedOrder, ...prev.filter((o) => o.id !== activeOrder.id)]);
     const orderEarnings = activeOrder.earnings || 45;
@@ -1637,31 +1994,48 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setActiveOrder(null);
     try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
 
-    // Online status check upon delivery completion:
-    // The rider must REMAIN ONLINE during an active duty slot or when manually toggled online.
-    // They should only automatically go offline if their booked duty slot has ended/completed
-    // and there is no other active booked slot running.
-    const now = getNow();
-    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
-    const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
-    const hasActiveBookedSlot = generated.some(
-      (s) => bookedSlotIds.includes(s.id) && now >= s.startTimestamp && now < s.endTimestamp
-    );
+    // Idempotently increment flexible session order count
+    const nextOrdersCount = (activeSession?.orders_completed || 0) + 1;
+    if (activeSession) {
+      incrementSessionOrders(activeSession.id, nextOrdersCount);
+      setActiveSession((prev) => (prev ? { ...prev, orders_completed: nextOrdersCount } : null));
+    }
 
-    if (activeSlot && now >= activeSlot.endTimestamp && !hasActiveBookedSlot) {
+    // Critical rule 13 check: If session expired during active delivery, finalize now!
+    const now = Date.now();
+    const isSessionExpired =
+      Boolean(activeSession) &&
+      (sessionExpiredPendingDeliveryRef.current || (activeSession ? now >= new Date(activeSession.committed_until).getTime() : false));
+
+    if (isSessionExpired && activeSession) {
+      sessionExpiredPendingDeliveryRef.current = false;
+      const duration = activeSession.planned_duration_mins;
+      endShiftSession(activeSession.id, false, nextOrdersCount, rider.phone);
+      setActiveSession(null);
       setIsOnline(false);
-      addAlert(createSlotEndedAlert(activeSlot));
+      setSessionCompletedData({
+        ordersCompleted: nextOrdersCount,
+        earnings: orderEarnings,
+        durationMinutes: duration,
+      });
+    } else if (!activeSession) {
+      // Fallback slot check
+      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
+      const hasActiveBookedSlot = generated.some(
+        (s) => bookedSlotIds.includes(s.id) && now >= s.startTimestamp && now < s.endTimestamp
+      );
+
+      if (activeSlot && now >= activeSlot.endTimestamp && !hasActiveBookedSlot) {
+        setIsOnline(false);
+        addAlert(createSlotEndedAlert(activeSlot));
+      }
     }
 
     return true;
   };
 
   const triggerMockOrder = () => {
-    // If rider is offline, auto turn online in test mode so user can test seamlessly
-    if (!isOnline) {
-      setIsOnline(true);
-    }
-
     const randomEarn = Math.floor(Math.random() * 35) + 45;
     const randomDistance = (Math.random() * 2 + 1.2).toFixed(1);
     const mock: Order = {
@@ -1689,6 +2063,17 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       timestamp: 'Just now',
       paymentMethod: 'Prepaid UPI',
     };
+
+    if (isBreakActiveRef.current) {
+      showBreakOrderPreview(mock);
+      return;
+    }
+
+    // If rider is offline, auto turn online in test mode so user can test seamlessly
+    if (!isOnline) {
+      setIsOnline(true);
+    }
+
     setIncomingOrder(mock);
   };
 
@@ -2073,6 +2458,22 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         resetTestEnvironment,
         ridingPreferences,
         saveRidingPreferences,
+        // Flexible Riding Session
+        activeSession,
+        startSession,
+        extendSession,
+        endSessionEarly,
+        isStartRidingOpen,
+        openStartRiding,
+        closeStartRiding,
+        riderAvailabilityStatus,
+        availableForOrder,
+        sessionCompletedData,
+        dismissSessionCompleted,
+        sessionBreakUsedMs,
+        remainingBreakAllowanceMs,
+        breakOrderPreview,
+        dismissBreakOrderPreview,
       }}
     >
       {children}
