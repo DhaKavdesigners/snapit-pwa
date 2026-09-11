@@ -11,6 +11,7 @@ import { ExtendSessionModal } from '@/components/dashboard/ExtendSessionModal';
 import { EndSessionEarlyModal } from '@/components/dashboard/EndSessionEarlyModal';
 import { SessionCompleteCard } from '@/components/dashboard/SessionCompleteCard';
 import { BreakOrderPreviewCard } from '@/components/delivery/BreakOrderPreviewCard';
+import { FeaturePromoBanner } from '@/components/dashboard/FeaturePromoBanner';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -302,9 +303,16 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* ─── SCENARIO E: OFFLINE STATE (START RIDING CTA) ─── */}
+        {/* ─── SCENARIO E: OFFLINE STATE (START RIDING CTA & FEATURE SHOWCASE) ─── */}
         {!incomingOrder && !activeOrder && !isOnline && !sessionCompletedData && (
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
+          <>
+            {/* Premium Moving Feature Advertisement Banner */}
+            <FeaturePromoBanner
+              onOpenStartRiding={openStartRiding}
+              onOpenZoneModal={() => setIsZoneModalOpen(true)}
+            />
+
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
             <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-400 my-1 shadow-2xs">
               <Power className="w-7 h-7" />
             </div>
@@ -336,6 +344,7 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
+          </>
         )}
 
         {/* ── 4. Modals ── */}

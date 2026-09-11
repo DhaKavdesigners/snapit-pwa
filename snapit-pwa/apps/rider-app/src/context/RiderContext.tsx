@@ -105,6 +105,9 @@ import {
   saveRiderPreferences,
   getLocalPreferences,
   saveLocalPreferences,
+  getLocalTomorrowPreferences,
+  getMultiDayPreferences,
+  saveLocalDayPreferences,
 } from '@/services/preferenceService';
 import {
   createShiftSession,
@@ -231,7 +234,8 @@ interface RiderContextType {
   resetTestEnvironment: () => void;
   // Availability Preferences
   ridingPreferences: PreferenceWindowId[];
-  saveRidingPreferences: (preferences: PreferenceWindowId[]) => Promise<boolean>;
+  tomorrowPreferences: PreferenceWindowId[];
+  saveRidingPreferences: (preferences: PreferenceWindowId[], target?: 'today' | 'tomorrow') => Promise<boolean>;
   // Flexible Riding Session
   activeSession: RiderShiftSession | null;
   startSession: (zoneId: string, zoneName: string, durationHours: number) => Promise<RiderShiftSession>;
@@ -432,6 +436,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const prevZoneStatusRef = useRef<ZoneStatus>('unknown');
 
   const [ridingPreferences, setRidingPreferences] = useState<PreferenceWindowId[]>([]);
+  const [tomorrowPreferences, setTomorrowPreferences] = useState<PreferenceWindowId[]>([]);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
   // ── Flexible Riding Session state ──
@@ -513,10 +518,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       if (savedRider) {
         const parsedRider = JSON.parse(savedRider);
         setRider(parsedRider);
-        const initialPrefs = getLocalPreferences(parsedRider.phone);
-        setRidingPreferences(initialPrefs);
+        const multi = getMultiDayPreferences(parsedRider.phone);
+        setRidingPreferences(multi.todayPreferences);
+        setTomorrowPreferences(multi.tomorrowPreferences);
       } else {
-        setRidingPreferences(getLocalPreferences());
+        const multi = getMultiDayPreferences();
+        setRidingPreferences(multi.todayPreferences);
+        setTomorrowPreferences(multi.tomorrowPreferences);
       }
 
       const savedOnline = localStorage.getItem('snapit_online_status_v2');
@@ -626,14 +634,19 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   }, [rider.phone]);
 
   const saveRidingPreferences = useCallback(
-    async (prefs: PreferenceWindowId[]): Promise<boolean> => {
-      setRidingPreferences(prefs);
-      saveLocalPreferences(prefs, rider.phone);
-      if (rider.phone) {
-        const res = await saveRiderPreferences(rider.phone, prefs);
-        return res.success;
+    async (prefs: PreferenceWindowId[], target: 'today' | 'tomorrow' = 'today'): Promise<boolean> => {
+      if (target === 'today') {
+        setRidingPreferences(prefs);
+      } else {
+        setTomorrowPreferences(prefs);
       }
-      return true;
+      if (rider.phone) {
+        const res = await saveRiderPreferences(rider.phone, prefs, target);
+        return res.success;
+      } else {
+        saveLocalDayPreferences(target, prefs);
+        return true;
+      }
     },
     [rider.phone]
   );
@@ -2457,6 +2470,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         setMockTimePreset,
         resetTestEnvironment,
         ridingPreferences,
+        tomorrowPreferences,
         saveRidingPreferences,
         // Flexible Riding Session
         activeSession,
