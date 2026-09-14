@@ -11,6 +11,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useOrderStore } from '../../store/orderStore';
+import { useCartStore } from '../../store/cartStore';
+import { useBabyToastStore } from '../../store/babyToastStore';
+import { useAllProducts } from '../../api/queries';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/currency';
 
@@ -163,6 +166,44 @@ export const ProfileView: React.FC = () => {
     } catch {
       return dateStr;
     }
+  };
+
+  const { reorderItems } = useCartStore();
+  const { showToast } = useBabyToastStore();
+  const { data: allCatalogProducts = [] } = useAllProducts();
+
+  const handleReorderOrder = (order: any) => {
+    if (!order.items || order.items.length === 0) {
+      alert("No items found in this order to reorder.");
+      return;
+    }
+
+    const itemsToAdd: Array<{ productId: string; quantity: number }> = [];
+    order.items.forEach((it: any) => {
+      const pid = it.productId || it.product_id;
+      const matched = allCatalogProducts.find((p: any) => 
+        (pid && p.id === pid) || 
+        (p.name && it.name && p.name.toLowerCase().trim() === it.name.toLowerCase().trim())
+      );
+      const targetId = matched?.id || pid;
+      if (targetId) {
+        itemsToAdd.push({
+          productId: targetId,
+          quantity: it.quantity || 1,
+        });
+      }
+    });
+
+    if (itemsToAdd.length === 0) {
+      alert("Sorry, items from this past order are no longer available.");
+      return;
+    }
+
+    reorderItems(itemsToAdd, false);
+    playSound('success');
+    showToast('more_item', `${itemsToAdd.length} items added to your basket!`);
+    setOrdersModal(false);
+    navigate('/cart');
   };
 
   const handleRequestBill = async (orderId: string) => {
@@ -1518,7 +1559,7 @@ export const ProfileView: React.FC = () => {
                                   <span>Request Bill</span>
                                 </button>
                                 <button
-                                  onClick={() => { setOrdersModal(false); navigate('/'); }}
+                                  onClick={() => handleReorderOrder(order)}
                                   className="text-[11px] font-black text-brand uppercase tracking-wider hover:underline px-1 py-1"
                                 >
                                   Reorder →

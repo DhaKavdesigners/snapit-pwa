@@ -14,7 +14,7 @@ interface NavItem {
 }
 
 /** Animated baby mascot icon for the Cart tab
- *  Catie (girl) = Shopping mode  |  Milo (boy) = Food mode */
+ *  Catie (girl) = Shopping mode  |  Momo (boy) = Food mode */
 const BabyCartIcon: React.FC<{ isActive: boolean; cartCount: number; isFood: boolean }> = ({
   isActive,
   cartCount,
@@ -35,13 +35,13 @@ const BabyCartIcon: React.FC<{ isActive: boolean; cartCount: number; isFood: boo
     prevCount.current = cartCount;
   }, [cartCount, controls]);
 
-  // Catie (girl) for shopping, Milo (boy) for food
+  // Catie (girl) for shopping, Momo (boy) for food
   const img = isFood
     ? cartCount > 0 ? '/baby/boy_cart_with_item.jpg' : '/baby/boy_cart_empty_food.jpg'
     : cartCount > 0 ? '/baby/cart_with_item.jpg' : '/baby/cart_empty.jpg';
 
   const label = isFood
-    ? cartCount > 0 ? 'Milo — food order ready!' : 'Milo waiting for your food order'
+    ? cartCount > 0 ? 'Momo — food order ready!' : 'Momo waiting for your food order'
     : cartCount > 0 ? 'Catie — basket is packed!' : 'Catie is waiting patiently';
 
   return (
@@ -171,7 +171,7 @@ export const BottomNav: React.FC = () => {
               className="relative flex flex-col items-center justify-center flex-1 h-full py-0.5 select-none transition-transform active:scale-95 group"
               aria-label={item.label}
             >
-              {/* Cart tab: Catie (shopping) or Milo (food) baby mascot */}
+              {/* Cart tab: Catie (shopping) or Momo (food) baby mascot */}
               {item.path === '/cart' ? (
                 <BabyCartIcon isActive={isActive} cartCount={cartItemsCount} isFood={isFoodMode} />
               ) : (

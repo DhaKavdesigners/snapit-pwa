@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useContextStore } from '../../store/contextStore';
 
-const banners = [
+const shoppingBanners = [
   { 
     id: 1, 
     title: 'Independence Day Specials', 
@@ -25,16 +26,47 @@ const banners = [
   },
 ];
 
+const foodBanners = [
+  { 
+    id: 101, 
+    title: 'Hot Dum Biriyani & Starters', 
+    subtitle: 'Authentic Ambur Flavors delivered hot',
+    gradient: 'from-amber-600/70 to-red-900/80',
+    img: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80' 
+  },
+  { 
+    id: 102, 
+    title: 'Crispy Shawarma & Burgers', 
+    subtitle: 'Freshly grilled & loaded with flavor',
+    gradient: 'from-orange-600/70 to-rose-950/80',
+    img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80' 
+  },
+  { 
+    id: 103, 
+    title: 'Cheesy Pizzas & Cool Shakes', 
+    subtitle: 'Hot slices, cold thickshakes in a snap',
+    gradient: 'from-red-600/70 to-purple-900/80',
+    img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80' 
+  },
+];
+
 export const BannerCarousel: React.FC = () => {
+  const { activeContext } = useContextStore();
+  const banners = activeContext === 'food' ? foodBanners : shoppingBanners;
   const [currentIndex, setCurrentIndex] = useState(0);
   const prefersReducedMotion = useReducedMotion();
+
+  // Reset index on context change
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [activeContext]);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % banners.length);
     }, 4000);
     return () => clearInterval(timer);
-  }, []);
+  }, [banners.length]);
 
   return (
     <div className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden mb-6 shadow-sm border border-gray-100">

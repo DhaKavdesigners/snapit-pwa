@@ -185,7 +185,7 @@ export const OrderSuccessView: React.FC = () => {
         >
           <img
             src={isFoodOrder ? "/baby/boy_ready_to_checkout.jpg" : "/baby/order_on_the_toast.jpg"}
-            alt={isFoodOrder ? "Milo food order" : "Catie grocery order"}
+            alt={isFoodOrder ? "Momo food order" : "Catie grocery order"}
             className="w-14 h-14 object-contain rounded-xl shrink-0"
           />
           <div className="flex-1 min-w-0">
@@ -194,7 +194,7 @@ export const OrderSuccessView: React.FC = () => {
             </p>
             <p className="text-[11px] text-emerald-200 font-medium mt-0.5">
               {isFoodOrder
-                ? "Milo says your delicious meal is being rushed to your doorstep!"
+                ? "Momo says your delicious meal is being rushed to your doorstep!"
                 : "Catie waved goodbye to the rider — on the way to your door!"}
             </p>
           </div>

@@ -10,6 +10,7 @@ import { CartView } from './features/cart/CartView';
 import { CheckoutView } from './features/checkout/CheckoutView';
 import { OrderSuccessView } from './features/checkout/OrderSuccessView';
 import { supabase } from './lib/supabase';
+import { SessionGuard } from './components/auth/SessionGuard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +76,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <GlobalRealtimeSync />
       <BrowserRouter>
+        <SessionGuard />
         <Routes>
           {/* Main App Shell with Bottom Navigation */}
           <Route element={<AppLayout />}>

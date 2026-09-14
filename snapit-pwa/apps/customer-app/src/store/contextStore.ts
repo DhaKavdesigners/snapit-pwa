@@ -8,6 +8,6 @@ interface ContextState {
 }
 
 export const useContextStore = create<ContextState>((set) => ({
-  activeContext: 'shopping',
+  activeContext: 'food',
   setContext: (context) => set({ activeContext: context }),
 }));

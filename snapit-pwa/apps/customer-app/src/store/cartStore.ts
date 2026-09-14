@@ -16,6 +16,7 @@ interface CartState {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number, maxStock?: number) => void;
   saveLastOrder: (order: LastOrder) => void;
+  reorderItems: (newItems: Array<{ productId: string; quantity: number }>, replace?: boolean) => void;
   clearCart: () => void;
 }
 
@@ -64,6 +65,24 @@ export const useCartStore = create<CartState>((set) => ({
       };
     }),
   saveLastOrder: (order) => set({ lastOrder: order }),
+  reorderItems: (newItems, replace = false) => {
+    set((state) => {
+      const baseItems = replace ? [] : [...state.items];
+      newItems.forEach((newItem) => {
+        if (!newItem.productId || newItem.quantity <= 0) return;
+        const idx = baseItems.findIndex((i) => i.productId === newItem.productId);
+        if (idx >= 0) {
+          baseItems[idx] = {
+            ...baseItems[idx],
+            quantity: baseItems[idx].quantity + newItem.quantity,
+          };
+        } else {
+          baseItems.push({ productId: newItem.productId, quantity: newItem.quantity });
+        }
+      });
+      return { items: baseItems };
+    });
+  },
   clearCart: () => set({ items: [] }),
 }));
 

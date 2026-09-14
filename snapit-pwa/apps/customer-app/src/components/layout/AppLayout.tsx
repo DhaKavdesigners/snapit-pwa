@@ -43,9 +43,9 @@ export const AppLayout: React.FC = () => {
   const isCart = location.pathname === '/cart';
 
   return (
-    <div className="max-w-md mx-auto relative min-h-screen bg-slate-50 shadow-2xl overflow-x-hidden flex flex-col pb-[140px]">
+    <div className={`max-w-md mx-auto relative min-h-screen bg-slate-50 shadow-2xl overflow-x-hidden flex flex-col ${isCart ? 'pb-14' : 'pb-[140px]'}`}>
       <TopBar />
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full flex flex-col min-h-0">
         <Outlet />
       </main>
       

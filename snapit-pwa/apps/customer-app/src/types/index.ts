@@ -2,6 +2,7 @@ export interface Product {
   id: string; // UUID, never sequential
   name: string;
   price: number; // Stored strictly as Integer Paise (e.g., ₹100 = 10000)
+  originalPrice?: number; // Optional MRP / previous price in paise
   imageUrl: string; // Local path: /images/products/<name>.jpg
   fallbackImageUrl?: string; // Unsplash URL if local image not found
   storeId: string;

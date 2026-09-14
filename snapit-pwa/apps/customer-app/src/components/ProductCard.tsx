@@ -176,7 +176,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
                 const success = addItem(product.id, stock);
                 if (success) {
                   if (isFoodProduct) {
-                    // Milo (food boy) toasts — smart food name detection
+                    // Momo (food boy) toasts — smart food name detection
                     showToast(detectFoodToastType(product.name, isFirstEverItem, isMoreItems), product.name);
                   } else {
                     // Catie (shopping girl) toasts

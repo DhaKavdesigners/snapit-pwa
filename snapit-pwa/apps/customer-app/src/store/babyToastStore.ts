@@ -6,7 +6,7 @@ export type BabyToastType =
   | 'item_added'         // item added — iteam_added.jpg
   | 'more_item'          // 2nd+ item — more_item_added.jpg
   | 'favourite_saved'    // saved favourite — saved_favoraoite_toast.jpg
-  // ── Boy (Milo) — Food mode ─────────────────────────────────
+  // ── Boy (Momo) — Food mode ─────────────────────────────────
   | 'food_first'         // first food item — boy_item_added.jpg (pizza scene)
   | 'food_pizza'         // pizza added — boy_pizza_added.jpg
   | 'food_burger'        // burger added — boy_burger_added.jpg

@@ -1,7 +1,7 @@
 /**
  * Mascot Image Preloader
  * Eagerly downloads and decodes all baby mascot images into browser & GPU cache
- * so Catie & Milo popups, toasts, and cart icons render instantaneously with 0ms delay.
+ * so Catie & Momo popups, toasts, and cart icons render instantaneously with 0ms delay.
  */
 
 export const ALL_MASCOT_IMAGES: string[] = [
@@ -16,7 +16,7 @@ export const ALL_MASCOT_IMAGES: string[] = [
   '/baby/ready_to_checkout.jpg',
   '/baby/order_on_the_toast.jpg',
 
-  // ── Boy (Milo) ──
+  // ── Boy (Momo) ──
   '/baby/boy_item_added.jpg',
   '/baby/boy_pizza_added.jpg',
   '/baby/boy_burger_added.jpg',
