@@ -48,9 +48,11 @@ export interface DbStore {
 export interface DbRiderProfile {
   id: string;
   user_id?: string;
+  Rider_ID?: string;
   name: string;
   phone: string;
   mpin?: string;
+  dob?: string;
   alt_phone?: string;
   email?: string;
   address?: string;
@@ -77,9 +79,22 @@ export interface DbRiderProfile {
   session_duration_mins?: number | null;
   available_for_order?: boolean;
   current_session_id?: string | null;
+  active_session_token?: string | null;
   riding_preferences?: string[];
   created_at?: string;
   updated_at?: string;
+}
+
+export interface DbRiderDeviceSession {
+  id: string;
+  rider_id: string;
+  rider_code?: string;
+  session_token: string;
+  device_info?: string;
+  is_active: boolean;
+  created_at: string;
+  last_active_at: string;
+  invalidated_at?: string | null;
 }
 
 export interface DbShiftSession {
@@ -98,4 +113,5 @@ export interface DbShiftSession {
   created_at?: string;
   updated_at?: string;
 }
+
 

@@ -347,12 +347,11 @@ export async function registerRiderInDb(riderData: {
   upi_id?: string;
   avatar_url?: string;
   selfie_url?: string;
-}): Promise<{ profile?: DbRiderProfile; error?: string }> {
+}): Promise<{ profile?: DbRiderProfile; riderId?: string; error?: string }> {
   try {
     const cleanPhone = riderData.phone.replace(/[^0-9]/g, '').slice(-10);
     const newRecord: any = {
       id: cleanPhone,
-      user_id: cleanPhone,
       name: riderData.name,
       phone: cleanPhone,
       mpin: riderData.mpin,
@@ -392,43 +391,77 @@ export async function registerRiderInDb(riderData: {
       .select()
       .single();
 
-    if (error && error.code === '22P02') {
-      // Fallback if user_id column in database is still typed as UUID
-      const fallbackRecord = { ...newRecord };
-      delete fallbackRecord.user_id;
-      const res = await supabase
-        .from('rider_profiles')
-        .upsert(fallbackRecord, { onConflict: 'phone' })
-        .select()
-        .single();
-      data = res.data;
-      error = res.error;
-    }
-
     if (error) {
       console.warn('Error saving rider to Supabase:', error);
       return { error: error.message };
     }
 
-    return { profile: data as DbRiderProfile };
+    // Retrieve database-generated Rider_ID (e.g. MM0001)
+    let generatedRiderId = data?.Rider_ID;
+    if (!generatedRiderId) {
+      // Re-query in case trigger executed on separate step
+      const { data: refetch } = await supabase
+        .from('rider_profiles')
+        .select('*')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+      if (refetch?.Rider_ID) {
+        generatedRiderId = refetch.Rider_ID;
+        data = refetch;
+      }
+    }
+
+    return {
+      profile: data as DbRiderProfile,
+      riderId: generatedRiderId || undefined,
+    };
   } catch (err: any) {
     console.warn('registerRiderInDb exception:', err);
     return { error: err.message || 'Network error saving rider profile.' };
   }
 }
 
-/** Login a rider using Phone + MPIN */
-export async function loginRiderWithMpin(
-  phone: string,
+/**
+ * Login a rider using Minnit Rider ID (case-insensitive) and 4-Digit MPIN.
+ * Normalizes Rider ID (e.g. mm0001, Mm0001 -> MM0001).
+ * Never exposes or logs the MPIN.
+ */
+export async function loginRiderWithRiderId(
+  riderIdOrPhone: string,
   mpin: string
 ): Promise<{ profile?: DbRiderProfile; error?: string }> {
   try {
-    const cleanPhone = phone.replace(/[^0-9+]/g, '');
-    const { data, error } = await supabase
+    const rawInput = (riderIdOrPhone || '').trim();
+    if (!rawInput) {
+      return { error: 'Please enter your Minnit Rider ID.' };
+    }
+    if (!mpin || mpin.length < 4) {
+      return { error: 'Please enter your 4-digit MPIN.' };
+    }
+
+    // Case-insensitive normalization
+    const normalizedId = rawInput.toUpperCase();
+    const cleanPhone = rawInput.replace(/[^0-9+]/g, '');
+
+    // 1. Primary lookup by Rider_ID (case-insensitive)
+    let { data, error } = await supabase
       .from('rider_profiles')
       .select('*')
-      .eq('phone', cleanPhone)
+      .ilike('Rider_ID', normalizedId)
       .maybeSingle();
+
+    // 2. Fallback: lookup by phone number (for legacy riders without MM format)
+    if (!data && cleanPhone) {
+      const phoneRes = await supabase
+        .from('rider_profiles')
+        .select('*')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+      if (phoneRes.data) {
+        data = phoneRes.data;
+        error = null;
+      }
+    }
 
     if (error) {
       console.warn('Error querying rider profile:', error);
@@ -436,18 +469,26 @@ export async function loginRiderWithMpin(
     }
 
     if (!data) {
-      return { error: 'Rider profile not found. Please register first.' };
+      return { error: `Rider with ID "${rawInput}" not found. Please verify your Rider ID or register.` };
     }
 
+    // Secure credential check without logging credentials
     if (data.mpin && data.mpin !== mpin) {
       return { error: 'Incorrect 4-Digit MPIN. Please try again.' };
     }
 
     return { profile: data as DbRiderProfile };
   } catch (err: any) {
-    console.warn('loginRiderWithMpin exception:', err);
-    return { error: err.message || 'Login error.' };
+    return { error: err.message || 'Login failed.' };
   }
+}
+
+/** Login a rider using Phone + MPIN (Backwards compatibility) */
+export async function loginRiderWithMpin(
+  phone: string,
+  mpin: string
+): Promise<{ profile?: DbRiderProfile; error?: string }> {
+  return loginRiderWithRiderId(phone, mpin);
 }
 
 /** Login with MPIN only for quick unlock */

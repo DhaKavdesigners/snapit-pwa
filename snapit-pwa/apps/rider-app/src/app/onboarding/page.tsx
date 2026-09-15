@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRider } from '@/context/RiderContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { SelfieCamera } from '@/components/onboarding/SelfieCamera';
@@ -21,19 +21,40 @@ import {
   EyeOff,
   HelpCircle,
   X,
+  Copy,
+  UserCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function OnboardingPage() {
-  const { rider, zones, updateRiderProfile, simulateApproval, registerRider, loginWithMpin, loginWithMpinOnly } = useRider();
-  const [step, setStep] = useState<'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'status'>('splash');
+  const {
+    rider,
+    zones,
+    updateRiderProfile,
+    simulateApproval,
+    registerRider,
+    loginWithRiderId,
+    sessionInvalidatedMessage,
+    clearSessionInvalidatedMessage,
+  } = useRider();
+  const [step, setStep] = useState<
+    'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'reg_success' | 'status'
+  >('splash');
   
   // Login form state
+  const [loginRiderId, setLoginRiderId] = useState('');
   const [loginMpin, setLoginMpin] = useState('');
   const [showLoginMpin, setShowLoginMpin] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+
+  // Registration success state
+  const [registeredRiderId, setRegisteredRiderId] = useState('');
+  const [isSubmittingReg, setIsSubmittingReg] = useState(false);
+  const [regError, setRegError] = useState('');
+  const [copiedId, setCopiedId] = useState(false);
 
   // Step 1: Personal & Contact fields
   const [fullName, setFullName] = useState(rider.name || '');
@@ -66,11 +87,28 @@ export default function OnboardingPage() {
   const [selectedZoneId, setSelectedZoneId] = useState(zones[0]?.id || 'zone-1');
 
   const router = useRouter();
+ 
+  // Automatically transition from splash screen to signin after 2 seconds
+  useEffect(() => {
+    if (step === 'splash') {
+      const timer = setTimeout(() => {
+        setStep('signin');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
-  // Handle Login with MPIN
+  // Handle Login with Rider ID + MPIN
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    if (clearSessionInvalidatedMessage) clearSessionInvalidatedMessage();
+
+    const cleanInput = loginRiderId.trim();
+    if (!cleanInput) {
+      setLoginError('Please enter your Minnit Rider ID.');
+      return;
+    }
 
     if (!loginMpin || loginMpin.length < 4) {
       setLoginError('Please enter your 4-digit MPIN.');
@@ -78,11 +116,11 @@ export default function OnboardingPage() {
     }
 
     setIsLoggingIn(true);
-    const result = await loginWithMpinOnly(loginMpin);
+    const result = await loginWithRiderId(cleanInput, loginMpin);
     setIsLoggingIn(false);
 
     if (!result.success) {
-      setLoginError(result.error || 'Incorrect MPIN. Please try again.');
+      setLoginError(result.error || 'Incorrect Rider ID or MPIN. Please try again.');
       return;
     }
 
@@ -146,12 +184,14 @@ export default function OnboardingPage() {
     setStep('zone');
   };
 
-  // Submit Zone & complete instant approval
+  // Submit Zone & complete registration
   const handleZoneSubmit = async () => {
+    setRegError('');
+    setIsSubmittingReg(true);
     const matchedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
     const cleanPhone1 = phone.replace(/[^0-9]/g, '');
 
-    await registerRider({
+    const result = await registerRider({
       name: fullName,
       phone: cleanPhone1,
       mpin: createMpin,
@@ -172,8 +212,24 @@ export default function OnboardingPage() {
       upiId,
       selfieCapturedUrl: capturedSelfie,
     });
+    setIsSubmittingReg(false);
 
-    router.push('/');
+    if (!result.success || !result.riderId) {
+      setRegError(result.error || 'Failed to save rider profile in Supabase. Please try again.');
+      return;
+    }
+
+    setRegisteredRiderId(result.riderId);
+    setStep('reg_success');
+  };
+
+  const handleCopyRiderId = () => {
+    if (!registeredRiderId) return;
+    try {
+      navigator.clipboard.writeText(registeredRiderId);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2500);
+    } catch {}
   };
 
   // Admin Approval Simulator
@@ -186,54 +242,67 @@ export default function OnboardingPage() {
     <AppShell showHeader={false} showNav={false} noPadding={true}>
       <div className="min-h-screen bg-background flex flex-col justify-between p-5 relative overflow-hidden">
         
-        {/* SCREEN 1: SPLASH SCREEN (CLEAN LOGO WITHOUT BORDER CONTAINER) */}
+        {/* SCREEN 1: SPLASH SCREEN (CLEAN LOGO, AUTO-NAVIGATES IN 2 SECONDS) */}
         {step === 'splash' && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-4 animate-scale-up">
             {/* Clean Minnit Logo */}
             <div className="relative mb-6">
               <img
-                src="/images/logo_with_tag.png"
+                src="/images/minnit_logo_main.png"
                 alt="Minnit Logo"
-                className="w-56 h-auto object-contain animate-pulse-soft filter drop-shadow-md"
+                className="w-56 h-auto object-contain select-none filter drop-shadow-sm animate-pulse-soft"
+                style={{ imageRendering: 'auto' }}
               />
             </div>
 
             <h1 className="text-3xl font-black text-on-surface tracking-tight mb-2">
               Welcome to <span className="text-primary">Minnit</span>
             </h1>
-            <p className="text-sm font-medium text-secondary mb-8">
+            <p className="text-sm font-medium text-secondary mb-6">
               Deliver smarter. Earn better.
             </p>
 
-            <button
-              onClick={() => setStep('signin')}
-              className="w-full max-w-xs py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm rounded-2xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {/* Subtle loading pulse */}
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="w-2 h-2 rounded-full bg-primary/40 animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-primary/70 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-primary" />
+            </div>
           </div>
         )}
 
         {/* SCREEN 2: SIGN-IN */}
         {step === 'signin' && (
-          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-8 animate-fade-in">
-            <button
-              onClick={() => setStep('splash')}
-              className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-200"
-            >
-              <ArrowLeft className="w-5 h-5 text-on-surface" />
-            </button>
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 sm:py-6 animate-fade-in">
+            <div className="w-full flex items-center mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.history.length > 1) {
+                    window.history.back();
+                  } else {
+                    setStep('splash');
+                  }
+                }}
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-200 active:scale-95 transition-all cursor-pointer"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 text-on-surface" />
+              </button>
+            </div>
 
             <div className="flex flex-col items-center text-center my-auto">
-              {/* Clean Minnit logo */}
-              <img
-                src="/images/minnit_cart_nd_logo.png"
-                alt="Minnit Rider"
-                className="w-36 h-auto object-contain mb-5"
-              />
+              {/* Crisp Minnit Brand Logo (High-Res, No Pixelation) */}
+              <div className="mb-4 flex items-center justify-center">
+                <img
+                  src="/images/minnit_logo_main.png"
+                  alt="Minnit"
+                  className="w-48 max-w-[200px] h-auto object-contain select-none"
+                  style={{ imageRendering: 'auto' }}
+                />
+              </div>
 
-              <h2 className="text-2xl font-black text-on-surface mb-1.5">
+              <h2 className="text-2xl font-black text-on-surface mb-1.5 tracking-tight">
                 Sign in to your account
               </h2>
               <p className="text-xs text-secondary mb-4">
@@ -242,6 +311,22 @@ export default function OnboardingPage() {
 
               {/* Login Form */}
               <form onSubmit={handleLoginSubmit} className="w-full bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 space-y-4 text-left mb-3">
+                {/* Rider ID */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-primary" />
+                    <span>Minnit Rider ID</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={loginRiderId}
+                    onChange={(e) => setLoginRiderId(e.target.value)}
+                    placeholder="e.g. MM0001"
+                    autoCapitalize="characters"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-900 outline-none focus:border-primary focus:bg-white shadow-inner uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
+                  />
+                </div>
+
                 {/* MPIN */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
@@ -276,6 +361,15 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
+                {/* Session Invalidation Alert (logged out on another phone) */}
+                {sessionInvalidatedMessage && (
+                  <div className="flex items-start gap-2.5 bg-amber-50 text-amber-900 p-3 rounded-2xl border border-amber-200 text-xs font-medium leading-relaxed animate-shake">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                    <span>{sessionInvalidatedMessage}</span>
+                  </div>
+                )}
+
+                {/* Login Error */}
                 {loginError && (
                   <div className="flex items-center gap-2 bg-red-50 text-red-700 p-2.5 rounded-xl border border-red-200 text-xs font-semibold">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -285,11 +379,11 @@ export default function OnboardingPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoggingIn || loginMpin.length < 4}
-                  className="w-full py-3.5 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  disabled={isLoggingIn || !loginRiderId.trim() || loginMpin.length < 4}
+                  className="w-full py-3.5 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   <Lock className="w-4 h-4" />
-                  <span>{isLoggingIn ? 'Logging in...' : 'Login with MPIN'}</span>
+                  <span>{isLoggingIn ? 'Verifying...' : 'Sign In with Rider ID'}</span>
                 </button>
               </form>
 
@@ -699,13 +793,117 @@ export default function OnboardingPage() {
               ))}
             </div>
 
+            {regError && (
+              <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold mb-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{regError}</span>
+              </div>
+            )}
+
             <button
               onClick={handleZoneSubmit}
-              className="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-2xl shadow-lift hover:opacity-95 transition-all flex items-center justify-center gap-2"
+              disabled={isSubmittingReg}
+              className="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-2xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              <span>Submit Application for Approval</span>
+              <span>{isSubmittingReg ? 'Saving Registration...' : 'Submit Application for Approval'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
+          </div>
+        )}
+
+        {/* SCREEN: REGISTRATION SUCCESS WITH DYNAMIC RIDER ID */}
+        {step === 'reg_success' && (
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-6 animate-scale-up">
+            <div className="flex flex-col items-center text-center mt-3">
+              {/* Success Badge */}
+              <div className="relative w-20 h-20 mb-5 flex items-center justify-center">
+                <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping opacity-75" />
+                <div className="relative z-10 w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+                  <Check className="w-8 h-8 stroke-[3]" />
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-black uppercase px-3.5 py-1 rounded-full border border-emerald-200 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Registration Completed</span>
+              </div>
+
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                Welcome to Minnit Fleet!
+              </h1>
+              <p className="text-xs text-slate-500 mt-1.5 max-w-[280px] leading-relaxed">
+                Your profile has been created successfully. Your unique Minnit Rider ID is ready.
+              </p>
+            </div>
+
+            {/* Rider ID Display Card */}
+            <div className="bg-white rounded-3xl p-6 shadow-soft border border-slate-200/90 my-auto text-center space-y-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  Your Minnit Rider ID
+                </p>
+                <div className="mt-2 py-3.5 px-4 bg-emerald-50/80 rounded-2xl border-2 border-emerald-500/40 flex items-center justify-center shadow-inner">
+                  <span className="text-3xl font-black font-mono tracking-widest text-emerald-700">
+                    {registeredRiderId || rider.Rider_ID || 'MM0001'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Copy Rider ID Button */}
+              <button
+                type="button"
+                onClick={handleCopyRiderId}
+                className={`w-full py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                  copiedId
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 active:scale-98'
+                }`}
+              >
+                {copiedId ? (
+                  <>
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>Rider ID Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 text-slate-500" />
+                    <span>Copy Rider ID</span>
+                  </>
+                )}
+              </button>
+
+              {/* Important Instruction Box */}
+              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-left space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Important: Save Your Rider ID</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Use this Rider ID to log in next time along with your 4-digit MPIN. Take a screenshot or write it down so you never lose access.
+                </p>
+              </div>
+            </div>
+
+            {/* Action CTA */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginRiderId(registeredRiderId || rider.Rider_ID || '');
+                  setLoginMpin('');
+                  setLoginError('');
+                  setStep('signin');
+                }}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+              >
+                <span>Proceed to Login</span>
+                <ArrowRight className="w-4 h-4 stroke-[3]" />
+              </button>
+
+              <p className="text-[10px] text-center text-slate-400">
+                Click above to sign in using your new Rider ID and 4-digit MPIN.
+              </p>
+            </div>
           </div>
         )}
 

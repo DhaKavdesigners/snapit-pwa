@@ -93,10 +93,19 @@ import {
   registerRiderInDb,
   loginRiderWithMpin,
   loginRiderWithMpinOnly,
+  loginRiderWithRiderId,
   fetchRiderProfileFromDb,
   updateRiderLiveLocation,
   updateRiderOnlineStatus,
 } from '@/services/supabaseOrderService';
+import {
+  getLocalSessionToken,
+  activateDeviceSession,
+  validateDeviceSession,
+  terminateDeviceSession,
+  subscribeToSessionInvalidation,
+  clearLocalSessionToken,
+} from '@/services/riderSessionService';
 import { verifyDeliveryPin } from '../../../../common_logic/deliveryLogic';
 import { soundEngine } from '@/services/soundService';
 import { formatOrderNumber } from '@/utils/orderUtils';
@@ -164,6 +173,10 @@ interface RiderContextType {
   markAlertAsRead: (id: string) => void;
   loginWithMpin: (phone: string, mpin: string) => Promise<{ success: boolean; error?: string }>;
   loginWithMpinOnly: (mpin: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithRiderId: (riderId: string, mpin: string) => Promise<{ success: boolean; error?: string }>;
+  sessionToken: string | null;
+  sessionInvalidatedMessage: string | null;
+  clearSessionInvalidatedMessage: () => void;
   registerRider: (data: {
     name: string;
     phone: string;
@@ -185,7 +198,7 @@ interface RiderContextType {
     upiId?: string;
     avatarUrl?: string;
     selfieCapturedUrl?: string;
-  }) => Promise<{ success: boolean; error?: string }>;
+  }) => Promise<{ success: boolean; riderId?: string; error?: string }>;
   logout: () => void;
   isHydrated: boolean;
   // ── New ──
@@ -285,6 +298,9 @@ const defaultRider: RiderProfile = {
   isVerified: true,
   verificationStep: 4,
   isAuthenticated: false,
+  riderId: '',
+  Rider_ID: '',
+  active_session_token: null,
 };
 
 const initialIncomingOrder: Order | null = null;
@@ -378,6 +394,8 @@ const RiderContext = createContext<RiderContextType | undefined>(undefined);
 export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ── Existing state ──
   const [rider, setRider] = useState<RiderProfile>(defaultRider);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [sessionInvalidatedMessage, setSessionInvalidatedMessage] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(false); // Default offline — slot gate
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [incomingOrder, setIncomingOrder] = useState<Order | null>(null);
@@ -514,10 +532,24 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
+      const savedToken = getLocalSessionToken();
+      if (savedToken) {
+        setSessionToken(savedToken);
+      }
+
       const savedRider = localStorage.getItem('snapit_rider_profile_v2');
       if (savedRider) {
         const parsedRider = JSON.parse(savedRider);
         setRider(parsedRider);
+        if (parsedRider.phone && savedToken) {
+          validateDeviceSession(parsedRider.phone, savedToken).then((res) => {
+            if (!res.isValid) {
+              soundEngine.stopIncomingOrderBuzzer();
+              logout();
+              setSessionInvalidatedMessage('You have been logged out because your account was signed in on another device.');
+            }
+          });
+        }
         const multi = getMultiDayPreferences(parsedRider.phone);
         setRidingPreferences(multi.todayPreferences);
         setTomorrowPreferences(multi.tomorrowPreferences);
@@ -618,6 +650,56 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       setIsHydrated(true);
     }
   }, []);
+
+  // ─── Single Active Session: Realtime Invalidation Guard ───────────
+  useEffect(() => {
+    if (!rider.phone || !sessionToken || !rider.isAuthenticated) {
+      return;
+    }
+
+    const handleInvalidation = (reason: string) => {
+      console.warn('Session invalidated:', reason);
+      soundEngine.stopIncomingOrderBuzzer();
+      logout();
+      setSessionInvalidatedMessage('You have been logged out because your account was signed in on another device.');
+    };
+
+    const unsubscribe = subscribeToSessionInvalidation(
+      rider.phone,
+      sessionToken,
+      handleInvalidation
+    );
+
+    // Validate session freshness when app becomes visible or reconnects
+    const checkSessionFreshness = async () => {
+      if (!sessionToken || !rider.phone) return;
+      const res = await validateDeviceSession(rider.phone, sessionToken);
+      if (!res.isValid) {
+        handleInvalidation(res.error || 'Session invalidated on another device');
+      }
+    };
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        checkSessionFreshness();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('online', checkSessionFreshness);
+
+    // Controlled periodic heartbeat check (every 30s)
+    const interval = setInterval(checkSessionFreshness, 30000);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('online', checkSessionFreshness);
+      clearInterval(interval);
+    };
+  }, [rider.phone, sessionToken, rider.isAuthenticated]);
 
   // Fetch remote availability preferences when rider profile phone changes
   useEffect(() => {
@@ -2204,20 +2286,27 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
   };
 
-  const loginWithMpin = async (
-    phone: string,
+  const loginWithRiderId = async (
+    riderIdOrPhone: string,
     mpin: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const result = await loginRiderWithMpin(phone, mpin);
+      setSessionInvalidatedMessage(null);
+      const result = await loginRiderWithRiderId(riderIdOrPhone, mpin);
       if (result.error || !result.profile) {
         return { success: false, error: result.error || 'Invalid credentials' };
       }
 
       const p = result.profile;
+      const returnedRiderId = p.Rider_ID || undefined;
+
+      // Activate session atomically in Supabase (invalidating any previous session)
+      const sessionResult = await activateDeviceSession(p.id, returnedRiderId);
+      setSessionToken(sessionResult.sessionToken);
+
       const updatedProfile: RiderProfile = {
         name: p.name,
-        dob: '',
+        dob: p.dob || '',
         phone: p.phone,
         altPhone: p.alt_phone || '',
         email: p.email || '',
@@ -2240,6 +2329,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         verificationStep: 4,
         mpin: p.mpin,
         isAuthenticated: true,
+        riderId: returnedRiderId,
+        Rider_ID: returnedRiderId,
+        active_session_token: sessionResult.sessionToken,
       };
 
       setRider(updatedProfile);
@@ -2250,19 +2342,32 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithMpin = async (
+    phone: string,
+    mpin: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    return loginWithRiderId(phone, mpin);
+  };
+
   const loginWithMpinOnly = async (
     mpin: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
+      setSessionInvalidatedMessage(null);
       const result = await loginRiderWithMpinOnly(mpin);
       if (result.error || !result.profile) {
         return { success: false, error: result.error || 'Incorrect MPIN' };
       }
 
       const p = result.profile;
+      const returnedRiderId = p.Rider_ID || undefined;
+
+      const sessionResult = await activateDeviceSession(p.id, returnedRiderId);
+      setSessionToken(sessionResult.sessionToken);
+
       const updatedProfile: RiderProfile = {
         name: p.name,
-        dob: '',
+        dob: p.dob || '',
         phone: p.phone,
         altPhone: p.alt_phone || '',
         email: p.email || '',
@@ -2285,6 +2390,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         verificationStep: 4,
         mpin: p.mpin,
         isAuthenticated: true,
+        riderId: returnedRiderId,
+        Rider_ID: returnedRiderId,
+        active_session_token: sessionResult.sessionToken,
       };
 
       setRider(updatedProfile);
@@ -2316,8 +2424,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     upiId?: string;
     avatarUrl?: string;
     selfieCapturedUrl?: string;
-  }): Promise<{ success: boolean; error?: string }> => {
+  }): Promise<{ success: boolean; riderId?: string; error?: string }> => {
     try {
+      setSessionInvalidatedMessage(null);
       const result = await registerRiderInDb({
         name: data.name,
         phone: data.phone,
@@ -2331,7 +2440,6 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         email: data.email,
         address: data.address,
         aadhaar_number: data.aadhaarNumber,
-        aadhaar_doc_url: data.aadhaarDocUrl,
         pan_number: data.panNumber,
         pan_doc_url: data.panDocUrl,
         dl_number: data.dlNumber,
@@ -2346,42 +2454,22 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const p = result.profile;
-      const updatedProfile: RiderProfile = {
-        name: p.name,
-        dob: data.dob || '',
-        phone: p.phone,
-        altPhone: p.alt_phone || '',
-        email: p.email || '',
-        address: p.address || '',
-        avatarUrl: p.avatar_url || data.selfieCapturedUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-        selfieCapturedUrl: p.selfie_url || data.selfieCapturedUrl || '',
-        aadhaarNumber: p.aadhaar_number || '',
-        panNumber: p.pan_number || '',
-        dlNumber: p.dl_number || '',
-        walletBalance: p.wallet_balance || 0,
-        upiId: p.upi_id || '',
-        rating: Number(p.rating || 5.0),
-        totalDeliveries: p.total_deliveries || 0,
-        acceptanceRate: p.acceptance_rate || 100,
-        vehicleType: p.vehicle_type || 'Bike',
-        vehicleNumber: p.vehicle_number || '',
-        selectedZone: p.selected_zone_name || 'Robertsonpet',
-        selectedZoneId: p.selected_zone_id || 'zone-1',
-        isVerified: true,
-        verificationStep: 4,
-        mpin: data.mpin,
-        isAuthenticated: true,
-      };
+      const returnedRiderId = result.riderId || p?.Rider_ID;
 
-      setRider(updatedProfile);
-      localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
-      return { success: true };
+      // Note: Do not auto-authenticate or activate device session here.
+      // The rider is redirected to the sign-in page to explicitly log in with their Rider ID and MPIN.
+      return { success: true, riderId: returnedRiderId };
     } catch (err: any) {
       return { success: false, error: err.message || 'Registration failed' };
     }
   };
 
   const logout = () => {
+    if (rider.phone && sessionToken) {
+      terminateDeviceSession(rider.phone, sessionToken);
+    }
+    clearLocalSessionToken();
+    setSessionToken(null);
     setIsOnline(false);
     setActiveOrder(null);
     setIncomingOrder(null);
@@ -2389,6 +2477,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('snapit_rider_profile_v2');
     localStorage.removeItem('snapit_online_status_v2');
     localStorage.removeItem('snapit_active_order_v2');
+  };
+
+  const clearSessionInvalidatedMessage = () => {
+    setSessionInvalidatedMessage(null);
   };
 
   return (
@@ -2427,6 +2519,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         markAlertAsRead,
         loginWithMpin,
         loginWithMpinOnly,
+        loginWithRiderId,
+        sessionToken,
+        sessionInvalidatedMessage,
+        clearSessionInvalidatedMessage,
         registerRider,
         logout,
         isHydrated,

@@ -136,13 +136,38 @@ export interface RiderProfile {
   mpin?: string;
   isAuthenticated?: boolean;
 
+  // Rider ID & Identity
+  riderId?: string;
+  Rider_ID?: string;
+
   // Sessions & Availability Preferences
   session_started_at?: string | null;
   session_ends_at?: string | null;
   session_duration_mins?: number | null;
   available_for_order?: boolean;
   current_session_id?: string | null;
+  active_session_token?: string | null;
   riding_preferences?: PreferenceWindowId[];
+}
+
+export interface DeviceSession {
+  id: string;
+  rider_id: string;
+  rider_code?: string;
+  session_token: string;
+  device_info?: string;
+  is_active: boolean;
+  created_at: string;
+  last_active_at: string;
+  invalidated_at?: string | null;
+}
+
+export interface SessionValidationResult {
+  isValid: boolean;
+  riderId?: string;
+  riderCode?: string;
+  invalidatedAt?: string | null;
+  error?: string;
 }
 
 // ─── Earnings ────────────────────────────────────────────────────────────────

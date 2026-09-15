@@ -67,9 +67,16 @@ export default function ProfilePage() {
               <span className="text-slate-500 font-medium">{rider.totalDeliveries} trips</span>
             </p>
             <p className="text-xs font-mono font-semibold text-secondary mt-0.5">{rider.selectedZone || 'Robertsonpet'}</p>
-            <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
-              Verified Partner
-            </span>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                Verified Partner
+              </span>
+              {(rider.Rider_ID || rider.riderId) && (
+                <span className="inline-block bg-slate-100 text-slate-800 text-[10px] font-mono font-black px-2 py-0.5 rounded-full border border-slate-200">
+                  ID: {rider.Rider_ID || rider.riderId}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -93,6 +100,15 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-2 text-xs">
+            {/* Minnit Rider ID (Locked) */}
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-secondary font-medium">Minnit Rider ID</span>
+              <span className="font-mono font-bold text-emerald-700 flex items-center gap-1.5">
+                <span>{rider.Rider_ID || rider.riderId || 'Assigned'}</span>
+                <Lock className="w-3 h-3 text-slate-400" />
+              </span>
+            </div>
+
             {/* DOB (Locked) */}
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">Date of Birth</span>

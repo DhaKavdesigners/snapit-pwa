@@ -66,15 +66,8 @@ export const OtpInput: React.FC<OtpInputProps> = ({
     }
   };
 
-  const quickFillSample = () => {
-    const sample = ['1', '2', '3', '4'];
-    setDigits(sample);
-    inputsRef.current[3]?.focus();
-    onComplete('1234');
-  };
-
   return (
-    <div className="flex flex-col items-center gap-4 w-full">
+    <div className="flex flex-col items-center w-full">
       {/* 4 OTP Input Boxes */}
       <div className="flex justify-center gap-3 w-full">
         {digits.map((digit, index) => (
@@ -98,18 +91,6 @@ export const OtpInput: React.FC<OtpInputProps> = ({
             }`}
           />
         ))}
-      </div>
-
-      {/* Quick Test Helper for immediate user verification */}
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] font-bold text-slate-500">Test PIN is </span>
-        <button
-          type="button"
-          onClick={quickFillSample}
-          className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/90 px-2 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
-        >
-          1234 (Click to autofill)
-        </button>
       </div>
     </div>
   );

@@ -58,13 +58,13 @@ export default function DashboardPage() {
 
   const isBreakActive = Boolean(riderBreak && !riderBreak.endedAt);
 
-  // Redirect to onboarding if not registered
+  // Redirect to onboarding if not registered or not authenticated
   useEffect(() => {
     if (!isHydrated) return;
-    if (!rider.phone) {
+    if (!rider.phone || !rider.isAuthenticated) {
       router.push('/onboarding');
     }
-  }, [isHydrated, rider.phone, router]);
+  }, [isHydrated, rider.phone, rider.isAuthenticated, router]);
 
   // Guarantee buzzer is stopped if leaving or unmounting dashboard
   useEffect(() => {

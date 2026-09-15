@@ -110,9 +110,9 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
         {/* Minnit Brand Logo (Moved down & made larger as in mockup, razor-sharp) */}
         <div className="mb-8 sm:mb-9 flex items-center justify-center animate-fade-in">
           <img
-            src="/images/minnit_delivered_logo.png"
+            src="/images/minnit_logo_main.png"
             alt="Minnit"
-            className="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-xs select-none"
+            className="w-40 sm:w-44 h-auto object-contain select-none filter drop-shadow-xs"
             style={{ imageRendering: 'auto' }}
           />
         </div>

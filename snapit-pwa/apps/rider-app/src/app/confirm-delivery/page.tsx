@@ -5,7 +5,7 @@ import { useRider } from '@/context/RiderContext';
 import { OtpInput } from '@/components/delivery/OtpInput';
 import { SuccessModal } from '@/components/delivery/SuccessModal';
 import { AppShell } from '@/components/layout/AppShell';
-import { ArrowLeft, Phone, ShieldCheck, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Phone, ShieldCheck, ArrowRight, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatOrderNumber } from '@/utils/orderUtils';
 
@@ -83,98 +83,104 @@ export default function ConfirmDeliveryPage() {
         {/* Background Atmosphere Gradient */}
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-purple-500/5 to-transparent pointer-events-none" />
 
-        {/* Transactional Top Header */}
-        <header className="flex items-center justify-between z-10 pt-2 pb-4">
+        {/* Transactional Top Header with Centered Minnit Logo */}
+        <header className="relative flex items-center justify-between z-10 pt-2 pb-3 mb-1">
           <button
             onClick={() => router.back()}
-            className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-2xs border border-slate-200 hover:bg-slate-50 transition-colors active:scale-95 cursor-pointer"
+            className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-2xs border border-slate-200 hover:bg-slate-50 transition-colors active:scale-95 cursor-pointer z-10"
+            aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5 text-slate-800" />
           </button>
 
-          <div className="font-black text-xs text-purple-800 bg-purple-50 border border-purple-200/90 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-            <ShieldCheck className="w-4 h-4 text-purple-600 stroke-[2.5]" />
-            <span>PIN Verification</span>
+          {/* Minnit Logo Centered at Top Header */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <img
+              src="/images/minnit_logo_main.png"
+              alt="Minnit"
+              className="h-8 w-auto object-contain select-none"
+              style={{ imageRendering: 'auto' }}
+            />
+          </div>
+
+          <div className="font-bold text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/90 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xs z-10">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+            <span>PIN Check</span>
           </div>
         </header>
 
         {/* Main Content Body */}
-        <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full z-10 py-4">
+        <div className="flex-1 flex flex-col justify-start max-w-sm mx-auto w-full z-10 pt-1 pb-4 space-y-3">
           
-          {/* Customer Context Card */}
-          <div className="bg-white rounded-[24px] p-4.5 mb-6 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.06)] border border-slate-200/90 flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200 bg-slate-100 shadow-2xs">
-              <img
-                src={currentOrder.customerAvatar}
-                alt={currentOrder.customerName}
-                className="w-full h-full object-cover"
-              />
-            </div>
+          {/* Customer Context Card (Professional, No Broken Avatar) */}
+          <div className="bg-white rounded-3xl p-3.5 sm:p-4 shadow-soft border border-slate-200/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+                <User className="w-5 h-5 text-emerald-600" />
+              </div>
 
-            <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                Customer Handoff
-              </span>
-              <h2 className="font-black text-base text-slate-900 truncate mt-0.5">
-                {currentOrder.customerName}
-              </h2>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">
-                Order #{formatOrderNumber(currentOrder.orderNumber)}
-              </p>
+              <div className="min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                  Customer Handoff
+                </span>
+                <h2 className="font-black text-base text-slate-900 truncate">
+                  {currentOrder.customerName}
+                </h2>
+                <p className="text-xs text-slate-500 font-mono">
+                  Order #{formatOrderNumber(currentOrder.orderNumber)}
+                </p>
+              </div>
             </div>
 
             <a
               href={`tel:${currentOrder.customerPhone}`}
-              className="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center border border-slate-200/80 transition-all active:scale-95 shadow-2xs cursor-pointer"
+              className="w-10 h-10 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center transition-all active:scale-95 shadow-md shadow-emerald-600/20 cursor-pointer shrink-0"
+              title="Call Customer"
+              aria-label="Call Customer"
             >
-              <Phone className="w-4 h-4 text-slate-700" />
+              <Phone className="w-4 h-4 text-white" />
             </a>
           </div>
 
-          {/* Heading and Instructions */}
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-1.5">
-              Enter Delivery PIN
-            </h1>
-            <p className="text-xs text-slate-500 max-w-[280px] mx-auto leading-relaxed">
-              Ask the customer for the 4-digit delivery PIN shown on their order tracking screen.
-            </p>
+          {/* Heading and Instructions Card */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-soft border border-slate-200/80 text-center space-y-3">
+            <div>
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center mx-auto mb-2 shadow-2xs">
+                <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                Enter Delivery PIN
+              </h1>
+              <p className="text-xs text-slate-500 max-w-[260px] mx-auto leading-relaxed mt-0.5">
+                Ask the customer for the 4-digit PIN shown on their order tracking screen.
+              </p>
+            </div>
+
+            {/* 4-Box Numeric OTP Input */}
+            <div className="py-1">
+              <OtpInput length={4} onComplete={(otp) => setEnteredOtp(otp)} />
+            </div>
+
+            {/* Error / Feedback alert */}
+            {errorMessage && (
+              <p className="text-xs font-bold text-center text-rose-600 bg-rose-50 py-2.5 px-3.5 rounded-2xl border border-rose-200 animate-fade-in shadow-2xs">
+                {errorMessage}
+              </p>
+            )}
           </div>
 
-          {/* 4-Box Numeric OTP Input */}
-          <div className="mb-6">
-            <OtpInput length={4} onComplete={(otp) => setEnteredOtp(otp)} />
-          </div>
-
-          {/* Error / Feedback alert */}
-          {errorMessage && (
-            <p className="text-xs font-bold text-center text-rose-600 mb-4 bg-rose-50 py-2.5 px-3.5 rounded-2xl border border-rose-200 animate-fade-in shadow-2xs">
-              {errorMessage}
-            </p>
-          )}
-
-          {/* Resend Link */}
-          <div className="text-center">
+          {/* Action Button - Shifted up in immediate phone FOV */}
+          <div className="pt-1 w-full">
             <button
-              onClick={handleResend}
-              className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors underline decoration-slate-300 underline-offset-4 cursor-pointer"
+              onClick={handleVerify}
+              disabled={enteredOtp.length !== 4}
+              className="w-full h-13 sm:h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 active:scale-98 transition-all flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:ring-0 cursor-pointer tracking-wider uppercase"
             >
-              Resend OTP via SMS
+              <span>VERIFY PIN & COMPLETE</span>
+              <ArrowRight className="w-4 h-4 stroke-[3]" />
             </button>
           </div>
 
-        </div>
-
-        {/* Fixed Bottom Verify Button */}
-        <div className="z-10 pt-4 pb-safe w-full max-w-sm mx-auto">
-          <button
-            onClick={handleVerify}
-            disabled={enteredOtp.length !== 4}
-            className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 active:scale-98 transition-all flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:ring-0 cursor-pointer tracking-wider"
-          >
-            <span>VERIFY PIN & COMPLETE</span>
-            <ArrowRight className="w-4 h-4 stroke-[3]" />
-          </button>
         </div>
 
         {/* Success Modal Overlay */}
