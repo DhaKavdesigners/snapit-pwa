@@ -9,6 +9,7 @@ import { getSessionRemainingMs, formatRemainingSessionTime } from '@/services/se
 
 interface TopHeaderProps {
   showBack?: boolean;
+  onBack?: () => void;
   title?: string;
   subtitle?: string;
 }
@@ -20,7 +21,7 @@ function getGreeting() {
   return 'Good evening';
 }
 
-export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle }) => {
+export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, subtitle }) => {
   const {
     rider,
     isOnline,
@@ -90,8 +91,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, title, subtitle 
         {showBack ? (
           <div className="flex items-center gap-2 min-w-0">
             <button
-              onClick={() => window.history.back()}
-              className="w-8 h-8 rounded-full bg-white/80 border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs active:scale-95 shrink-0"
+              onClick={() => {
+                if (onBack) {
+                  onBack();
+                } else if (typeof window !== 'undefined') {
+                  window.history.back();
+                }
+              }}
+              className="w-8 h-8 rounded-full bg-white/80 border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs active:scale-95 shrink-0 cursor-pointer"
               aria-label="Go back"
             >
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>

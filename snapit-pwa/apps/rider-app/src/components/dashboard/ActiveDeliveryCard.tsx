@@ -342,7 +342,7 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
           <div className="pt-1">
             {isOutForDelivery ? (
               <SlideButton
-                label="SLIDE: ARRIVED AT CUSTOMER"
+                label="SLIDE: ARRIVED AT LOCATION"
                 variant="blue"
                 onConfirm={onAdvanceStatus}
               />

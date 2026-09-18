@@ -94,11 +94,31 @@ export interface StoreSettlementRecord {
 
 export interface AdminRider {
   id: string;
+  Rider_ID?: string;
   name: string;
   phone: string;
+  alt_phone?: string;
+  email?: string;
+  dob?: string;
+  address?: string;
   vehicle_type?: string;
   vehicle_number?: string;
   avatar_url?: string;
+  selfie_url?: string;
+  selected_zone_id?: string;
+  selected_zone_name?: string;
+  aadhaar_number?: string;
+  aadhaar_doc_url?: string;
+  pan_number?: string;
+  pan_doc_url?: string;
+  dl_number?: string;
+  dl_doc_url?: string;
+  upi_id?: string;
+  is_verified?: boolean;
+  verification_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verified_at?: string | null;
+  verified_by?: string | null;
+  rejection_reason?: string | null;
   is_online?: boolean;
   is_busy?: boolean;
   current_order_id?: string | null;

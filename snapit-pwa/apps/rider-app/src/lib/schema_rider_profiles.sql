@@ -34,9 +34,13 @@ CREATE TABLE public.rider_profiles (
   dl_doc_url TEXT,
   upi_id TEXT,
 
-  -- Operational & Status (Auto-approved)
-  is_verified BOOLEAN DEFAULT true,
-  verification_step INT DEFAULT 4,
+  -- Operational & Verification Status
+  verification_status TEXT DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  verified_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  verified_by TEXT DEFAULT NULL,
+  rejection_reason TEXT DEFAULT NULL,
+  is_verified BOOLEAN DEFAULT false,
+  verification_step INT DEFAULT 3,
   is_online BOOLEAN DEFAULT false,
   current_lat DOUBLE PRECISION DEFAULT 12.9716,
   current_lng DOUBLE PRECISION DEFAULT 77.6412,

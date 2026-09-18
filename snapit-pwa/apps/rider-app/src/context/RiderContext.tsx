@@ -171,9 +171,9 @@ interface RiderContextType {
   resetOnboarding: () => void;
   transferWalletToBank: (amount: number) => boolean;
   markAlertAsRead: (id: string) => void;
-  loginWithMpin: (phone: string, mpin: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithMpin: (phone: string, mpin: string) => Promise<{ success: boolean; error?: string; verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'; riderId?: string }>;
   loginWithMpinOnly: (mpin: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithRiderId: (riderId: string, mpin: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithRiderId: (riderId: string, mpin: string) => Promise<{ success: boolean; error?: string; verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'; riderId?: string }>;
   sessionToken: string | null;
   sessionInvalidatedMessage: string | null;
   clearSessionInvalidatedMessage: () => void;
@@ -2254,11 +2254,22 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const simulateApproval = () => {
-    setRider((prev) => ({ ...prev, isVerified: true, verificationStep: 4 }));
+    setRider((prev) => {
+      const updated = {
+        ...prev,
+        isVerified: true,
+        verificationStep: 4,
+        verificationStatus: 'APPROVED' as const,
+      };
+      try {
+        localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
   };
 
   const resetOnboarding = () => {
-    setRider((prev) => ({ ...prev, isVerified: false, verificationStep: 1 }));
+    setRider((prev) => ({ ...prev, isVerified: false, verificationStep: 1, verificationStatus: 'PENDING' }));
     setActiveOrder(null);
     setIncomingOrder(null);
     setBookedSlotIds([]);
@@ -2289,12 +2300,32 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const loginWithRiderId = async (
     riderIdOrPhone: string,
     mpin: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    riderId?: string;
+  }> => {
     try {
       setSessionInvalidatedMessage(null);
       const result = await loginRiderWithRiderId(riderIdOrPhone, mpin);
+
+      // Handle unapproved riders
+      if (result.verificationStatus && result.verificationStatus !== 'APPROVED') {
+        return {
+          success: false,
+          error: result.error,
+          verificationStatus: result.verificationStatus,
+          riderId: result.profile?.Rider_ID || result.profile?.phone || riderIdOrPhone,
+        };
+      }
+
       if (result.error || !result.profile) {
-        return { success: false, error: result.error || 'Invalid credentials' };
+        return {
+          success: false,
+          error: result.error || 'Invalid credentials',
+          verificationStatus: result.verificationStatus,
+        };
       }
 
       const p = result.profile;
@@ -2302,6 +2333,14 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
       // Activate session atomically in Supabase (invalidating any previous session)
       const sessionResult = await activateDeviceSession(p.id, returnedRiderId);
+      if (!sessionResult.success && sessionResult.error) {
+        return {
+          success: false,
+          error: sessionResult.error,
+          verificationStatus: p.verification_status || 'PENDING',
+          riderId: returnedRiderId,
+        };
+      }
       setSessionToken(sessionResult.sessionToken);
 
       const updatedProfile: RiderProfile = {
@@ -2327,6 +2366,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         selectedZoneId: p.selected_zone_id || 'zone-1',
         isVerified: true,
         verificationStep: 4,
+        verificationStatus: 'APPROVED',
+        verifiedAt: p.verified_at,
+        verifiedBy: p.verified_by,
         mpin: p.mpin,
         isAuthenticated: true,
         riderId: returnedRiderId,
@@ -2336,7 +2378,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
       setRider(updatedProfile);
       localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updatedProfile));
-      return { success: true };
+      return { success: true, verificationStatus: 'APPROVED', riderId: returnedRiderId };
     } catch (err: any) {
       return { success: false, error: err.message || 'Login failed' };
     }
@@ -2345,7 +2387,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const loginWithMpin = async (
     phone: string,
     mpin: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'; riderId?: string }> => {
     return loginWithRiderId(phone, mpin);
   };
 
@@ -2360,6 +2402,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const p = result.profile;
+      if (p.verification_status === 'PENDING' || p.verification_status === 'REJECTED') {
+        return { success: false, error: 'Your rider account is pending admin verification.' };
+      }
+      if (!p.verification_status && p.is_verified === false) {
+        return { success: false, error: 'Your rider account is pending admin verification.' };
+      }
+
       const returnedRiderId = p.Rider_ID || undefined;
 
       const sessionResult = await activateDeviceSession(p.id, returnedRiderId);
@@ -2388,6 +2437,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         selectedZoneId: p.selected_zone_id || 'zone-1',
         isVerified: true,
         verificationStep: 4,
+        verificationStatus: 'APPROVED',
+        verifiedAt: p.verified_at,
+        verifiedBy: p.verified_by,
         mpin: p.mpin,
         isAuthenticated: true,
         riderId: returnedRiderId,

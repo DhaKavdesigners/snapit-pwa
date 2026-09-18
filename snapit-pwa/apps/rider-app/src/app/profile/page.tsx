@@ -19,8 +19,11 @@ import {
   FileCheck2,
 } from 'lucide-react';
 
+import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
+
 export default function ProfilePage() {
   const { rider, updateRiderProfile, logout } = useRider();
+  const [showInstructions, setShowInstructions] = useState(false);
   
   // Editable fields state
   const [altPhone, setAltPhone] = useState(rider.altPhone || '');
@@ -38,6 +41,20 @@ export default function ProfilePage() {
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
+
+  if (showInstructions) {
+    return (
+      <AppShell showNav={false} showBack={true} onBack={() => setShowInstructions(false)} title="Rider Instructions" noPadding={true}>
+        <div className="flex-1 min-h-0 w-full flex flex-col justify-between overflow-hidden">
+          <RiderInstructionViewer
+            isModal={false}
+            onDone={() => setShowInstructions(false)}
+            onClose={() => setShowInstructions(false)}
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -251,6 +268,30 @@ export default function ProfilePage() {
               className="w-4 h-4 text-primary rounded accent-primary cursor-pointer"
             />
           </div>
+        </div>
+
+        {/* SECTION 4: RIDER INSTRUCTIONS */}
+        <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowInstructions(true)}
+            className="w-full flex items-center justify-between text-left group active:scale-98 transition-all cursor-pointer"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-xl shrink-0 group-hover:bg-emerald-100 transition-colors">
+                📖
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 group-hover:text-primary transition-colors">
+                  Rider Instructions
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  Learn how Minnit rider features work
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors shrink-0" />
+          </button>
         </div>
 
         {/* Log Out / Switch Account */}

@@ -55,6 +55,8 @@ interface AdminState {
   // Rider Actions
   createRider: (data: Partial<AdminRider>) => Promise<boolean>;
   updateRider: (riderId: string, updates: Partial<AdminRider>) => Promise<boolean>;
+  approveRider: (riderId: string, adminIdentifier?: string) => Promise<boolean>;
+  rejectRider: (riderId: string, reason?: string, adminIdentifier?: string) => Promise<boolean>;
   toggleRiderOnline: (riderId: string, isOnline: boolean) => Promise<boolean>;
   resetRiderBusy: (riderId: string) => Promise<boolean>;
   deleteRider: (riderId: string) => Promise<boolean>;
@@ -608,6 +610,131 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       return true;
     } catch (err: any) {
       console.error("Failed to update rider:", err);
+      return false;
+    }
+  },
+
+  approveRider: async (riderId: string, adminIdentifier: string = "Master Admin") => {
+    try {
+      const updates: any = {
+        verification_status: "APPROVED",
+        is_verified: true,
+        verification_step: 4,
+        verified_at: new Date().toISOString(),
+        verified_by: adminIdentifier,
+        rejection_reason: null,
+      };
+
+      // 1. Try atomic RPC function first
+      try {
+        const { error: rpcErr } = await supabase.rpc("admin_approve_rider", {
+          p_rider_id: riderId,
+          p_admin_identifier: adminIdentifier,
+        });
+        if (!rpcErr) {
+          set((state) => ({
+            riders: state.riders.map((r) => (r.id === riderId ? { ...r, ...updates } : r)),
+          }));
+          return true;
+        }
+      } catch {}
+
+      // 2. Direct database update fallback
+      const { error } = await supabase
+        .from("rider_profiles")
+        .update(updates)
+        .eq("id", riderId);
+
+      if (error) {
+        // Fallback if migration columns are not yet applied in Supabase SQL Editor
+        const isColumnMissing =
+          error.code === "PGRST204" ||
+          error.code === "42703" ||
+          error.message?.includes("verification_status") ||
+          error.message?.includes("verified_at");
+
+        if (isColumnMissing) {
+          const { error: fallbackErr } = await supabase
+            .from("rider_profiles")
+            .update({ is_verified: true, verification_step: 4 })
+            .eq("id", riderId);
+          if (fallbackErr) throw fallbackErr;
+        } else {
+          throw error;
+        }
+      }
+
+      set((state) => ({
+        riders: state.riders.map((r) => (r.id === riderId ? { ...r, ...updates } : r)),
+      }));
+
+      return true;
+    } catch (err: any) {
+      console.error("Failed to approve rider:", err);
+      return false;
+    }
+  },
+
+  rejectRider: async (
+    riderId: string,
+    reason: string = "Documents could not be verified",
+    adminIdentifier: string = "Master Admin"
+  ) => {
+    try {
+      const updates: any = {
+        verification_status: "REJECTED",
+        is_verified: false,
+        rejection_reason: reason,
+        verified_at: new Date().toISOString(),
+        verified_by: adminIdentifier,
+      };
+
+      // 1. Try atomic RPC function first
+      try {
+        const { error: rpcErr } = await supabase.rpc("admin_reject_rider", {
+          p_rider_id: riderId,
+          p_reason: reason,
+          p_admin_identifier: adminIdentifier,
+        });
+        if (!rpcErr) {
+          set((state) => ({
+            riders: state.riders.map((r) => (r.id === riderId ? { ...r, ...updates } : r)),
+          }));
+          return true;
+        }
+      } catch {}
+
+      // 2. Direct database update fallback
+      const { error } = await supabase
+        .from("rider_profiles")
+        .update(updates)
+        .eq("id", riderId);
+
+      if (error) {
+        const isColumnMissing =
+          error.code === "PGRST204" ||
+          error.code === "42703" ||
+          error.message?.includes("verification_status") ||
+          error.message?.includes("rejection_reason");
+
+        if (isColumnMissing) {
+          const { error: fallbackErr } = await supabase
+            .from("rider_profiles")
+            .update({ is_verified: false })
+            .eq("id", riderId);
+          if (fallbackErr) throw fallbackErr;
+        } else {
+          throw error;
+        }
+      }
+
+      set((state) => ({
+        riders: state.riders.map((r) => (r.id === riderId ? { ...r, ...updates } : r)),
+      }));
+
+      return true;
+    } catch (err: any) {
+      console.error("Failed to reject rider:", err);
       return false;
     }
   },

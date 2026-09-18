@@ -68,6 +68,10 @@ export interface DbRiderProfile {
   selected_zone_name?: string;
   is_verified?: boolean;
   verification_step?: number;
+  verification_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verified_at?: string | null;
+  verified_by?: string | null;
+  rejection_reason?: string | null;
   is_online?: boolean;
   wallet_balance?: number;
   rating?: number;

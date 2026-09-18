@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ZoneSelectionModal } from '@/components/slots/ZoneSelectionModal';
-import { HomeAvailabilityCard } from '@/components/dashboard/HomeAvailabilityCard';
 import { ActiveDeliveryCard } from '@/components/dashboard/ActiveDeliveryCard';
 import { StartRidingSheet } from '@/components/dashboard/StartRidingSheet';
 import { ActiveSessionCard } from '@/components/dashboard/ActiveSessionCard';
@@ -12,6 +11,7 @@ import { EndSessionEarlyModal } from '@/components/dashboard/EndSessionEarlyModa
 import { SessionCompleteCard } from '@/components/dashboard/SessionCompleteCard';
 import { BreakOrderPreviewCard } from '@/components/delivery/BreakOrderPreviewCard';
 import { FeaturePromoBanner } from '@/components/dashboard/FeaturePromoBanner';
+import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -49,12 +49,48 @@ export default function DashboardPage() {
     riderBreak,
     breakOrderPreview,
     dismissBreakOrderPreview,
+    updateRiderProfile,
   } = useRider();
   const router = useRouter();
 
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [isEndEarlyModalOpen, setIsEndEarlyModalOpen] = useState(false);
+  const [showFirstLoginInstructions, setShowFirstLoginInstructions] = useState(false);
+
+  // Check for first login after approval to show instructions automatically
+  useEffect(() => {
+    if (!isHydrated || !rider.isAuthenticated) return;
+
+    const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
+    const isCompleted =
+      Boolean(rider.rider_instructions_completed) ||
+      (typeof window !== 'undefined' && localStorage.getItem(`minnit_first_login_instructions_${riderKey}`) === 'true');
+
+    if (!isCompleted) {
+      setShowFirstLoginInstructions(true);
+    }
+  }, [isHydrated, rider.isAuthenticated, rider.phone, rider.Rider_ID, rider.riderId, rider.rider_instructions_completed]);
+
+  const handleCompleteFirstLoginInstructions = () => {
+    setShowFirstLoginInstructions(false);
+    const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
+    try {
+      localStorage.setItem(`minnit_first_login_instructions_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_rider_instructions_completed_${riderKey}`, 'true');
+    } catch {}
+
+    updateRiderProfile({ rider_instructions_completed: true });
+
+    try {
+      const saved = localStorage.getItem('snapit_rider_profile_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        parsed.rider_instructions_completed = true;
+        localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(parsed));
+      }
+    } catch {}
+  };
 
   const isBreakActive = Boolean(riderBreak && !riderBreak.endedAt);
 
@@ -112,6 +148,19 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [incomingOrder, declineIncomingOrder]);
 
+  if (showFirstLoginInstructions) {
+    return (
+      <AppShell showNav={false} noPadding={true}>
+        <div className="flex-1 min-h-0 w-full flex flex-col justify-between overflow-hidden">
+          <RiderInstructionViewer
+            isModal={false}
+            onDone={handleCompleteFirstLoginInstructions}
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="flex flex-col gap-3.5 pt-2 pb-6 max-w-md mx-auto w-full">
@@ -164,8 +213,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── 2. LIVE AVAILABILITY & PRIORITY CARD ── */}
-        <HomeAvailabilityCard />
 
         {/* ── 3. MAIN INTERACTIVE ORDER / SESSION COCKPIT ── */}
 

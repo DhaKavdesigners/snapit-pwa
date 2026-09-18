@@ -35,6 +35,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   ).length;
 
   const onlineRidersCount = riders.filter((r) => r.is_online).length;
+  const pendingRidersCount = riders.filter(
+    (r) => r.verification_status === "PENDING" || (r.is_verified === false && !r.verification_status)
+  ).length;
   const onlineStoresCount = stores.filter((s) => s.is_online).length;
 
   const navItems = [
@@ -69,8 +72,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       id: "fleet" as AdminTab,
       label: "Rider Fleet",
       icon: Bike,
-      badge: `${onlineRidersCount} Online`,
-      badgeColor: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+      badge: pendingRidersCount > 0 ? `${pendingRidersCount} Pending` : `${onlineRidersCount} Online`,
+      badgeColor:
+        pendingRidersCount > 0
+          ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse"
+          : "bg-blue-500/20 text-blue-400 border border-blue-500/30",
     },
     {
       id: "catalog" as AdminTab,

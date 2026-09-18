@@ -24,8 +24,14 @@ import {
   Copy,
   UserCheck,
   Sparkles,
+  RefreshCw,
+  XCircle,
+  Clock,
+  Radio,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
 
 export default function OnboardingPage() {
   const {
@@ -39,7 +45,7 @@ export default function OnboardingPage() {
     clearSessionInvalidatedMessage,
   } = useRider();
   const [step, setStep] = useState<
-    'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'reg_success' | 'status'
+    'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'reg_waiting' | 'approved' | 'rejected' | 'reg_success' | 'status'
   >('splash');
   
   // Login form state
@@ -50,11 +56,16 @@ export default function OnboardingPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Registration success state
+  // Registration success & verification state
   const [registeredRiderId, setRegisteredRiderId] = useState('');
+  const [registeredPhone, setRegisteredPhone] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [statusCheckNotice, setStatusCheckNotice] = useState('');
   const [isSubmittingReg, setIsSubmittingReg] = useState(false);
   const [regError, setRegError] = useState('');
   const [copiedId, setCopiedId] = useState(false);
+  const [showWaitingInstructions, setShowWaitingInstructions] = useState(false);
 
   // Step 1: Personal & Contact fields
   const [fullName, setFullName] = useState(rider.name || '');
@@ -120,11 +131,149 @@ export default function OnboardingPage() {
     setIsLoggingIn(false);
 
     if (!result.success) {
+      if (result.verificationStatus === 'PENDING') {
+        setRegisteredRiderId(result.riderId || cleanInput);
+        setStep('reg_waiting');
+        return;
+      }
+      if (result.verificationStatus === 'REJECTED') {
+        setRegisteredRiderId(result.riderId || cleanInput);
+        setRejectionReason(result.error || 'Your registration could not be approved at this time.');
+        setStep('rejected');
+        return;
+      }
       setLoginError(result.error || 'Incorrect Rider ID or MPIN. Please try again.');
       return;
     }
 
     router.push('/');
+  };
+
+  // ── 1. Real-Time Verification Status Subscription ──
+  useEffect(() => {
+    const targetPhone = registeredPhone || phone.replace(/[^0-9]/g, '') || rider.phone;
+    const targetId = registeredRiderId || rider.Rider_ID || rider.riderId;
+
+    if (step !== 'reg_waiting') return;
+    if (!targetPhone && !targetId) return;
+
+    console.log('⚡ [Rider Realtime] Listening for approval on rider_profiles:', { targetPhone, targetId });
+
+    const channel = supabase
+      .channel(`rider-approval-watch-${targetPhone || targetId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rider_profiles',
+          filter: targetPhone ? `phone=eq.${targetPhone}` : `id=eq.${targetId}`,
+        },
+        (payload: any) => {
+          console.log('⚡ [Rider Realtime] Approval event received:', payload.new);
+          const newStatus = payload.new?.verification_status;
+          const isVerified = payload.new?.is_verified;
+
+          if (payload.new?.Rider_ID && !registeredRiderId) {
+            setRegisteredRiderId(payload.new.Rider_ID);
+          }
+
+          if (newStatus === 'APPROVED' || isVerified === true) {
+            setStep('approved');
+          } else if (newStatus === 'REJECTED') {
+            setRejectionReason(payload.new?.rejection_reason || 'Documents could not be verified.');
+            setStep('rejected');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [step, registeredPhone, registeredRiderId, phone, rider.Rider_ID, rider.phone, rider.riderId]);
+
+  // ── 2. Periodic Status Polling Fallback (Every 6 seconds) ──
+  useEffect(() => {
+    if (step !== 'reg_waiting') return;
+    const targetPhone = registeredPhone || phone.replace(/[^0-9]/g, '') || rider.phone;
+    const targetId = registeredRiderId || rider.Rider_ID || rider.riderId;
+    if (!targetPhone && !targetId) return;
+
+    const pollTimer = setInterval(async () => {
+      try {
+        let query = supabase.from('rider_profiles').select('id, phone, Rider_ID, verification_status, is_verified, rejection_reason');
+        if (targetPhone) {
+          query = query.eq('phone', targetPhone);
+        } else {
+          query = query.or(`id.eq.${targetId},Rider_ID.eq.${targetId}`);
+        }
+
+        const { data } = await query.maybeSingle();
+        if (data) {
+          if (data.Rider_ID && !registeredRiderId) {
+            setRegisteredRiderId(data.Rider_ID);
+          }
+          if (data.verification_status === 'APPROVED' || data.is_verified === true) {
+            setStep('approved');
+          } else if (data.verification_status === 'REJECTED') {
+            setRejectionReason(data.rejection_reason || 'Documents could not be verified.');
+            setStep('rejected');
+          }
+        }
+      } catch (err) {
+        // Silent poll error
+      }
+    }, 6000);
+
+    return () => clearInterval(pollTimer);
+  }, [step, registeredPhone, registeredRiderId, phone, rider.Rider_ID, rider.phone, rider.riderId]);
+
+  // ── 3. Manual Check Status Action ──
+  const handleManualCheckStatus = async () => {
+    setIsCheckingStatus(true);
+    setStatusCheckNotice('');
+    const targetPhone = registeredPhone || phone.replace(/[^0-9]/g, '') || rider.phone;
+    const targetId = registeredRiderId || rider.Rider_ID || rider.riderId;
+
+    try {
+      let query = supabase.from('rider_profiles').select('id, phone, Rider_ID, verification_status, is_verified, rejection_reason');
+      if (targetPhone) {
+        query = query.eq('phone', targetPhone);
+      } else if (targetId) {
+        query = query.or(`id.eq.${targetId},Rider_ID.eq.${targetId}`);
+      }
+
+      const { data, error } = await query.maybeSingle();
+      setIsCheckingStatus(false);
+
+      if (error) {
+        setStatusCheckNotice("We couldn't update your verification status. Please check your connection and try again.");
+        return;
+      }
+
+      if (!data) {
+        setStatusCheckNotice('Rider profile is being initialized...');
+        return;
+      }
+
+      if (data.Rider_ID && !registeredRiderId) {
+        setRegisteredRiderId(data.Rider_ID);
+      }
+
+      if (data.verification_status === 'APPROVED' || data.is_verified === true) {
+        setStep('approved');
+      } else if (data.verification_status === 'REJECTED') {
+        setRejectionReason(data.rejection_reason || 'Documents could not be verified.');
+        setStep('rejected');
+      } else {
+        setStatusCheckNotice('Still under review by Minnit Admin. Please wait.');
+        setTimeout(() => setStatusCheckNotice(''), 4000);
+      }
+    } catch (err) {
+      setIsCheckingStatus(false);
+      setStatusCheckNotice("We couldn't update your verification status. Please check your connection and try again.");
+    }
   };
 
   // Validate personal details & phone numbers matching & MPIN
@@ -220,7 +369,9 @@ export default function OnboardingPage() {
     }
 
     setRegisteredRiderId(result.riderId);
-    setStep('reg_success');
+    setRegisteredPhone(cleanPhone1);
+    setStep('reg_waiting');
+    setShowWaitingInstructions(true);
   };
 
   const handleCopyRiderId = () => {
@@ -240,7 +391,7 @@ export default function OnboardingPage() {
 
   return (
     <AppShell showHeader={false} showNav={false} noPadding={true}>
-      <div className="min-h-screen bg-background flex flex-col justify-between p-5 relative overflow-hidden">
+      <div className={`min-h-screen bg-background flex flex-col justify-between relative overflow-hidden ${showWaitingInstructions ? 'p-0' : 'p-5'}`}>
         
         {/* SCREEN 1: SPLASH SCREEN (CLEAN LOGO, AUTO-NAVIGATES IN 2 SECONDS) */}
         {step === 'splash' && (
@@ -811,38 +962,47 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* SCREEN: REGISTRATION SUCCESS WITH DYNAMIC RIDER ID */}
-        {step === 'reg_success' && (
-          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-6 animate-scale-up">
-            <div className="flex flex-col items-center text-center mt-3">
-              {/* Success Badge */}
-              <div className="relative w-20 h-20 mb-5 flex items-center justify-center">
-                <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping opacity-75" />
-                <div className="relative z-10 w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
-                  <Check className="w-8 h-8 stroke-[3]" />
+        {/* ── SCREEN: REGISTRATION SUCCESSFUL / WAITING FOR ADMIN VERIFICATION ── */}
+        {showWaitingInstructions ? (
+          <div className="flex-1 min-h-0 flex flex-col justify-between max-w-md mx-auto w-full h-[100dvh] animate-fade-in">
+            <RiderInstructionViewer
+              isModal={false}
+              onDone={() => setShowWaitingInstructions(false)}
+              onClose={() => setShowWaitingInstructions(false)}
+            />
+          </div>
+        ) : (step === 'reg_waiting' || step === 'reg_success' || step === 'status') ? (
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-5 animate-fade-in">
+            <div className="flex flex-col items-center text-center mt-1">
+              {/* Radar pulse status icon */}
+              <div className="relative w-18 h-18 mb-3 flex items-center justify-center">
+                <div className="absolute inset-0 bg-amber-500/20 rounded-full animate-ping opacity-75" />
+                <div className="relative z-10 w-14 h-14 bg-gradient-to-tr from-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/30 text-white">
+                  <Hourglass className="w-7 h-7 animate-pulse" />
                 </div>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-black uppercase px-3.5 py-1 rounded-full border border-emerald-200 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Registration Completed</span>
+              {/* Status Badge */}
+              <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-[11px] font-black uppercase px-3.5 py-1 rounded-full border border-amber-200 mb-2 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span>Verification Pending</span>
               </div>
 
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                Welcome to Minnit Fleet!
+                Registration Successful
               </h1>
-              <p className="text-xs text-slate-500 mt-1.5 max-w-[280px] leading-relaxed">
-                Your profile has been created successfully. Your unique Minnit Rider ID is ready.
+              <p className="text-xs text-slate-500 mt-1 max-w-[300px] leading-relaxed">
+                Your Minnit Rider registration has been submitted successfully.
               </p>
             </div>
 
-            {/* Rider ID Display Card */}
-            <div className="bg-white rounded-3xl p-6 shadow-soft border border-slate-200/90 my-auto text-center space-y-4">
+            {/* Rider ID Card */}
+            <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/90 my-3 text-center space-y-3.5">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                   Your Minnit Rider ID
                 </p>
-                <div className="mt-2 py-3.5 px-4 bg-emerald-50/80 rounded-2xl border-2 border-emerald-500/40 flex items-center justify-center shadow-inner">
+                <div className="mt-1.5 py-3 px-4 bg-emerald-50/80 rounded-2xl border-2 border-emerald-500/40 flex items-center justify-center shadow-inner">
                   <span className="text-3xl font-black font-mono tracking-widest text-emerald-700">
                     {registeredRiderId || rider.Rider_ID || 'MM0001'}
                   </span>
@@ -853,7 +1013,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={handleCopyRiderId}
-                className={`w-full py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
                   copiedId
                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
                     : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 active:scale-98'
@@ -872,19 +1032,156 @@ export default function OnboardingPage() {
                 )}
               </button>
 
-              {/* Important Instruction Box */}
-              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-left space-y-1.5">
+              {/* Status Explanation Box */}
+              <div className="bg-amber-50/60 rounded-2xl p-3 border border-amber-200/70 text-left space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Waiting for Admin Verification</span>
+                </div>
+                <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                  Your documents and profile details are now waiting for verification by the Minnit Admin Team. You will be able to log in once your registration is approved.
+                </p>
+              </div>
+
+              {/* Checklist preview */}
+              <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px] text-left">
+                <div className="flex items-center gap-1.5 text-slate-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Selfie Uploaded</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>KYC Documents</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Zone Assigned</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-amber-700 font-semibold">
+                  <Hourglass className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>Admin Sign-off</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Read Rider Instructions CTA Card */}
+            <button
+              type="button"
+              onClick={() => setShowWaitingInstructions(true)}
+              className="w-full bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/80 rounded-2xl p-3 text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer shadow-2xs mb-2.5"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">📖</span>
+                <div>
+                  <p className="text-xs font-bold text-emerald-950">
+                    Read Rider Instructions
+                  </p>
+                  <p className="text-[10px] text-emerald-700 font-medium">
+                    Learn how Minnit deliveries, slots & earnings work
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-emerald-700 shrink-0" />
+            </button>
+
+            {/* Realtime Status Live Sync Bar & Refresh Option */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-900 text-white rounded-2xl border border-slate-800 text-xs shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  <span className="text-[11px] font-medium text-slate-300">
+                    Live Real-Time Sync Active
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleManualCheckStatus}
+                  disabled={isCheckingStatus}
+                  className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isCheckingStatus ? 'animate-spin' : ''}`} />
+                  <span>{isCheckingStatus ? 'Checking...' : 'Check Status'}</span>
+                </button>
+              </div>
+
+              {statusCheckNotice && (
+                <p className="text-[11px] text-center text-amber-700 font-medium px-2">
+                  {statusCheckNotice}
+                </p>
+              )}
+
+              {/* Safe instruction */}
+              <p className="text-[10px] text-center text-slate-400 leading-tight">
+                Please keep your Rider ID safe. Login access will be granted automatically once approved.
+              </p>
+
+              {/* Back to Sign-in Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginRiderId(registeredRiderId || rider.Rider_ID || '');
+                  setLoginMpin('');
+                  setLoginError('');
+                  setStep('signin');
+                }}
+                className="w-full py-2.5 text-slate-500 hover:text-slate-700 text-xs font-bold text-center transition-colors"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* ── SCREEN: APPROVED CONFIRMATION (REAL-TIME TRANSITION) ── */}
+        {step === 'approved' && (
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-6 animate-scale-up">
+            <div className="flex flex-col items-center text-center mt-3">
+              {/* Celebration Icon */}
+              <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
+                <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping opacity-75" />
+                <div className="relative z-10 w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+                  <ShieldCheck className="w-8 h-8 stroke-[2.5]" />
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-black uppercase px-3.5 py-1 rounded-full border border-emerald-200 mb-2 shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Account Verified</span>
+              </div>
+
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                You&apos;re Approved! 🎉
+              </h1>
+              <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
+                Your Minnit Rider account has been successfully verified by the Minnit Admin Team.
+              </p>
+            </div>
+
+            {/* Approved Account Card */}
+            <div className="bg-white rounded-3xl p-6 shadow-soft border border-slate-200/90 my-auto text-center space-y-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Ready for Delivery Cockpit
+                </p>
+                <div className="mt-2 py-3.5 px-4 bg-emerald-50/90 rounded-2xl border-2 border-emerald-500/40 flex items-center justify-center shadow-inner">
+                  <span className="text-3xl font-black font-mono tracking-widest text-emerald-700">
+                    {registeredRiderId || rider.Rider_ID || 'MM0001'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-left space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
                   <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Important: Save Your Rider ID</span>
+                  <span>Log In with Your Credentials</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Use this Rider ID to log in next time along with your 4-digit MPIN. Take a screenshot or write it down so you never lose access.
+                  You can now log in using your <strong className="text-slate-900 font-bold">Rider ID</strong> and your <strong className="text-slate-900 font-bold">4-digit MPIN</strong>.
                 </p>
               </div>
             </div>
 
-            {/* Action CTA */}
+            {/* Action CTA: Continue to Login */}
             <div className="space-y-2">
               <button
                 type="button"
@@ -894,110 +1191,75 @@ export default function OnboardingPage() {
                   setLoginError('');
                   setStep('signin');
                 }}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                className="w-full py-4 bg-gradient-to-r from-primary to-primary-container hover:opacity-95 text-white font-black text-sm rounded-2xl shadow-lg shadow-primary/25 border border-primary ring-2 ring-primary/20 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
               >
-                <span>Proceed to Login</span>
+                <span>Continue to Login</span>
                 <ArrowRight className="w-4 h-4 stroke-[3]" />
               </button>
 
               <p className="text-[10px] text-center text-slate-400">
-                Click above to sign in using your new Rider ID and 4-digit MPIN.
+                Click above to proceed to the Minnit rider sign-in screen.
               </p>
             </div>
           </div>
         )}
 
-        {/* STEP 5: VERIFICATION APPROVAL STATUS TRACKER (STRICT GUARD) */}
-        {step === 'status' && (
-          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
-            <div className="flex flex-col items-center text-center mt-2">
-              {/* Radar pulse hourglass icon */}
-              <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
-                <div className="absolute inset-0 bg-primary/20 rounded-full radar-ring" />
-                <div className="relative z-10 w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-soft border border-slate-200">
-                  <Hourglass className="w-7 h-7 text-primary animate-pulse" />
-                </div>
+        {/* ── SCREEN: REJECTED RIDER FLOW ── */}
+        {step === 'rejected' && (
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-6 animate-fade-in">
+            <div className="flex flex-col items-center text-center mt-3">
+              <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mb-4 shadow-sm">
+                <XCircle className="w-8 h-8" />
               </div>
 
-              <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3.5 py-1 rounded-full text-[11px] font-bold border border-amber-200 mb-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                <span>Status: Under Review</span>
+              <div className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 text-[11px] font-black uppercase px-3.5 py-1 rounded-full border border-rose-200 mb-2">
+                <span>Verification Not Approved</span>
               </div>
 
-              <h1 className="text-xl font-black text-on-surface">
-                Application Submitted!
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                Application Not Approved
               </h1>
-              <p className="text-xs text-secondary mt-1 max-w-[280px]">
-                Your selfie, Aadhaar, PAN, and DL are currently being verified by the Minnit onboarding team.
+              <p className="text-xs text-slate-500 mt-1.5 max-w-[280px] leading-relaxed">
+                Your Minnit Rider registration could not be approved at this time.
               </p>
             </div>
 
-            {/* Live Progress Tracker */}
-            <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/80 my-3">
-              <h3 className="font-bold text-xs text-on-surface mb-3.5 flex items-center justify-between">
-                <span>Verification Queue</span>
-                <span className="text-[10px] text-primary font-mono font-bold">Est: ~5 mins</span>
-              </h3>
-
-              <div className="relative pl-5 space-y-4 text-xs">
-                <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-slate-200" />
-
-                <div className="flex items-start gap-3 relative">
-                  <div className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-[10px] -ml-[23px] shrink-0 shadow-sm">
-                    <Check className="w-2.5 h-2.5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-on-surface leading-tight">Live Selfie & Profile Form</p>
-                    <p className="text-[10px] text-secondary">Verified face match</p>
-                  </div>
+            <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/90 my-auto space-y-3.5">
+              {rejectionReason && (
+                <div className="bg-rose-50 rounded-2xl p-3 border border-rose-200 text-left">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Notice from Admin Team</p>
+                  <p className="text-xs font-semibold text-rose-800 mt-0.5 leading-relaxed">{rejectionReason}</p>
                 </div>
+              )}
 
-                <div className="flex items-start gap-3 relative">
-                  <div className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-[10px] -ml-[23px] shrink-0 shadow-sm">
-                    <Check className="w-2.5 h-2.5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-on-surface leading-tight">Aadhaar & PAN Scans</p>
-                    <p className="text-[10px] text-secondary">Government database matched</p>
-                  </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Please contact the Minnit Admin Support team for further assistance or to update your submitted identification documents.
+              </p>
+
+              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 text-xs space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-bold">Helpline:</span>
+                  <a href="tel:+918000012345" className="text-slate-900 font-mono font-bold hover:underline">+91 80000 12345</a>
                 </div>
-
-                <div className="flex items-start gap-3 relative">
-                  <div className="w-4 h-4 rounded-full bg-primary-container text-white flex items-center justify-center text-[10px] -ml-[23px] shrink-0 animate-pulse">
-                    <Check className="w-2.5 h-2.5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-primary leading-tight">Driving License Check</p>
-                    <p className="text-[10px] text-secondary">Transport authority clearance</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 relative opacity-60">
-                  <div className="w-4 h-4 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center text-[10px] -ml-[23px] shrink-0">
-                    4
-                  </div>
-                  <div>
-                    <p className="font-bold text-on-surface leading-tight">Admin Sign-off</p>
-                    <p className="text-[10px] text-secondary">Ready to receive deliveries</p>
-                  </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-bold">Support Email:</span>
+                  <a href="mailto:riders@minnit.in" className="text-primary font-bold hover:underline">riders@minnit.in</a>
                 </div>
               </div>
             </div>
 
-            {/* Admin Approval Trigger (Simulate approval to unlock Dashboard) */}
-            <div className="space-y-2">
-              <button
-                onClick={handleSimulateApprove}
-                className="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-2xl shadow-lift hover:opacity-95 transition-all flex items-center justify-center gap-2 active:scale-98"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Simulate Admin Approval & Unlock Dashboard</span>
-              </button>
-
-              <p className="text-[10px] text-center text-secondary">
-                Riders cannot open the main cockpit until approved.
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginRiderId('');
+                setLoginMpin('');
+                setLoginError('');
+                setStep('signin');
+              }}
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+            >
+              Back to Sign In
+            </button>
           </div>
         )}
 
@@ -1043,6 +1305,7 @@ export default function OnboardingPage() {
             </div>
           </div>
         )}
+
 
       </div>
     </AppShell>

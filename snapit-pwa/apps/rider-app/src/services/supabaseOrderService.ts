@@ -376,8 +376,9 @@ export async function registerRiderInDb(riderData: {
       rating: 5.0,
       total_deliveries: 0,
       acceptance_rate: 100,
-      is_verified: true,
-      verification_step: 4,
+      is_verified: false,
+      verification_status: 'PENDING',
+      verification_step: 3,
       is_online: false,
       current_lat: 12.9602,
       current_lng: 78.2711,
@@ -390,6 +391,18 @@ export async function registerRiderInDb(riderData: {
       .upsert(newRecord, { onConflict: 'phone' })
       .select()
       .single();
+
+    // Fallback if verification_status column is not yet migrated in Supabase
+    if (error && error.message?.includes('verification_status')) {
+      delete newRecord.verification_status;
+      const retry = await supabase
+        .from('rider_profiles')
+        .upsert(newRecord, { onConflict: 'phone' })
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.warn('Error saving rider to Supabase:', error);
@@ -421,15 +434,22 @@ export async function registerRiderInDb(riderData: {
   }
 }
 
+export interface LoginRiderResult {
+  profile?: DbRiderProfile;
+  error?: string;
+  verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
 /**
  * Login a rider using Minnit Rider ID (case-insensitive) and 4-Digit MPIN.
  * Normalizes Rider ID (e.g. mm0001, Mm0001 -> MM0001).
  * Never exposes or logs the MPIN.
+ * Strictly verifies server-side approval status.
  */
 export async function loginRiderWithRiderId(
   riderIdOrPhone: string,
   mpin: string
-): Promise<{ profile?: DbRiderProfile; error?: string }> {
+): Promise<LoginRiderResult> {
   try {
     const rawInput = (riderIdOrPhone || '').trim();
     if (!rawInput) {
@@ -477,7 +497,39 @@ export async function loginRiderWithRiderId(
       return { error: 'Incorrect 4-Digit MPIN. Please try again.' };
     }
 
-    return { profile: data as DbRiderProfile };
+    // ── SERVER-AUTHORITATIVE VERIFICATION STATUS CHECK ──
+    const status = data.verification_status;
+    const isVerifiedBool = data.is_verified;
+
+    if (status === 'PENDING') {
+      return {
+        error: 'Your registration is pending verification by the Minnit Admin Team.',
+        verificationStatus: 'PENDING',
+        profile: data as DbRiderProfile,
+      };
+    }
+
+    if (status === 'REJECTED') {
+      return {
+        error: data.rejection_reason || 'Your registration was not approved. Please contact Minnit Admin Support.',
+        verificationStatus: 'REJECTED',
+        profile: data as DbRiderProfile,
+      };
+    }
+
+    // Legacy fallback: if status column not present, check is_verified
+    if (!status && isVerifiedBool === false) {
+      return {
+        error: 'Your registration is pending verification by the Minnit Admin Team.',
+        verificationStatus: 'PENDING',
+        profile: data as DbRiderProfile,
+      };
+    }
+
+    return {
+      profile: data as DbRiderProfile,
+      verificationStatus: 'APPROVED',
+    };
   } catch (err: any) {
     return { error: err.message || 'Login failed.' };
   }

@@ -133,6 +133,10 @@ export interface RiderProfile {
   zoneSwitchHistory?: number[];
   isVerified: boolean;
   verificationStep: number; // 1: submitted, 2: reviewing, 3: admin check, 4: approved
+  verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
+  rejectionReason?: string | null;
   mpin?: string;
   isAuthenticated?: boolean;
 
@@ -148,6 +152,7 @@ export interface RiderProfile {
   current_session_id?: string | null;
   active_session_token?: string | null;
   riding_preferences?: PreferenceWindowId[];
+  rider_instructions_completed?: boolean;
 }
 
 export interface DeviceSession {

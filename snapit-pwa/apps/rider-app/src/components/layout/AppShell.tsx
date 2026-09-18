@@ -10,6 +10,7 @@ interface AppShellProps {
   showHeader?: boolean;
   showNav?: boolean;
   showBack?: boolean;
+  onBack?: () => void;
   title?: string;
   subtitle?: string;
   noPadding?: boolean;
@@ -20,6 +21,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   showHeader = true,
   showNav = true,
   showBack = false,
+  onBack,
   title,
   subtitle,
   noPadding = false,
@@ -37,13 +39,13 @@ export const AppShell: React.FC<AppShellProps> = ({
         }`}
       >
         {/* Top App Header */}
-        {showHeader && <TopHeader showBack={showBack} title={title} subtitle={subtitle} />}
+        {showHeader && <TopHeader showBack={showBack} onBack={onBack} title={title} subtitle={subtitle} />}
 
         {/* Main Content Area */}
         <main
-          className={`flex-1 flex flex-col w-full relative ${
+          className={`flex-1 min-h-0 flex flex-col w-full relative ${
             showHeader ? 'pt-16' : ''
-          } ${showNav ? 'pb-24' : 'pb-6'} ${noPadding ? '' : 'px-4'}`}
+          } ${showNav ? 'pb-24' : noPadding ? 'pb-0' : 'pb-6'} ${noPadding ? '' : 'px-4'}`}
         >
           {children}
         </main>

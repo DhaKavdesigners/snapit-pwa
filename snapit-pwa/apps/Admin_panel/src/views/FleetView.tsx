@@ -9,8 +9,15 @@ import {
   Edit2,
   Trash2,
   RotateCcw,
-  Zap,
   Star,
+  ShieldCheck,
+  Clock,
+  Eye,
+  ExternalLink,
+  FileCheck,
+  AlertTriangle,
+  UserCheck,
+  Calendar,
   MapPin,
 } from "lucide-react";
 import { useAdminStore } from "../store/useAdminStore";
@@ -23,16 +30,33 @@ export const FleetView: React.FC = () => {
     orders,
     createRider,
     updateRider,
+    approveRider,
+    rejectRider,
     toggleRiderOnline,
     resetRiderBusy,
     deleteRider,
   } = useAdminStore();
+
+  // Top sub-tab: Active Fleet vs Pending Approvals vs Rejected
+  const [mainTab, setMainTab] = useState<"ACTIVE" | "PENDING" | "REJECTED">("ACTIVE");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterState, setFilterState] = useState<string>("ALL");
 
   const [addRiderModal, setAddRiderModal] = useState(false);
   const [editRiderModal, setEditRiderModal] = useState<AdminRider | null>(null);
+
+  // Review & Verification Modal states
+  const [reviewRider, setReviewRider] = useState<AdminRider | null>(null);
+  const [rejectingRider, setRejectingRider] = useState<AdminRider | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("Documents or details could not be verified.");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const [riderForm, setRiderForm] = useState({
     name: "",
@@ -43,18 +67,46 @@ export const FleetView: React.FC = () => {
     is_online: true,
   });
 
-  const filteredRiders = riders.filter((r) => {
+  // Categorize riders based on verification status
+  const pendingRiders = riders.filter((r) => {
+    const isPendingStatus = r.verification_status === "PENDING";
+    const isLegacyUnverified = r.is_verified === false && !r.verification_status;
+    return isPendingStatus || isLegacyUnverified;
+  });
+
+  const activeRiders = riders.filter((r) => {
+    const isApprovedStatus = r.verification_status === "APPROVED";
+    const isLegacyApproved = r.is_verified === true && r.verification_status !== "PENDING" && r.verification_status !== "REJECTED";
+    return isApprovedStatus || isLegacyApproved;
+  });
+
+  const rejectedRiders = riders.filter((r) => r.verification_status === "REJECTED");
+
+  // Determine current working list based on selected mainTab
+  const currentList =
+    mainTab === "PENDING"
+      ? pendingRiders
+      : mainTab === "REJECTED"
+      ? rejectedRiders
+      : activeRiders;
+
+  const filteredRiders = currentList.filter((r) => {
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.phone.includes(searchQuery) ||
-      r.id.toLowerCase().includes(searchQuery.toLowerCase());
+      r.name.toLowerCase().includes(query) ||
+      r.phone.includes(query) ||
+      r.id.toLowerCase().includes(query) ||
+      (r.Rider_ID && r.Rider_ID.toLowerCase().includes(query)) ||
+      (r.selected_zone_name && r.selected_zone_name.toLowerCase().includes(query));
 
     if (!matchesSearch) return false;
 
-    if (filterState === "ALL") return true;
-    if (filterState === "ONLINE") return r.is_online;
-    if (filterState === "BUSY") return r.is_online && r.is_busy;
-    if (filterState === "OFFLINE") return !r.is_online;
+    if (mainTab === "ACTIVE") {
+      if (filterState === "ALL") return true;
+      if (filterState === "ONLINE") return r.is_online;
+      if (filterState === "BUSY") return r.is_online && r.is_busy;
+      if (filterState === "OFFLINE") return !r.is_online;
+    }
     return true;
   });
 
@@ -77,9 +129,11 @@ export const FleetView: React.FC = () => {
     if (editRiderModal) {
       await updateRider(editRiderModal.id, riderForm);
       setEditRiderModal(null);
+      showToast("Rider updated successfully.");
     } else {
       await createRider(riderForm);
       setAddRiderModal(false);
+      showToast("New rider onboarded successfully.");
     }
   };
 
@@ -98,29 +152,159 @@ export const FleetView: React.FC = () => {
   const handleDeleteRider = async (riderId: string) => {
     if (window.confirm("Are you sure you want to remove this delivery partner?")) {
       await deleteRider(riderId);
+      showToast("Rider removed.");
+    }
+  };
+
+  // Admin Approval Action
+  const handleApproveRiderAction = async (rider: AdminRider) => {
+    setIsProcessing(true);
+    const success = await approveRider(rider.id, "Master Admin");
+    setIsProcessing(false);
+
+    if (success) {
+      setReviewRider(null);
+      showToast(`Rider ${rider.Rider_ID || rider.name} approved successfully!`);
+    } else {
+      alert("Failed to approve rider. Please try again.");
+    }
+  };
+
+  // Admin Reject Action
+  const handleRejectRiderAction = async () => {
+    if (!rejectingRider) return;
+    setIsProcessing(true);
+    const success = await rejectRider(rejectingRider.id, rejectionReason, "Master Admin");
+    setIsProcessing(false);
+
+    if (success) {
+      const rejectedId = rejectingRider.Rider_ID || rejectingRider.name;
+      setRejectingRider(null);
+      setReviewRider(null);
+      showToast(`Rider ${rejectedId} marked as rejected.`);
+    } else {
+      alert("Failed to reject rider. Please try again.");
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Controls Header */}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 bg-emerald-600 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-xl border border-emerald-400 flex items-center gap-2 animate-in slide-in-from-top duration-200">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* ── TOP LEVEL SECTION NAVIGATION ── */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-900 p-3 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-2">
+          {/* Active Fleet Tab */}
+          <button
+            onClick={() => {
+              setMainTab("ACTIVE");
+              setFilterState("ALL");
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              mainTab === "ACTIVE"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                : "bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800"
+            }`}
+          >
+            <Bike className="w-4 h-4" />
+            <span>Active Fleet</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              mainTab === "ACTIVE" ? "bg-white/20 text-white" : "bg-slate-800 text-slate-300"
+            }`}>
+              {activeRiders.length}
+            </span>
+          </button>
+
+          {/* Pending Verification Tab (with live pulse if pending riders exist) */}
+          <button
+            onClick={() => {
+              setMainTab("PENDING");
+              setFilterState("ALL");
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
+              mainTab === "PENDING"
+                ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30 font-black"
+                : "bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800"
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Pending Verification</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 ${
+                pendingRiders.length > 0
+                  ? mainTab === "PENDING"
+                    ? "bg-slate-950 text-amber-400"
+                    : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                  : "bg-slate-800 text-slate-400"
+              }`}
+            >
+              {pendingRiders.length > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+              )}
+              <span>{pendingRiders.length}</span>
+            </span>
+          </button>
+
+          {/* Rejected Tab (optional view) */}
+          {rejectedRiders.length > 0 && (
+            <button
+              onClick={() => {
+                setMainTab("REJECTED");
+                setFilterState("ALL");
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                mainTab === "REJECTED"
+                  ? "bg-rose-500 text-white shadow-md shadow-rose-500/30"
+                  : "bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800"
+              }`}
+            >
+              <XCircle className="w-4 h-4" />
+              <span>Rejected ({rejectedRiders.length})</span>
+            </button>
+          )}
+        </div>
+
+        {/* Right Action: Onboard Rider */}
+        {mainTab === "ACTIVE" && (
+          <button
+            onClick={handleOpenAddRider}
+            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Onboard Rider Manually</span>
+          </button>
+        )}
+      </div>
+
+      {/* ── SEARCH & FILTER CONTROLS BAR ── */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-2xl border border-slate-800">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search riders by name, phone, or ID..."
+            placeholder={
+              mainTab === "PENDING"
+                ? "Search pending applicants by name, phone, or Rider ID..."
+                : "Search active riders by name, phone, or ID..."
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Status Filters (Only for Active Fleet) */}
+        {mainTab === "ACTIVE" && (
           <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
             {[
-              { id: "ALL", label: `All (${riders.length})` },
-              { id: "ONLINE", label: `Online (${riders.filter((r) => r.is_online).length})` },
+              { id: "ALL", label: `All (${activeRiders.length})` },
+              { id: "ONLINE", label: `Online (${activeRiders.filter((r) => r.is_online).length})` },
               { id: "BUSY", label: "On Delivery" },
               { id: "OFFLINE", label: "Offline" },
             ].map((tab) => (
@@ -137,145 +321,649 @@ export const FleetView: React.FC = () => {
               </button>
             ))}
           </div>
+        )}
 
-          <button
-            onClick={handleOpenAddRider}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Onboard Rider</span>
-          </button>
-        </div>
+        {mainTab === "PENDING" && (
+          <div className="flex items-center gap-2 text-xs text-amber-400 font-bold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+            <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+            <span>{pendingRiders.length} Applications Awaiting Review</span>
+          </div>
+        )}
       </div>
 
-      {/* Fleet Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {filteredRiders.map((rider) => {
-          const isOnline = rider.is_online !== false;
-          const isBusy = isOnline && rider.is_busy;
-          const assignedOrder = orders.find((o) => o.id === rider.current_order_id);
+      {/* ── EMPTY STATE ── */}
+      {filteredRiders.length === 0 && (
+        <div className="p-12 text-center bg-slate-900/60 rounded-3xl border border-slate-800 text-slate-400 space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-slate-800/80 border border-slate-700 mx-auto flex items-center justify-center text-slate-400 text-2xl">
+            {mainTab === "PENDING" ? "📋" : "🛵"}
+          </div>
+          <h3 className="font-bold text-base text-white">
+            {mainTab === "PENDING"
+              ? "No Pending Verifications"
+              : searchQuery
+              ? "No riders found matching your search"
+              : "No riders in this section"}
+          </h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+            {mainTab === "PENDING"
+              ? "All registered riders have been reviewed and approved. When a new rider registers in the Rider App, their application will appear here in real time."
+              : "Try adjusting your search terms or filter selection above."}
+          </p>
+        </div>
+      )}
 
-          return (
-            <div
-              key={rider.id}
-              className="rounded-3xl bg-slate-900 border border-slate-800 p-5 shadow-lg flex flex-col justify-between space-y-4 hover:border-slate-700 transition-all"
-            >
-              {/* Header */}
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xl shrink-0 overflow-hidden">
-                      {rider.avatar_url ? (
-                        <img
-                          src={rider.avatar_url}
-                          alt={rider.name}
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = "none";
-                          }}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        "🛵"
-                      )}
+      {/* ── SECTION A: PENDING VERIFICATION LIST ── */}
+      {mainTab === "PENDING" && filteredRiders.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredRiders.map((rider) => {
+            const hasSelfie = Boolean(rider.selfie_url || rider.avatar_url);
+            const hasAadhaar = Boolean(rider.aadhaar_number || rider.aadhaar_doc_url);
+            const hasPan = Boolean(rider.pan_number || rider.pan_doc_url);
+            const hasDl = Boolean(rider.dl_number || rider.dl_doc_url);
+            const docsCount = [hasSelfie, hasAadhaar, hasPan, hasDl].filter(Boolean).length;
+
+            return (
+              <div
+                key={rider.id}
+                className="rounded-3xl bg-slate-900 border-2 border-amber-500/30 hover:border-amber-500/60 p-5 shadow-lg flex flex-col justify-between space-y-4 transition-all"
+              >
+                {/* Header */}
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-800 border-2 border-amber-500/40 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                        {rider.selfie_url || rider.avatar_url ? (
+                          <img
+                            src={rider.selfie_url || rider.avatar_url}
+                            alt={rider.name}
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xl">👤</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-black text-base text-white leading-tight">{rider.name}</h3>
+                        </div>
+                        <p className="text-xs text-slate-400 font-mono mt-0.5">{rider.phone}</p>
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-md text-[10px] font-mono font-bold mt-1">
+                          <span>ID: {rider.Rider_ID || rider.id}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <h3 className="font-black text-base text-white leading-tight">{rider.name}</h3>
-                      <p className="text-xs text-slate-400 font-mono mt-0.5">{rider.phone}</p>
-                    </div>
-                  </div>
-
-                  {/* Online / Offline switch */}
-                  <button
-                    onClick={() => toggleRiderOnline(rider.id, !isOnline)}
-                    className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border ${
-                      isOnline
-                        ? isBusy
-                          ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                          : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                        : "bg-slate-800 text-slate-400 border-slate-700"
-                    }`}
-                  >
-                    {isOnline ? (isBusy ? "🟡 On Delivery" : "🟢 Online") : "🔴 Offline"}
-                  </button>
-                </div>
-
-                {/* Details */}
-                <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 space-y-1.5 text-xs text-slate-300">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Vehicle:</span>
-                    <span className="font-bold text-white">
-                      {rider.vehicle_type || "Bike"} • {rider.vehicle_number || "KA-08"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Total Completed Trips:</span>
-                    <span className="font-mono font-bold text-emerald-400">
-                      {rider.total_trips || 0} deliveries
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Rider Rating:</span>
-                    <span className="flex items-center gap-1 font-bold text-amber-400">
-                      <Star className="w-3.5 h-3.5 fill-amber-400" />
-                      <span>{rider.rating || 5.0}</span>
+                    <span className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                      <span>Pending</span>
                     </span>
                   </div>
 
-                  {isBusy && (
-                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                      <span className="text-amber-400 font-bold">Active Trip:</span>
-                      <span className="font-mono text-xs text-slate-200">
-                        #{rider.current_order_id?.slice(0, 8) || "Assigned"}
+                  {/* Details Card */}
+                  <div className="bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80 space-y-2 text-xs text-slate-300">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Zone:</span>
+                      <span className="font-bold text-white flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-emerald-400" />
+                        <span>{rider.selected_zone_name || "Robertsonpet"}</span>
                       </span>
                     </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Vehicle:</span>
+                      <span className="font-bold text-slate-200">
+                        {rider.vehicle_type || "Bike"} • {rider.vehicle_number || "Unspecified"}
+                      </span>
+                    </div>
+
+                    {rider.dob && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">DOB:</span>
+                        <span className="font-mono text-slate-300">{rider.dob}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-800">
+                      <span className="text-slate-400">KYC Completed:</span>
+                      <span className="font-bold text-emerald-400 flex items-center gap-1">
+                        <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{docsCount} / 4 items submitted</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
+                  <button
+                    onClick={() => setReviewRider(rider)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl transition-all shadow-md cursor-pointer"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Review Application</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleApproveRiderAction(rider)}
+                    title="Quick Approve"
+                    className="p-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl transition-all shadow-md cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+
+                  <button
+                    onClick={() => setRejectingRider(rider)}
+                    title="Reject Application"
+                    className="p-2.5 bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white rounded-xl transition-all border border-rose-500/30 cursor-pointer"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── SECTION B: ACTIVE FLEET ROSTER GRID ── */}
+      {mainTab === "ACTIVE" && filteredRiders.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredRiders.map((rider) => {
+            const isOnline = rider.is_online !== false;
+            const isBusy = isOnline && rider.is_busy;
+            const assignedOrder = orders.find((o) => o.id === rider.current_order_id);
+
+            return (
+              <div
+                key={rider.id}
+                className="rounded-3xl bg-slate-900 border border-slate-800 p-5 shadow-lg flex flex-col justify-between space-y-4 hover:border-slate-700 transition-all"
+              >
+                {/* Header */}
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xl shrink-0 overflow-hidden">
+                        {rider.avatar_url || rider.selfie_url ? (
+                          <img
+                            src={rider.avatar_url || rider.selfie_url}
+                            alt={rider.name}
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          "🛵"
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-black text-base text-white leading-tight">{rider.name}</h3>
+                          <span title="Verified Rider">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-slate-400 font-mono">{rider.phone}</span>
+                          {rider.Rider_ID && (
+                            <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
+                              {rider.Rider_ID}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Online / Offline switch */}
+                    <button
+                      onClick={() => toggleRiderOnline(rider.id, !isOnline)}
+                      className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border ${
+                        isOnline
+                          ? isBusy
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                          : "bg-slate-800 text-slate-400 border-slate-700"
+                      }`}
+                    >
+                      {isOnline ? (isBusy ? "🟡 On Delivery" : "🟢 Online") : "🔴 Offline"}
+                    </button>
+                  </div>
+
+                  {/* Details */}
+                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 space-y-1.5 text-xs text-slate-300">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Vehicle:</span>
+                      <span className="font-bold text-white">
+                        {rider.vehicle_type || "Bike"} • {rider.vehicle_number || "KA-08"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Total Completed Trips:</span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        {rider.total_trips || 0} deliveries
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Rider Rating:</span>
+                      <span className="flex items-center gap-1 font-bold text-amber-400">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <span>{rider.rating || 5.0}</span>
+                      </span>
+                    </div>
+
+                    {isBusy && (
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                        <span className="text-amber-400 font-bold">Active Trip:</span>
+                        <span className="font-mono text-xs text-slate-200">
+                          #{rider.current_order_id?.slice(0, 8) || "Assigned"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                  {isBusy && (
+                    <button
+                      onClick={() => resetRiderBusy(rider.id)}
+                      title="Reset Busy status to Available"
+                      className="flex items-center gap-1 px-3 py-2 bg-amber-500/20 hover:bg-amber-500 hover:text-slate-950 text-amber-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Free Up</span>
+                    </button>
                   )}
+
+                  <a
+                    href={`tel:${rider.phone}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Call Rider</span>
+                  </a>
+
+                  <button
+                    onClick={() => setReviewRider(rider)}
+                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                    title="View Registration Details"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenEditRider(rider)}
+                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                    title="Edit Rider"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteRider(rider.id)}
+                    className="p-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                    title="Remove Rider"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── SECTION C: REJECTED RIDERS VIEW ── */}
+      {mainTab === "REJECTED" && filteredRiders.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredRiders.map((rider) => (
+            <div
+              key={rider.id}
+              className="rounded-3xl bg-slate-900 border border-rose-500/30 p-5 shadow-lg flex flex-col justify-between space-y-4 opacity-80 hover:opacity-100 transition-all"
+            >
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-base text-white">{rider.name}</h3>
+                    <p className="text-xs text-slate-400 font-mono">{rider.phone}</p>
+                    <span className="text-[10px] font-mono text-slate-400">ID: {rider.Rider_ID || rider.id}</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                    Rejected
+                  </span>
+                </div>
+
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Rejection Reason:</p>
+                  <p className="text-rose-300 font-medium">{rider.rejection_reason || "Documents could not be verified."}</p>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                {isBusy && (
-                  <button
-                    onClick={() => resetRiderBusy(rider.id)}
-                    title="Reset Busy status to Available"
-                    className="flex items-center gap-1 px-3 py-2 bg-amber-500/20 hover:bg-amber-500 hover:text-slate-950 text-amber-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Free Up</span>
-                  </button>
-                )}
-
-                <a
-                  href={`tel:${rider.phone}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all"
-                >
-                  <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Call Rider</span>
-                </a>
-
+              <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
                 <button
-                  onClick={() => handleOpenEditRider(rider)}
-                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer"
-                  title="Edit Rider"
+                  onClick={() => handleApproveRiderAction(rider)}
+                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  Re-Approve Rider
                 </button>
-
                 <button
                   onClick={() => handleDeleteRider(rider.id)}
-                  className="p-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl transition-all cursor-pointer"
-                  title="Remove Rider"
+                  className="p-2 bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Add / Edit Rider Modal */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          COMPREHENSIVE ADMIN REVIEW & VERIFICATION MODAL
+      ══════════════════════════════════════════════════════════════════════ */}
+      {reviewRider && (
+        <Modal
+          isOpen={true}
+          onClose={() => setReviewRider(null)}
+          title="Rider Registration Review"
+          subtitle={`Rider ID: ${reviewRider.Rider_ID || reviewRider.id} • ${reviewRider.name}`}
+          maxWidth="2xl"
+        >
+          <div className="space-y-5 text-xs text-slate-200">
+            {/* Top Identity Banner */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 bg-slate-950 rounded-2xl border border-slate-800">
+              {/* Live Selfie Box */}
+              <div className="relative group shrink-0">
+                <div className="w-24 h-24 rounded-2xl bg-slate-800 border-2 border-emerald-500/50 overflow-hidden shadow-md">
+                  {reviewRider.selfie_url || reviewRider.avatar_url ? (
+                    <img
+                      src={reviewRider.selfie_url || reviewRider.avatar_url}
+                      alt={reviewRider.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">👤</div>
+                  )}
+                </div>
+                {(reviewRider.selfie_url || reviewRider.avatar_url) && (
+                  <a
+                    href={reviewRider.selfie_url || reviewRider.avatar_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white font-bold text-[10px] transition-opacity"
+                  >
+                    View Full
+                  </a>
+                )}
+              </div>
+
+              <div className="flex-1 text-center sm:text-left space-y-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <h2 className="text-xl font-black text-white">{reviewRider.name}</h2>
+                  <span
+                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider inline-block ${
+                      reviewRider.verification_status === "APPROVED" || reviewRider.is_verified
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        : reviewRider.verification_status === "REJECTED"
+                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                    }`}
+                  >
+                    Status: {reviewRider.verification_status || (reviewRider.is_verified ? "APPROVED" : "PENDING")}
+                  </span>
+                </div>
+
+                <p className="font-mono text-slate-300">{reviewRider.phone}</p>
+                {reviewRider.email && <p className="text-slate-400">{reviewRider.email}</p>}
+
+                <div className="pt-1 flex flex-wrap gap-2">
+                  <span className="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-[10px] font-mono font-bold">
+                    Rider ID: {reviewRider.Rider_ID || reviewRider.id}
+                  </span>
+                  <span className="px-2.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-[10px] font-bold">
+                    Zone: {reviewRider.selected_zone_name || "Robertsonpet"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2-Column Specs: Personal & Vehicle Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Personal Details */}
+              <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-800">
+                  <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Personal Details</span>
+                </h4>
+
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Date of Birth (DOB):</span>
+                    <span className="font-semibold text-white font-mono">{reviewRider.dob || "Not provided"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Alternate Contact:</span>
+                    <span className="font-semibold text-white font-mono">{reviewRider.alt_phone || "None"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Registered Address:</span>
+                    <span className="font-semibold text-white text-right max-w-[200px] leading-tight">
+                      {reviewRider.address || "Not provided"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vehicle & Payout Details */}
+              <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-800">
+                  <Bike className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Vehicle & Financials</span>
+                </h4>
+
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Vehicle Type:</span>
+                    <span className="font-semibold text-white">{reviewRider.vehicle_type || "Motorcycle"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Vehicle Number:</span>
+                    <span className="font-bold text-emerald-400 font-mono">{reviewRider.vehicle_number || "KA-08"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Payout UPI ID:</span>
+                    <span className="font-mono font-bold text-white">{reviewRider.upi_id || `${reviewRider.phone}@upi`}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── KYC IDENTITY DOCUMENTS (SECTION 6 REQUIREMENT) ── */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+                <FileCheck className="w-4 h-4 text-emerald-400" />
+                <span>Submitted KYC Documents</span>
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* 1. Aadhaar Card */}
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-[11px]">Aadhaar Card</span>
+                    {reviewRider.aadhaar_number ? (
+                      <span className="text-[10px] text-emerald-400 font-bold">Entered</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500">Missing</span>
+                    )}
+                  </div>
+
+                  <p className="font-mono text-xs text-slate-300 font-bold">
+                    {reviewRider.aadhaar_number || "•••• •••• ••••"}
+                  </p>
+
+                  {reviewRider.aadhaar_doc_url ? (
+                    <a
+                      href={reviewRider.aadhaar_doc_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 hover:text-blue-300 hover:underline pt-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>View Attached Scan</span>
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 block pt-1">No file attached</span>
+                  )}
+                </div>
+
+                {/* 2. PAN Card */}
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-[11px]">PAN Card</span>
+                    {reviewRider.pan_number ? (
+                      <span className="text-[10px] text-emerald-400 font-bold">Entered</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500">Missing</span>
+                    )}
+                  </div>
+
+                  <p className="font-mono text-xs text-slate-300 font-bold">
+                    {reviewRider.pan_number || "••••••••••"}
+                  </p>
+
+                  {reviewRider.pan_doc_url ? (
+                    <a
+                      href={reviewRider.pan_doc_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 hover:text-blue-300 hover:underline pt-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>View Attached Scan</span>
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 block pt-1">No file attached</span>
+                  )}
+                </div>
+
+                {/* 3. Driving License */}
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-[11px]">Driving License (DL)</span>
+                    {reviewRider.dl_number ? (
+                      <span className="text-[10px] text-emerald-400 font-bold">Entered</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500">Missing</span>
+                    )}
+                  </div>
+
+                  <p className="font-mono text-xs text-slate-300 font-bold">
+                    {reviewRider.dl_number || "••••••••••••••"}
+                  </p>
+
+                  {reviewRider.dl_doc_url ? (
+                    <a
+                      href={reviewRider.dl_doc_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 hover:text-blue-300 hover:underline pt-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>View Attached Scan</span>
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 block pt-1">No file attached</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setReviewRider(null)}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectingRider(reviewRider)}
+                  disabled={isProcessing}
+                  className="px-4 py-2.5 bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white font-bold text-xs rounded-xl transition-all border border-rose-500/40 cursor-pointer disabled:opacity-50"
+                >
+                  Reject Application
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApproveRiderAction(reviewRider)}
+                  disabled={isProcessing}
+                  className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isProcessing ? "Approving..." : "Approve Rider"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── REJECTION REASON PROMPT MODAL ── */}
+      {rejectingRider && (
+        <Modal
+          isOpen={true}
+          onClose={() => setRejectingRider(null)}
+          title="Reject Rider Application"
+          subtitle={`Provide a notice for ${rejectingRider.name} (${rejectingRider.Rider_ID || rejectingRider.phone})`}
+          maxWidth="md"
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-slate-300 leading-relaxed">
+              Please specify the reason for rejecting this application. The rider will be informed on their app waiting screen.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">Rejection Reason</label>
+              <textarea
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none focus:border-rose-500 resize-none"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRejectingRider(null)}
+                className="px-4 py-2 bg-slate-800 text-slate-300 font-bold text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectRiderAction}
+                disabled={isProcessing}
+                className="px-5 py-2 bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {isProcessing ? "Rejecting..." : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── ADD / EDIT RIDER MODAL (EXISTING FEATURE PRESERVED) ── */}
       <Modal
         isOpen={addRiderModal || !!editRiderModal}
         onClose={() => {

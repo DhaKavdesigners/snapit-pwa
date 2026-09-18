@@ -10,6 +10,7 @@ interface SlideButtonProps {
   disabled?: boolean;
   className?: string;
   icon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export const SlideButton: React.FC<SlideButtonProps> = ({
@@ -19,6 +20,7 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
   disabled = false,
   className = '',
   icon,
+  rightIcon,
 }) => {
   const [dragProgress, setDragProgress] = useState(0); // 0 to 1
   const [isDragging, setIsDragging] = useState(false);
@@ -30,33 +32,43 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
   const isDraggingRef = useRef<boolean>(false);
   const isCompletedRef = useRef<boolean>(false);
 
-  // Styling maps based on variant
-  const variantStyles = {
+  const theme = {
     emerald: {
-      trackBg: 'bg-emerald-50 border-emerald-500/40',
-      trackFill: 'from-emerald-600 to-teal-500',
-      handleBg: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/40',
-      handleBorder: 'border-emerald-300/40',
-      textColor: 'text-emerald-900',
-      glow: 'shadow-[0_4px_20px_rgba(16,185,129,0.2)]',
+      trackBorder: 'border-emerald-100/90',
+      trackShadow: 'shadow-[0_4px_16px_rgba(16,185,129,0.12)]',
+      trackGradient: 'bg-gradient-to-r from-[#dcfce7]/70 via-[#ecfdf5]/85 to-[#f0fdf4]',
+      trailGradient: 'bg-gradient-to-r from-emerald-300/50 via-emerald-200/40 to-emerald-100/20',
+      textColor: 'text-[#064e3b]',
+      haloBg: 'bg-emerald-400/25',
+      haloBorder: 'border-emerald-300/80',
+      haloShadow: 'shadow-[0_0_16px_2px_rgba(52,211,153,0.55),0_0_28px_rgba(52,211,153,0.3)]',
+      buttonGradient: 'bg-gradient-to-b from-[#059669] via-[#047857] to-[#065f46]',
     },
     blue: {
-      trackBg: 'bg-blue-50 border-blue-500/40',
-      trackFill: 'from-blue-600 to-cyan-500',
-      handleBg: 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/40',
-      handleBorder: 'border-blue-300/40',
-      textColor: 'text-blue-900',
-      glow: 'shadow-[0_4px_20px_rgba(59,130,246,0.2)]',
+      trackBorder: 'border-blue-100/90',
+      trackShadow: 'shadow-[0_4px_16px_rgba(59,130,246,0.12)]',
+      trackGradient: 'bg-gradient-to-r from-[#dbeafe]/70 via-[#eff6ff]/85 to-[#f8faff]',
+      trailGradient: 'bg-gradient-to-r from-blue-300/50 via-blue-200/40 to-blue-100/20',
+      textColor: 'text-[#1e3a8a]',
+      haloBg: 'bg-blue-400/25',
+      haloBorder: 'border-blue-300/80',
+      haloShadow: 'shadow-[0_0_16px_2px_rgba(59,130,246,0.55),0_0_28px_rgba(59,130,246,0.3)]',
+      buttonGradient: 'bg-gradient-to-b from-[#2563eb] via-[#1d4ed8] to-[#1e40af]',
     },
     purple: {
-      trackBg: 'bg-purple-50 border-purple-500/40',
-      trackFill: 'from-purple-600 to-indigo-500',
-      handleBg: 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/40',
-      handleBorder: 'border-purple-300/40',
-      textColor: 'text-purple-900',
-      glow: 'shadow-[0_4px_20px_rgba(168,85,247,0.2)]',
+      trackBorder: 'border-purple-100/90',
+      trackShadow: 'shadow-[0_4px_16px_rgba(168,85,247,0.12)]',
+      trackGradient: 'bg-gradient-to-r from-[#f3e8ff]/70 via-[#faf5ff]/85 to-[#fdfbfe]',
+      trailGradient: 'bg-gradient-to-r from-purple-300/50 via-purple-200/40 to-purple-100/20',
+      textColor: 'text-[#581c87]',
+      haloBg: 'bg-purple-400/25',
+      haloBorder: 'border-purple-300/80',
+      haloShadow: 'shadow-[0_0_16px_2px_rgba(168,85,247,0.55),0_0_28px_rgba(168,85,247,0.3)]',
+      buttonGradient: 'bg-gradient-to-b from-[#9333ea] via-[#7e22ce] to-[#6b21a8]',
     },
   }[variant];
+
+  const handleWidth = 54;
 
   const triggerCompletion = useCallback(() => {
     if (isCompletedRef.current) return;
@@ -89,7 +101,6 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
     if (!isDraggingRef.current || !trackRef.current || isCompletedRef.current) return;
 
     const trackRect = trackRef.current.getBoundingClientRect();
-    const handleWidth = 52;
     const maxDistance = trackRect.width - handleWidth - 8; // 8px total padding
 
     if (maxDistance <= 0) return;
@@ -107,7 +118,7 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
       setIsDragging(false);
       triggerCompletion();
     }
-  }, [triggerCompletion]);
+  }, [handleWidth, triggerCompletion]);
 
   const handleDragEnd = useCallback(() => {
     if (!isDraggingRef.current || isCompletedRef.current) return;
@@ -173,7 +184,6 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
     };
   }, [handleDrag, handleDragEnd]);
 
-  const handleWidth = 52;
   const trackWidth = trackRef.current ? trackRef.current.clientWidth : 280;
   const maxTravel = Math.max(0, trackWidth - handleWidth - 8);
   const currentTranslateX = dragProgress * maxTravel;
@@ -181,7 +191,7 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
   if (disabled) {
     return (
       <div
-        className={`w-full h-14 rounded-2xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center font-bold text-xs cursor-not-allowed select-none ${className}`}
+        className={`w-full h-[62px] rounded-full bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center font-bold text-xs cursor-not-allowed select-none ${className}`}
       >
         <span>{label}</span>
       </div>
@@ -191,33 +201,45 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
   return (
     <div
       ref={trackRef}
-      className={`relative w-full h-14 rounded-2xl p-1 select-none overflow-hidden transition-shadow duration-200 border-2 ${variantStyles.trackBg} ${variantStyles.glow} ${className}`}
+      className={`relative w-full h-[62px] rounded-full p-1 select-none border-[3px] ${theme.trackBorder} ${theme.trackShadow} ${theme.trackGradient} flex items-center ${className}`}
     >
-      {/* Dynamic Background Fill */}
-      <div
-        className={`absolute top-0 left-0 bottom-0 bg-gradient-to-r ${variantStyles.trackFill} transition-all duration-75`}
-        style={{
-          width: isCompleted
-            ? '100%'
-            : `calc(${currentTranslateX}px + ${handleWidth}px + 8px)`,
-          transition: isDragging ? 'none' : 'width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
-        }}
-      />
+      {/* Overflow-clipped Track Fill & Dynamic Chevron Trail */}
+      <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
+        {/* Leading Chevron Wedge Trail Behind Handle */}
+        <div
+          className={`absolute left-0 top-0 bottom-0 ${theme.trailGradient}`}
+          style={{
+            width: isCompleted
+              ? '100%'
+              : `calc(${currentTranslateX}px + ${handleWidth}px + 28px)`,
+            clipPath: isCompleted
+              ? 'none'
+              : 'polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%)',
+            transition: isDragging
+              ? 'none'
+              : 'width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          }}
+        />
+      </div>
 
-      {/* Shimmer Track Center Label */}
+      {/* Center Label */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-14">
         <span
-          className={`text-xs font-black tracking-wider uppercase transition-opacity duration-200 text-center flex items-center gap-1 ${
-            dragProgress > 0.3 ? 'text-white' : variantStyles.textColor
-          }`}
-          style={{ opacity: Math.max(0.2, 1 - dragProgress * 1.5) }}
+          className={`text-[12.5px] font-black uppercase tracking-wider ${theme.textColor} transition-opacity duration-150 text-center select-none`}
+          style={{ opacity: Math.max(0, 1 - dragProgress * 2.2) }}
         >
-          <span>{label}</span>
-          <span className="inline-flex tracking-tighter opacity-70 animate-pulse">❯❯</span>
+          {label}
         </span>
       </div>
 
-      {/* Draggable Slider Thumb */}
+      {/* Right Icon if provided */}
+      {rightIcon && (
+        <div className={`absolute right-4.5 flex items-center pointer-events-none ${theme.textColor} select-none`}>
+          {rightIcon}
+        </div>
+      )}
+
+      {/* Draggable Circular Knob with Outer Glowing Halo */}
       <div
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -225,17 +247,22 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
         onMouseDown={onMouseDown}
         style={{
           transform: `translateX(${currentTranslateX}px)`,
-          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          transition: isDragging
+            ? 'none'
+            : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
         }}
-        className={`absolute top-1 bottom-1 left-1 w-[52px] rounded-xl flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg border ${variantStyles.handleBg} ${variantStyles.handleBorder} z-10`}
+        className={`relative z-10 w-[54px] h-[54px] rounded-full p-[3px] flex items-center justify-center cursor-grab active:cursor-grabbing select-none ${theme.haloBg} border-[1.5px] ${theme.haloBorder} ${theme.haloShadow}`}
       >
-        {isCompleted ? (
-          <Check className="w-5 h-5 text-white stroke-[3] animate-scale-in" />
-        ) : icon ? (
-          <span className="text-white">{icon}</span>
-        ) : (
-          <ChevronsRight className="w-6 h-6 text-white stroke-[2.5] animate-pulse" />
-        )}
+        {/* Inner Solid Circle Button */}
+        <div className={`w-full h-full rounded-full ${theme.buttonGradient} flex items-center justify-center shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.4),0_3px_6px_rgba(0,0,0,0.25)]`}>
+          {isCompleted ? (
+            <Check className="w-5 h-5 text-white stroke-[3.5] animate-scale-in" />
+          ) : icon ? (
+            <span className="text-white flex items-center justify-center">{icon}</span>
+          ) : (
+            <ChevronsRight className="w-5 h-5 text-white stroke-[3.2] drop-shadow-xs" />
+          )}
+        </div>
       </div>
     </div>
   );
