@@ -64,9 +64,23 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/.well-known/assetlinks.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/json',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
+      },
     ];
   },
 };
+
 
 
 export default nextConfig;
