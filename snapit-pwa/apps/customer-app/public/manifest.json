@@ -1,0 +1,93 @@
+{
+  "name": "Minnit - 10 Min Delivery",
+  "short_name": "Minnit",
+  "description": "Fastest 10-minute grocery and food delivery in KGF. Order delicious meals, fresh groceries, snacks, and daily essentials delivered to your door.",
+  "id": "/?source=pwa",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#059669",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "shopping",
+    "food",
+    "lifestyle"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Order Food",
+      "short_name": "Food",
+      "description": "Browse hot restaurant meals and fast delivery in KGF",
+      "url": "/?tab=food",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Groceries",
+      "short_name": "Groceries",
+      "description": "Daily essentials, dairy, and household goods in 10 mins",
+      "url": "/?tab=groceries",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "description": "Track active deliveries and order history",
+      "url": "/?tab=orders",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/minnit_full_logo.png",
+      "sizes": "576x1024",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Minnit 10-Minute Delivery Home"
+    }
+  ]
+}
