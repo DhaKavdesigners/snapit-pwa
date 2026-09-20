@@ -8,7 +8,7 @@ interface DocumentUploadCardProps {
   icon?: string;
   title: string;
   subtitle?: string;
-  documentType?: 'aadhaar' | 'pan' | 'dl';
+  documentType?: 'aadhaar' | 'pan' | 'dl' | 'bank' | string;
   documentNumber?: string;
   onNumberChange?: (val: string) => void;
   onFileUploaded?: (url: string, name: string) => void;

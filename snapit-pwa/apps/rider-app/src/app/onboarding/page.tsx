@@ -28,10 +28,14 @@ import {
   XCircle,
   Clock,
   Radio,
+  Zap,
+  Bike,
+  Info,
+  CreditCard,
+  ExternalLink,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
 
 export default function OnboardingPage() {
   const {
@@ -45,7 +49,7 @@ export default function OnboardingPage() {
     clearSessionInvalidatedMessage,
   } = useRider();
   const [step, setStep] = useState<
-    'splash' | 'signin' | 'selfie' | 'personal' | 'kyc' | 'zone' | 'reg_waiting' | 'approved' | 'rejected' | 'reg_success' | 'status'
+    'splash' | 'signin' | 'personal' | 'selfie' | 'vehicle' | 'payout' | 'kyc' | 'zone' | 'reg_waiting' | 'approved' | 'rejected' | 'reg_success' | 'status'
   >('splash');
   
   // Login form state
@@ -65,36 +69,53 @@ export default function OnboardingPage() {
   const [isSubmittingReg, setIsSubmittingReg] = useState(false);
   const [regError, setRegError] = useState('');
   const [copiedId, setCopiedId] = useState(false);
-  const [showWaitingInstructions, setShowWaitingInstructions] = useState(false);
 
-  // Step 1: Personal & Contact fields
+  // Step 1: Personal Details
   const [fullName, setFullName] = useState(rider.name || '');
   const [dob, setDob] = useState(rider.dob || '');
-  const [email, setEmail] = useState(rider.email || '');
+  const [dobError, setDobError] = useState('');
   const [phone, setPhone] = useState(rider.phone || '');
   const [confirmPhone, setConfirmPhone] = useState(rider.phone || '');
-  const [altPhone, setAltPhone] = useState(rider.altPhone || '');
-  const [address, setAddress] = useState(rider.address || '');
-  const [vehicleType, setVehicleType] = useState(rider.vehicleType || 'Motorcycle');
-  const [vehicleNumber, setVehicleNumber] = useState(rider.vehicleNumber || '');
+  const [personalError, setPersonalError] = useState('');
+
+  // Residential Address breakdown
+  const [addressStreet, setAddressStreet] = useState(rider.addressStreet || '');
+  const [addressArea, setAddressArea] = useState(rider.addressArea || '');
+  const [addressCity, setAddressCity] = useState(rider.addressCity || 'KGF');
+  const [addressPincode, setAddressPincode] = useState(rider.addressPincode || '');
+
+  // MPIN Setup
   const [createMpin, setCreateMpin] = useState('');
   const [confirmMpin, setConfirmMpin] = useState('');
   const [showRegMpin, setShowRegMpin] = useState(false);
-  const [phoneError, setPhoneError] = useState('');
 
-  // Step 2: Selfie
+  // Aadhaar Details (Collected in Step 1)
+  const [aadhaarNumber, setAadhaarNumber] = useState(rider.aadhaarNumber || '');
+  const [aadhaarDocUrl, setAadhaarDocUrl] = useState(rider.aadhaarDoc || '');
+
+  // Step 2: Live Selfie
   const [capturedSelfie, setCapturedSelfie] = useState<string>(rider.selfieCapturedUrl || '');
 
-  // Step 3: KYC Details & Attachments
-  const [aadhaarNumber, setAadhaarNumber] = useState(rider.aadhaarNumber || '');
-  const [aadhaarDocUrl, setAadhaarDocUrl] = useState('');
-  const [panNumber, setPanNumber] = useState(rider.panNumber || '');
-  const [panDocUrl, setPanDocUrl] = useState('');
+  // Step 3: Vehicle Details
+  const [hasDrivingLicense, setHasDrivingLicense] = useState<boolean>(rider.hasDrivingLicense ?? true);
+  const [vehicleType, setVehicleType] = useState(rider.vehicleType || 'Motorcycle');
+  const [vehicleModel, setVehicleModel] = useState(rider.vehicleModel || '');
+  const [vehicleNumber, setVehicleNumber] = useState(rider.vehicleNumber || '');
   const [dlNumber, setDlNumber] = useState(rider.dlNumber || '');
-  const [dlDocUrl, setDlDocUrl] = useState('');
-  const [upiId, setUpiId] = useState(rider.upiId || '');
+  const [dlDocUrl, setDlDocUrl] = useState(rider.dlDoc || '');
+  const [vehicleError, setVehicleError] = useState('');
 
-  // Step 4: Zone
+  // Step 4: Payout Settlement & Tax Details
+  const [panNumber, setPanNumber] = useState(rider.panNumber || '');
+  const [payoutMode, setPayoutMode] = useState<'UPI' | 'BANK'>(rider.payoutMode || 'UPI');
+  const [upiId, setUpiId] = useState(rider.upiId || '');
+  const [bankAccountHolder, setBankAccountHolder] = useState(rider.bankAccountHolder || '');
+  const [bankAccountNo, setBankAccountNo] = useState(rider.bankAccountNo || '');
+  const [bankIfsc, setBankIfsc] = useState(rider.bankIfsc || '');
+  const [bankPassbookDocUrl, setBankPassbookDocUrl] = useState(rider.bankPassbookDoc || '');
+  const [payoutError, setPayoutError] = useState('');
+
+  // Step 5: Preferred Operating Zone
   const [selectedZoneId, setSelectedZoneId] = useState(zones[0]?.id || 'zone-1');
 
   const router = useRouter();
@@ -276,11 +297,53 @@ export default function OnboardingPage() {
     }
   };
 
-  // Validate personal details & phone numbers matching & MPIN
+  // Age calculation helper (in completed years)
+  const calculateAge = (birthDateString: string): number => {
+    if (!birthDateString) return 0;
+    const birthDate = new Date(birthDateString);
+    if (isNaN(birthDate.getTime())) return 0;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const handleDobChange = (val: string) => {
+    setDob(val);
+    if (val) {
+      const age = calculateAge(val);
+      if (age < 16) {
+        setDobError('Riders must be at least 16 years of age to register.');
+      } else {
+        setDobError('');
+      }
+    } else {
+      setDobError('');
+    }
+  };
+
+  // Validate Step 1: Personal Details
   const handlePersonalSubmit = () => {
-    setPhoneError('');
+    setPersonalError('');
+    setDobError('');
+
     if (!fullName.trim()) {
-      setPhoneError('Please enter your full name as per government ID.');
+      setPersonalError('Please enter your full name as per government ID.');
+      return;
+    }
+
+    if (!dob) {
+      setPersonalError('Please select your Date of Birth.');
+      return;
+    }
+
+    const age = calculateAge(dob);
+    if (age < 16) {
+      setPersonalError('Riders must be at least 16 years of age to register.');
+      setDobError('Riders must be at least 16 years of age to register.');
       return;
     }
 
@@ -288,77 +351,218 @@ export default function OnboardingPage() {
     const cleanPhone2 = confirmPhone.replace(/[^0-9]/g, '');
 
     if (!cleanPhone1 || cleanPhone1.length < 10) {
-      setPhoneError('Please enter a valid 10-digit primary mobile number.');
+      setPersonalError('Please enter a valid 10-digit primary mobile number.');
       return;
     }
 
     if (cleanPhone1 !== cleanPhone2) {
-      setPhoneError('Phone numbers do not match! Please verify the confirmation number.');
+      setPersonalError('Phone numbers do not match! Please verify the confirmation number.');
+      return;
+    }
+
+    if (!addressStreet.trim()) {
+      setPersonalError('Please enter your house/flat number and street name.');
+      return;
+    }
+
+    if (!addressArea.trim()) {
+      setPersonalError('Please enter your area or locality.');
+      return;
+    }
+
+    if (!addressCity.trim()) {
+      setPersonalError('Please enter your city.');
+      return;
+    }
+
+    const cleanPincode = addressPincode.replace(/[^0-9]/g, '');
+    if (!cleanPincode || cleanPincode.length !== 6) {
+      setPersonalError('Please enter a valid 6-digit pincode.');
       return;
     }
 
     if (!createMpin || createMpin.length < 4) {
-      setPhoneError('Please create a 4-digit login MPIN.');
+      setPersonalError('Please create a 4-digit login MPIN.');
       return;
     }
 
     if (createMpin !== confirmMpin) {
-      setPhoneError('Create MPIN and Confirm MPIN do not match!');
+      setPersonalError('Create MPIN and Confirm MPIN do not match!');
       return;
     }
+
+    const cleanAadhaar = aadhaarNumber.replace(/[^0-9]/g, '');
+    if (!cleanAadhaar || cleanAadhaar.length !== 12) {
+      setPersonalError('Please enter a valid 12-digit Aadhaar Card number.');
+      return;
+    }
+
+    const fullAddress = `${addressStreet.trim()}, ${addressArea.trim()}, ${addressCity.trim()} - ${cleanPincode}`;
 
     updateRiderProfile({
       name: fullName,
       dob,
-      email,
-      phone,
-      altPhone,
-      address,
-      vehicleType,
-      vehicleNumber,
+      phone: cleanPhone1,
+      address: fullAddress,
+      addressStreet: addressStreet.trim(),
+      addressArea: addressArea.trim(),
+      addressCity: addressCity.trim(),
+      addressPincode: cleanPincode,
       mpin: createMpin,
+      aadhaarNumber: cleanAadhaar,
+      aadhaarDoc: aadhaarDocUrl || undefined,
     });
 
     setStep('selfie');
   };
 
-  // Submit KYC
-  const handleKycSubmit = () => {
-    updateRiderProfile({
-      aadhaarNumber,
-      panNumber,
-      dlNumber,
-      upiId,
-    });
+  // Validate Step 3: Vehicle Details
+  const handleVehicleSubmit = () => {
+    setVehicleError('');
+
+    if (hasDrivingLicense) {
+      if (!vehicleNumber.trim()) {
+        setVehicleError('Please enter your vehicle registration number (e.g. KA 08 EJ 1234).');
+        return;
+      }
+
+      if (!dlNumber.trim()) {
+        setVehicleError('Please enter your Driving Licence (DL) number.');
+        return;
+      }
+
+      updateRiderProfile({
+        hasDrivingLicense: true,
+        vehicleType,
+        vehicleModel: vehicleModel.trim(),
+        vehicleNumber: vehicleNumber.toUpperCase().trim(),
+        dlNumber: dlNumber.toUpperCase().trim(),
+        dlDoc: dlDocUrl || undefined,
+      });
+    } else {
+      if (!vehicleModel.trim()) {
+        setVehicleError('Please select or enter your low-speed electric vehicle model.');
+        return;
+      }
+
+      const numStr = vehicleNumber.trim().toUpperCase() || 'EXEMPT-EV';
+
+      updateRiderProfile({
+        hasDrivingLicense: false,
+        vehicleType: 'Electric Scooter (Low-Speed ≤25km/h)',
+        vehicleModel: vehicleModel.trim(),
+        vehicleNumber: numStr,
+        dlNumber: undefined,
+        dlDoc: undefined,
+      });
+    }
+
+    setStep('payout');
+  };
+
+  // Validate Step 4: Payout Settlement & Tax (PAN)
+  const handlePayoutSubmit = () => {
+    setPayoutError('');
+
+    const cleanPan = panNumber.trim().toUpperCase();
+    if (!cleanPan || cleanPan.length !== 10) {
+      setPayoutError('Please enter a valid 10-character alphanumeric PAN Card Number (e.g. ABCDE1234F).');
+      return;
+    }
+
+    if (payoutMode === 'UPI') {
+      const cleanUpi = upiId.trim();
+      if (!cleanUpi || !cleanUpi.includes('@')) {
+        setPayoutError('Please enter a valid UPI ID (e.g. ravi@okaxis or 9876543210@upi).');
+        return;
+      }
+      updateRiderProfile({
+        panNumber: cleanPan,
+        payoutMode: 'UPI',
+        upiId: cleanUpi,
+      });
+    } else {
+      if (!bankAccountHolder.trim()) {
+        setPayoutError('Please enter the Account Holder Name as shown in Bank Passbook.');
+        return;
+      }
+      const cleanAcc = bankAccountNo.replace(/[^0-9]/g, '');
+      if (!cleanAcc || cleanAcc.length < 9 || cleanAcc.length > 18) {
+        setPayoutError('Please enter a valid 9 to 18 digits bank account number.');
+        return;
+      }
+      const cleanIfsc = bankIfsc.trim().toUpperCase();
+      if (!cleanIfsc || cleanIfsc.length !== 11) {
+        setPayoutError('Please enter a valid 11-character IFSC Code (e.g. SBIN0001234).');
+        return;
+      }
+      updateRiderProfile({
+        panNumber: cleanPan,
+        payoutMode: 'BANK',
+        bankAccountHolder: bankAccountHolder.trim(),
+        bankAccountNo: cleanAcc,
+        bankIfsc: cleanIfsc,
+        bankPassbookDoc: bankPassbookDocUrl || undefined,
+      });
+    }
+
     setStep('zone');
   };
 
-  // Submit Zone & complete registration
+  // Submit Step 5: Preferred Operating Zone
   const handleZoneSubmit = async () => {
     setRegError('');
+
+    if (!selectedZoneId) {
+      setRegError('Please select a preferred operating delivery zone.');
+      return;
+    }
+
     setIsSubmittingReg(true);
     const matchedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
     const cleanPhone1 = phone.replace(/[^0-9]/g, '');
+
+    const resolvedVehicleType = hasDrivingLicense
+      ? vehicleType
+      : 'Electric Scooter (Low-Speed ≤25km/h)';
+
+    const resolvedVehicleNumber = hasDrivingLicense
+      ? vehicleNumber.toUpperCase().trim()
+      : (vehicleNumber.trim().toUpperCase() || 'EXEMPT-EV');
+
+    const cleanPincode = addressPincode.replace(/[^0-9]/g, '');
+    const fullAddress = `${addressStreet.trim()}, ${addressArea.trim()}, ${addressCity.trim()} - ${cleanPincode}`;
+
+    const cleanAccNo = bankAccountNo.replace(/[^0-9]/g, '');
+    const cleanIfscCode = bankIfsc.trim().toUpperCase();
 
     const result = await registerRider({
       name: fullName,
       phone: cleanPhone1,
       mpin: createMpin,
       dob,
-      vehicleType,
-      vehicleNumber: vehicleNumber.toUpperCase(),
+      hasDrivingLicense,
+      vehicleType: resolvedVehicleType,
+      vehicleModel: vehicleModel.trim(),
+      vehicleNumber: resolvedVehicleNumber,
       selectedZoneId: matchedZone?.id || 'zone-1',
       selectedZone: matchedZone?.name || 'Robertsonpet',
-      altPhone,
-      email,
-      address,
-      aadhaarNumber,
+      address: fullAddress,
+      addressStreet: addressStreet.trim(),
+      addressArea: addressArea.trim(),
+      addressCity: addressCity.trim(),
+      addressPincode: cleanPincode,
+      aadhaarNumber: aadhaarNumber.replace(/[^0-9]/g, ''),
       aadhaarDocUrl,
-      panNumber,
-      panDocUrl,
-      dlNumber,
-      dlDocUrl,
-      upiId,
+      panNumber: panNumber.trim().toUpperCase(),
+      dlNumber: hasDrivingLicense ? dlNumber.trim().toUpperCase() : undefined,
+      dlDocUrl: hasDrivingLicense ? dlDocUrl : undefined,
+      payoutMode,
+      upiId: payoutMode === 'UPI' ? upiId.trim() : (cleanAccNo ? `bank:${cleanAccNo}` : `${cleanPhone1}@upi`),
+      bankAccountHolder: bankAccountHolder.trim(),
+      bankAccountNo: cleanAccNo,
+      bankIfsc: cleanIfscCode,
+      bankPassbookDocUrl: bankPassbookDocUrl || undefined,
       selfieCapturedUrl: capturedSelfie,
     });
     setIsSubmittingReg(false);
@@ -371,7 +575,6 @@ export default function OnboardingPage() {
     setRegisteredRiderId(result.riderId);
     setRegisteredPhone(cleanPhone1);
     setStep('reg_waiting');
-    setShowWaitingInstructions(true);
   };
 
   const handleCopyRiderId = () => {
@@ -391,7 +594,7 @@ export default function OnboardingPage() {
 
   return (
     <AppShell showHeader={false} showNav={false} noPadding={true}>
-      <div className={`min-h-screen bg-background flex flex-col justify-between relative overflow-hidden ${showWaitingInstructions ? 'p-0' : 'p-5'}`}>
+      <div className="min-h-screen bg-background flex flex-col justify-between relative overflow-hidden p-5">
         
         {/* SCREEN 1: SPLASH SCREEN (CLEAN LOGO, AUTO-NAVIGATES IN 2 SECONDS) */}
         {step === 'splash' && (
@@ -564,28 +767,29 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* STEP 1: PERSONAL DETAILS (NAME, DOB, EMAIL, 2x PHONE, ALT PHONE, ADDRESS, VEHICLE, MPIN) */}
+        {/* STEP 1: PERSONAL DETAILS */}
         {step === 'personal' && (
           <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
             <div>
               <div className="flex justify-between items-center mb-3">
                 <button
+                  type="button"
                   onClick={() => setStep('signin')}
                   className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200"
                 >
                   <ArrowLeft className="w-4 h-4 text-on-surface" />
                 </button>
                 <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
-                  Step 1 of 4: Personal Details
+                  Step 1 of 5: Personal Details
                 </span>
               </div>
 
               <h1 className="text-xl font-black text-on-surface">Personal Information</h1>
               <p className="text-xs text-secondary mt-0.5">
-                Fill in your basic information and vehicle registration.
+                Fill in your basic information, residential address, and Aadhaar card.
               </p>
               <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-1/4" />
+                <div className="h-full bg-primary rounded-full w-1/5" />
               </div>
             </div>
 
@@ -603,27 +807,23 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              {/* Date of Birth */}
+              {/* Date of Birth (DOB) - 16+ Validation */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-on-surface">Date of Birth (DOB)</label>
                 <input
                   type="date"
                   value={dob}
-                  onChange={(e) => setDob(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                  onChange={(e) => handleDobChange(e.target.value)}
+                  className={`w-full bg-white border rounded-xl p-3 text-xs font-semibold text-on-surface outline-none ${
+                    dobError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-primary'
+                  }`}
                 />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface">Email Address</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
-                />
+                {dobError && (
+                  <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{dobError}</span>
+                  </p>
+                )}
               </div>
 
               {/* Primary Phone Number */}
@@ -638,7 +838,7 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              {/* Confirm Phone Number (Double-Entry Validation) */}
+              {/* Confirm Phone Number */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-on-surface">
                   Confirm Phone Number <span className="text-primary">*</span>
@@ -652,54 +852,93 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              {/* Phone validation alert */}
-              {phoneError && (
-                <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{phoneError}</span>
-                </div>
-              )}
-
-              {/* Alternative Number (Optional) */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface">
-                  Alternative Phone Number <span className="text-secondary font-normal">(Optional)</span>
+              {/* Residential Address Fields */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                <label className="text-xs font-bold text-slate-800 block">
+                  Residential Address
                 </label>
-                <input
-                  type="tel"
-                  value={altPhone}
-                  onChange={(e) => setAltPhone(e.target.value)}
-                  placeholder="+91 98000 00000"
-                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary"
-                />
-              </div>
-
-              {/* Vehicle Type & Number */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-on-surface">Vehicle Type</label>
-                  <select
-                    value={vehicleType}
-                    onChange={(e) => setVehicleType(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
-                  >
-                    <option value="Motorcycle">Motorcycle</option>
-                    <option value="Electric Scooter">EV Scooter</option>
-                    <option value="Scooter">Scooter</option>
-                    <option value="Bicycle">Bicycle</option>
-                  </select>
-                </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-on-surface">Vehicle Number</label>
+                  <span className="text-[10px] font-bold text-secondary block">Flat / House No., Street Address *</span>
                   <input
                     type="text"
-                    value={vehicleNumber}
-                    onChange={(e) => setVehicleNumber(e.target.value)}
-                    placeholder="KA 03 EQ 8821"
-                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary uppercase"
+                    value={addressStreet}
+                    onChange={(e) => setAddressStreet(e.target.value)}
+                    placeholder="e.g. No. 42, 3rd Cross Street"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-on-surface outline-none focus:border-primary"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-secondary block">Area / Locality *</span>
+                  <input
+                    type="text"
+                    value={addressArea}
+                    onChange={(e) => setAddressArea(e.target.value)}
+                    placeholder="e.g. Robertsonpet, Marikuppam"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-secondary block">City *</span>
+                    <input
+                      type="text"
+                      value={addressCity}
+                      onChange={(e) => setAddressCity(e.target.value)}
+                      placeholder="e.g. KGF"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-secondary block">Pincode *</span>
+                    <input
+                      type="tel"
+                      maxLength={6}
+                      value={addressPincode}
+                      onChange={(e) => setAddressPincode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      placeholder="e.g. 563122"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── AADHAAR CARD DETAILS & UPLOAD ── */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <FileCheck className="w-3.5 h-3.5 text-primary" />
+                    <span>Aadhaar Card Verification</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    Mandatory
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-secondary block">
+                    12-Digit Aadhaar Number <span className="text-primary">*</span>
+                  </span>
+                  <input
+                    type="tel"
+                    maxLength={12}
+                    value={aadhaarNumber}
+                    onChange={(e) => setAadhaarNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 12))}
+                    placeholder="e.g. 1234 5678 9012"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary tracking-wider"
+                  />
+                </div>
+
+                <DocumentUploadCard
+                  title="Aadhaar Card Document"
+                  subtitle="Front & Back scan/photo (JPG/PNG/PDF)"
+                  documentType="aadhaar"
+                  onFileUploaded={(url) => setAadhaarDocUrl(url)}
+                  required={true}
+                />
               </div>
 
               {/* ── CREATE & CONFIRM MPIN SLOTS ── */}
@@ -745,22 +984,19 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              {/* Residential Address */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface">Residential Address</label>
-                <textarea
-                  rows={2}
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Full permanent residential address"
-                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary resize-none"
-                />
-              </div>
+              {/* Validation alert */}
+              {personalError && (
+                <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{personalError}</span>
+                </div>
+              )}
             </div>
 
             <button
+              type="button"
               onClick={handlePersonalSubmit}
-              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Proceed to Live Selfie</span>
               <ArrowRight className="w-4 h-4" />
@@ -774,13 +1010,14 @@ export default function OnboardingPage() {
             <div>
               <div className="flex justify-between items-center mb-3">
                 <button
+                  type="button"
                   onClick={() => setStep('personal')}
-                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200"
+                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4 text-on-surface" />
                 </button>
                 <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
-                  Step 2 of 4: Live Selfie
+                  Step 2 of 5: Live Selfie
                 </span>
               </div>
 
@@ -789,7 +1026,7 @@ export default function OnboardingPage() {
                 Take a clear front-facing selfie for rider badge and instant facial ID verification.
               </p>
               <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-2/4" />
+                <div className="h-full bg-primary rounded-full w-2/5" />
               </div>
             </div>
 
@@ -805,128 +1042,492 @@ export default function OnboardingPage() {
             </div>
 
             <button
+              type="button"
               onClick={() => {
                 if (!capturedSelfie) {
-                  // If user didn't capture, default sample photo
                   const sample =
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuC-PEiTgWViD1ovXWhH1B1TQbMaWamoTZBv9VbCDabgGy61BlhUVTtyCaQqeI5WbDHOFao2v1A6tBhc7gUUm_4Kw7IjE4g7U93BvPxpBCwFcpkL3WKodfrio1p1RyKPuUw3qMZ3ehzSz5_NUemOI3BVvFqRDj3EdyCQfpGH2eWP1FbJCAvX16Yy7ZGqOdSYHx44o2sVTKEs0VZ56ZU7EjUIFOEJHw_qX6azzfjVcPoCJ7EDvRR1lx43EA';
+                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400';
                   setCapturedSelfie(sample);
                   updateRiderProfile({ selfieCapturedUrl: sample, avatarUrl: sample });
                 }
-                setStep('kyc');
+                setStep('vehicle');
               }}
-              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Continue to KYC Documents</span>
+              <span>Continue to Vehicle Details</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* STEP 3: KYC DOCUMENTS (AADHAAR + PAN + DL + ATTACHMENTS) */}
-        {step === 'kyc' && (
+        {/* STEP 3: DEDICATED VEHICLE DETAILS & LICENCE CATEGORY */}
+        {step === 'vehicle' && (
           <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
             <div>
               <div className="flex justify-between items-center mb-3">
                 <button
+                  type="button"
                   onClick={() => setStep('selfie')}
-                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200"
+                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4 text-on-surface" />
                 </button>
                 <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
-                  Step 3 of 4: KYC Documents
+                  Step 3 of 5: Vehicle Details
                 </span>
               </div>
 
-              <h1 className="text-xl font-black text-on-surface">Identity & License Verification</h1>
+              <h1 className="text-xl font-black text-on-surface">Vehicle & Licence Details</h1>
               <p className="text-xs text-secondary mt-0.5">
-                Enter government ID numbers and attach clear scans/photos.
+                Select your vehicle type and licensing category.
               </p>
               <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
-                <div className="h-full bg-primary rounded-full w-3/4" />
+                <div className="h-full bg-primary rounded-full w-3/5" />
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 space-y-4">
-              {/* 1. Aadhaar Card */}
+              {/* Question: Do you have a Driving Licence? */}
               <div className="space-y-1.5">
-                <DocumentUploadCard
-                  title="Aadhaar Card"
-                  subtitle="Front & Back (JPG/PNG/PDF)"
-                  documentType="aadhaar"
-                  documentNumber={aadhaarNumber}
-                  onNumberChange={setAadhaarNumber}
-                  onFileUploaded={(url) => setAadhaarDocUrl(url)}
-                />
+                <label className="text-xs font-bold text-slate-800 block">
+                  Do you have a Driving Licence (DL)?
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasDrivingLicense(true);
+                      setVehicleError('');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                      hasDrivingLicense
+                        ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                        hasDrivingLicense ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        <FileCheck className="w-4 h-4" />
+                      </div>
+                      {hasDrivingLicense && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                    </div>
+                    <p className="text-xs font-bold text-slate-900">I have a DL</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                      Petrol bikes & high-speed EVs
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasDrivingLicense(false);
+                      setVehicleError('');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                      !hasDrivingLicense
+                        ? 'border-emerald-600 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-600'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                        !hasDrivingLicense ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      {!hasDrivingLicense && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                    </div>
+                    <p className="text-xs font-bold text-slate-900">No DL Needed</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                      Low-speed EV (≤25km/h)
+                    </p>
+                  </button>
+                </div>
               </div>
 
-              {/* 2. PAN Card */}
-              <div className="space-y-1.5">
-                <DocumentUploadCard
-                  title="PAN Card"
-                  subtitle="Front scan (JPG/PNG/PDF)"
-                  documentType="pan"
-                  documentNumber={panNumber}
-                  onNumberChange={setPanNumber}
-                  onFileUploaded={(url) => setPanDocUrl(url)}
-                />
-              </div>
+              {/* Conditional Form based on DL status */}
+              {hasDrivingLicense ? (
+                <div className="space-y-3.5 animate-fade-in pt-1">
+                  {/* Vehicle Type */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-on-surface">Vehicle Type</label>
+                    <select
+                      value={vehicleType}
+                      onChange={(e) => setVehicleType(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                    >
+                      <option value="Motorcycle">Motorcycle (Petrol / Geared)</option>
+                      <option value="Scooter">Scooter (Petrol / Non-Geared)</option>
+                      <option value="Electric Scooter (High-Speed)">Electric Scooter (High-Speed RTO)</option>
+                    </select>
+                  </div>
 
-              {/* 3. Driving License */}
-              <div className="space-y-1.5">
-                <DocumentUploadCard
-                  title="Driving License (DL)"
-                  subtitle="Front & Back scan (JPG/PNG/PDF)"
-                  documentType="dl"
-                  documentNumber={dlNumber}
-                  onNumberChange={setDlNumber}
-                  onFileUploaded={(url) => setDlDocUrl(url)}
-                />
-              </div>
+                  {/* Vehicle Model Name with suggestions */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-on-surface">Vehicle Model</label>
+                    <input
+                      type="text"
+                      value={vehicleModel}
+                      onChange={(e) => setVehicleModel(e.target.value)}
+                      placeholder="e.g. Honda Activa 6G, Hero Splendor, Ola S1"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                    />
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {['Honda Activa', 'Hero Splendor', 'Bajaj Pulsar', 'TVS Jupiter', 'Ola S1', 'Ather 450X'].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setVehicleModel(m)}
+                          className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                            vehicleModel === m
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* 4. Payout UPI ID */}
-              <div className="space-y-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <label className="text-xs font-bold text-slate-900">Payout UPI ID (For Wallet Cashout)</label>
-                <input
-                  type="text"
-                  value={upiId}
-                  onChange={(e) => setUpiId(e.target.value)}
-                  placeholder="yourname@bank"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-semibold text-slate-900 outline-none focus:border-primary focus:bg-white"
-                />
-              </div>
+                  {/* Vehicle Number Plate */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-on-surface">
+                      Vehicle Registration Number <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleNumber}
+                      onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                      placeholder="KA 08 EJ 1234"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
+                    />
+                  </div>
+
+                  {/* DL Number Input */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-on-surface">
+                      Driving Licence (DL) Number <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={dlNumber}
+                      onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                      placeholder="e.g. KA08 20210001234"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
+                    />
+                  </div>
+
+                  {/* DL Document Upload */}
+                  <div className="space-y-1.5">
+                    <DocumentUploadCard
+                      title="Driving Licence (DL) Document"
+                      subtitle="Front & Back scan/photo (JPG/PNG/PDF)"
+                      documentType="dl"
+                      onFileUploaded={(url) => setDlDocUrl(url)}
+                      required={true}
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Non-DL Branch */
+                <div className="space-y-3.5 animate-fade-in pt-1">
+                  {/* Legal Compliance Box with MoRTH Official Link */}
+                  <div className="bg-emerald-50/90 border border-emerald-300/80 rounded-2xl p-3.5 shadow-2xs space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Legal Exemption Notice (CMVR Rule 2(u))</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 leading-relaxed">
+                      Under the Central Motor Vehicles Rules (CMVR), electric two-wheelers with a maximum speed ≤ 25 km/h & motor power ≤ 250W are classified as non-motor vehicles. They are <strong>legally exempt</strong> from Driving Licence and RTO registration plate requirements.
+                    </p>
+                    <a
+                      href="https://morth.nic.in"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 underline decoration-emerald-400 hover:decoration-emerald-700 cursor-pointer"
+                    >
+                      <span>View Official MoRTH Guidelines (CMVR Rule 2(u))</span>
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                    </a>
+                  </div>
+
+                  {/* Low-Speed EV Model Selection */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-on-surface">
+                      Low-Speed EV Model / Brand <span className="text-emerald-600">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleModel}
+                      onChange={(e) => setVehicleModel(e.target.value)}
+                      placeholder="e.g. Hero Electric Flash, Okinawa Lite"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-emerald-600"
+                    />
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {['Hero Electric Flash', 'Hero Electric NYX', 'Ampere Reo', 'Okinawa Lite', 'Komaki XGT VP'].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setVehicleModel(m)}
+                          className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                            vehicleModel === m
+                              ? 'bg-emerald-600 text-white border-emerald-600'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Vehicle Number Plate Input */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-on-surface">
+                      Vehicle Number Plate
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleNumber}
+                      onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                      placeholder="e.g. KA 08 EJ 1234"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-emerald-600 uppercase tracking-wider"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {vehicleError && (
+                <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{vehicleError}</span>
+                </div>
+              )}
             </div>
 
             <button
-              onClick={handleKycSubmit}
-              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+              type="button"
+              onClick={handleVehicleSubmit}
+              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Proceed to Zone Selection</span>
+              <span>Continue to Payout Details</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* STEP 4: ZONE SELECTION */}
+        {/* STEP 4: PAYOUT SETTLEMENT & TAX (PAN) */}
+        {step === 'payout' && (
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <button
+                  type="button"
+                  onClick={() => setStep('vehicle')}
+                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4 text-on-surface" />
+                </button>
+                <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
+                  Step 4 of 5: Payout Settlement
+                </span>
+              </div>
+
+              <h1 className="text-xl font-black text-on-surface">Payout Settlement</h1>
+              <p className="text-xs text-secondary mt-0.5">
+                Enter your PAN number and choose your preferred earnings cashout method.
+              </p>
+              <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
+                <div className="h-full bg-primary rounded-full w-4/5" />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar py-4 space-y-4">
+              {/* ── PAN CARD DETAILS (OUTSIDE TOGGLE, MANDATORY, NO UPLOAD) ── */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-primary" />
+                    <span>Permanent Account Number (PAN)</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    Required for Tax
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700">
+                    PAN Card Number <span className="text-primary">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    value={panNumber}
+                    onChange={(e) => setPanNumber(e.target.value.toUpperCase().slice(0, 10))}
+                    placeholder="e.g. ABCDE1234F"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-slate-900 outline-none focus:border-primary focus:bg-white uppercase tracking-wider"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    10-character alphanumeric PAN for TDS compliance and weekly payout processing. No document upload required.
+                  </p>
+                </div>
+              </div>
+
+              {/* ── PAYOUT METHOD TOGGLE (UPI VS BANK) ── */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-slate-900">
+                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                    <span>Select Payout Method</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                    Direct Settlement
+                  </span>
+                </div>
+
+                {/* Tab switcher: UPI vs Bank */}
+                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMode('UPI')}
+                    className={`flex-1 py-2.5 text-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      payoutMode === 'UPI'
+                        ? 'bg-white text-emerald-700 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    UPI ID (Instant)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMode('BANK')}
+                    className={`flex-1 py-2.5 text-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      payoutMode === 'BANK'
+                        ? 'bg-white text-emerald-700 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Bank Account
+                  </button>
+                </div>
+
+                {payoutMode === 'UPI' ? (
+                  <div className="space-y-2 pt-1">
+                    <label className="text-[11px] font-bold text-slate-700">
+                      UPI ID for Cashout <span className="text-emerald-600">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value.toLowerCase())}
+                      placeholder="e.g. ravi@okaxis or 9876543210@upi"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono font-semibold text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Deliveries and weekly bonuses are credited directly to this UPI ID.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">
+                        Account Holder Name <span className="text-emerald-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={bankAccountHolder}
+                        onChange={(e) => setBankAccountHolder(e.target.value)}
+                        placeholder="As shown in Bank Passbook"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">
+                        Bank Account Number <span className="text-emerald-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={bankAccountNo}
+                        onChange={(e) => setBankAccountNo(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="9 to 18 digits account number"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">
+                        IFSC Code <span className="text-emerald-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={11}
+                        value={bankIfsc}
+                        onChange={(e) => setBankIfsc(e.target.value.toUpperCase())}
+                        placeholder="e.g. SBIN0001234"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-900 outline-none focus:border-emerald-600 focus:bg-white uppercase tracking-wider"
+                      />
+                    </div>
+
+                    {/* Optional Bank Passbook / Cheque photo upload */}
+                    <div className="space-y-1.5 pt-1">
+                      <DocumentUploadCard
+                        title="Bank Passbook / Cheque"
+                        subtitle="Photo of passbook or cheque (Optional)"
+                        documentType="bank"
+                        onFileUploaded={(url) => setBankPassbookDocUrl(url)}
+                      />
+                    </div>
+
+                    <p className="text-[10px] text-slate-400">
+                      Direct NEFT/IMPS earnings settlement to your bank account.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {payoutError && (
+                <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{payoutError}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePayoutSubmit}
+              className="w-full py-4 bg-primary text-white font-bold text-xs rounded-2xl shadow-lift hover:bg-primary/90 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Proceed to Select Preferred Zone</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* STEP 5: SELECT YOUR PREFERRED OPERATING ZONE */}
         {step === 'zone' && (
           <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-4 animate-fade-in">
             <div>
               <div className="flex justify-between items-center mb-3">
                 <button
-                  onClick={() => setStep('kyc')}
-                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200"
+                  type="button"
+                  onClick={() => setStep('payout')}
+                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-slate-200 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4 text-on-surface" />
                 </button>
                 <span className="text-xs font-bold text-secondary bg-slate-200/80 px-3 py-1 rounded-full">
-                  Step 4 of 4: Zone Selection
+                  Step 5 of 5: Select Preferred Zone
                 </span>
               </div>
 
-              <h1 className="text-xl font-black text-on-surface">Select Operating Zone</h1>
+              <h1 className="text-xl font-black text-on-surface">Select Your Preferred Zone</h1>
               <p className="text-xs text-secondary mt-0.5">
-                Choose where you want to receive delivery requests.
+                Choose the primary delivery zone where you want to accept orders.
               </p>
               <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
                 <div className="h-full bg-primary rounded-full w-full" />
@@ -934,24 +1535,88 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 space-y-3">
-              {zones.map((z) => (
-                <ZoneSelectCard
-                  key={z.id}
-                  zone={z}
-                  isSelected={selectedZoneId === z.id}
-                  onSelect={() => setSelectedZoneId(z.id)}
-                />
-              ))}
+              {/* Short and simple selectable option for 2 active zones */}
+              {[
+                {
+                  id: 'zone-1',
+                  name: 'Robertsonpet Zone',
+                  coverage: '5km Hub Coverage',
+                  demand: 'High Demand',
+                  earnings: '₹800 - ₹1,200/day',
+                },
+                {
+                  id: 'zone-3',
+                  name: 'BEML Zone',
+                  coverage: '5km Sub-Hub Coverage',
+                  demand: 'Steady Demand',
+                  earnings: '₹550 - ₹850/day',
+                },
+              ].map((z) => {
+                const isSelected = selectedZoneId === z.id;
+                return (
+                  <div
+                    key={z.id}
+                    onClick={() => setSelectedZoneId(z.id)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
+                      isSelected
+                        ? 'bg-primary/5 border-primary ring-1 ring-primary shadow-xs'
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                            isSelected
+                              ? 'bg-primary text-white'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          <Radio className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-black text-slate-900">{z.name}</h3>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              {z.demand}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">{z.coverage} • Est. {z.earnings}</p>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'bg-primary text-white shadow-xs'
+                            : 'border-2 border-slate-300'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Informative note */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
+                <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                <span>
+                  You can always switch your operating zone later from Rider Settings based on active order demand.
+                </span>
+              </div>
+
+              {regError && (
+                <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{regError}</span>
+                </div>
+              )}
             </div>
 
-            {regError && (
-              <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold mb-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{regError}</span>
-              </div>
-            )}
-
             <button
+              type="button"
               onClick={handleZoneSubmit}
               disabled={isSubmittingReg}
               className="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white font-bold text-xs rounded-2xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
@@ -963,171 +1628,137 @@ export default function OnboardingPage() {
         )}
 
         {/* ── SCREEN: REGISTRATION SUCCESSFUL / WAITING FOR ADMIN VERIFICATION ── */}
-        {showWaitingInstructions ? (
-          <div className="flex-1 min-h-0 flex flex-col justify-between max-w-md mx-auto w-full h-[100dvh] animate-fade-in">
-            <RiderInstructionViewer
-              isModal={false}
-              onDone={() => setShowWaitingInstructions(false)}
-              onClose={() => setShowWaitingInstructions(false)}
-            />
-          </div>
-        ) : (step === 'reg_waiting' || step === 'reg_success' || step === 'status') ? (
-          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-5 animate-fade-in">
-            <div className="flex flex-col items-center text-center mt-1">
+        {(step === 'reg_waiting' || step === 'reg_success' || step === 'status') ? (
+          <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-6 animate-fade-in">
+            <div className="flex flex-col items-center text-center mt-3">
               {/* Radar pulse status icon */}
-              <div className="relative w-18 h-18 mb-3 flex items-center justify-center">
+              <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
                 <div className="absolute inset-0 bg-amber-500/20 rounded-full animate-ping opacity-75" />
-                <div className="relative z-10 w-14 h-14 bg-gradient-to-tr from-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/30 text-white">
-                  <Hourglass className="w-7 h-7 animate-pulse" />
+                <div className="relative z-10 w-16 h-16 bg-gradient-to-tr from-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/30 text-white">
+                  <Hourglass className="w-8 h-8 animate-pulse" />
                 </div>
               </div>
 
               {/* Status Badge */}
-              <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-[11px] font-black uppercase px-3.5 py-1 rounded-full border border-amber-200 mb-2 shadow-2xs">
+              <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-xs font-black uppercase px-4 py-1.5 rounded-full border border-amber-200 mb-3 shadow-2xs">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
                 <span>Verification Pending</span>
               </div>
 
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                Registration Successful
+                Registration Submitted
               </h1>
-              <p className="text-xs text-slate-500 mt-1 max-w-[300px] leading-relaxed">
-                Your Minnit Rider registration has been submitted successfully.
+              <p className="text-xs text-slate-500 mt-1.5 max-w-[290px] leading-relaxed">
+                Your profile is currently under review by the Minnit Admin Team. You will receive an SMS update once your registration is approved.
               </p>
             </div>
 
-            {/* Rider ID Card */}
-            <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/90 my-3 text-center space-y-3.5">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Your Minnit Rider ID
-                </p>
-                <div className="mt-1.5 py-3 px-4 bg-emerald-50/80 rounded-2xl border-2 border-emerald-500/40 flex items-center justify-center shadow-inner">
-                  <span className="text-3xl font-black font-mono tracking-widest text-emerald-700">
-                    {registeredRiderId || rider.Rider_ID || 'MM0001'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Copy Rider ID Button */}
-              <button
-                type="button"
-                onClick={handleCopyRiderId}
-                className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
-                  copiedId
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 active:scale-98'
-                }`}
-              >
-                {copiedId ? (
-                  <>
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Rider ID Copied to Clipboard!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4 text-slate-500" />
-                    <span>Copy Rider ID</span>
-                  </>
-                )}
-              </button>
-
-              {/* Status Explanation Box */}
-              <div className="bg-amber-50/60 rounded-2xl p-3 border border-amber-200/70 text-left space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Waiting for Admin Verification</span>
-                </div>
-                <p className="text-[11px] text-amber-800/90 leading-relaxed">
-                  Your documents and profile details are now waiting for verification by the Minnit Admin Team. You will be able to log in once your registration is approved.
-                </p>
-              </div>
-
-              {/* Checklist preview */}
-              <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px] text-left">
-                <div className="flex items-center gap-1.5 text-slate-600">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Selfie Uploaded</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-600">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>KYC Documents</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-600">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Zone Assigned</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-amber-700 font-semibold">
-                  <Hourglass className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>Admin Sign-off</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Read Rider Instructions CTA Card */}
-            <button
-              type="button"
-              onClick={() => setShowWaitingInstructions(true)}
-              className="w-full bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/80 rounded-2xl p-3 text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer shadow-2xs mb-2.5"
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl">📖</span>
-                <div>
-                  <p className="text-xs font-bold text-emerald-950">
-                    Read Rider Instructions
-                  </p>
-                  <p className="text-[10px] text-emerald-700 font-medium">
-                    Learn how Minnit deliveries, slots & earnings work
-                  </p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-emerald-700 shrink-0" />
-            </button>
-
-            {/* Realtime Status Live Sync Bar & Refresh Option */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between px-3 py-2 bg-slate-900 text-white rounded-2xl border border-slate-800 text-xs shadow-sm">
+            {/* Clean Verification Status Tracker Card (Row by Row) */}
+            <div className="bg-white rounded-3xl p-5 shadow-soft border border-slate-200/90 my-auto text-left space-y-3.5">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                  <span className="text-[11px] font-medium text-slate-300">
-                    Live Real-Time Sync Active
-                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-900 leading-none">Application Status</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Live verification progress</p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleManualCheckStatus}
-                  disabled={isCheckingStatus}
-                  className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isCheckingStatus ? 'animate-spin' : ''}`} />
-                  <span>{isCheckingStatus ? 'Checking...' : 'Check Status'}</span>
-                </button>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                  Under Review
+                </span>
               </div>
 
-              {statusCheckNotice && (
-                <p className="text-[11px] text-center text-amber-700 font-medium px-2">
-                  {statusCheckNotice}
-                </p>
-              )}
+              <div className="space-y-2 pt-1">
+                {/* 1. Selfie Uploaded */}
+                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 leading-tight">Selfie Uploaded</p>
+                      <p className="text-[10px] text-slate-500">Live facial photo submitted</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md shrink-0">
+                    Completed
+                  </span>
+                </div>
 
-              {/* Safe instruction */}
-              <p className="text-[10px] text-center text-slate-400 leading-tight">
-                Please keep your Rider ID safe. Login access will be granted automatically once approved.
-              </p>
+                {/* 2. Vehicle Details */}
+                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 leading-tight">Vehicle Details</p>
+                      <p className="text-[10px] text-slate-500">Model & registration recorded</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md shrink-0">
+                    Completed
+                  </span>
+                </div>
 
-              {/* Back to Sign-in Option */}
+                {/* 3. KYC Documents */}
+                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 leading-tight">KYC Documents</p>
+                      <p className="text-[10px] text-slate-500">Aadhaar & PAN entered</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md shrink-0">
+                    Completed
+                  </span>
+                </div>
+
+                {/* 4. Admin Review */}
+                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-amber-50 border border-amber-300/80 shadow-2xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-7 h-7 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 animate-pulse">
+                      <Hourglass className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-amber-950 leading-tight">Admin Review</p>
+                      <p className="text-[10px] text-amber-800">Verification in progress</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black text-amber-800 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-md shrink-0 animate-pulse">
+                    In Progress
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Explore Rider UI Action Button */}
+            <div className="space-y-2 pt-2">
               <button
                 type="button"
                 onClick={() => {
-                  setLoginRiderId(registeredRiderId || rider.Rider_ID || '');
-                  setLoginMpin('');
-                  setLoginError('');
-                  setStep('signin');
+                  updateRiderProfile({
+                    isAuthenticated: true,
+                    isVerified: false,
+                    verificationStatus: 'PENDING',
+                  });
+                  router.push('/');
                 }}
-                className="w-full py-2.5 text-slate-500 hover:text-slate-700 text-xs font-bold text-center transition-colors"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm rounded-2xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                Back to Sign In
+                <Sparkles className="w-4 h-4 text-emerald-200" />
+                <span>Explore Rider UI</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
+
+              <p className="text-[10px] text-slate-400 text-center leading-tight">
+                Preview the delivery dashboard and features while awaiting admin activation.
+              </p>
             </div>
           </div>
         ) : null}

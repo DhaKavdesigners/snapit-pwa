@@ -26,6 +26,7 @@ import {
   Home,
   Power,
   Check,
+  Lock,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -61,6 +62,7 @@ export default function DashboardPage() {
   // Check for first login after approval to show instructions automatically
   useEffect(() => {
     if (!isHydrated || !rider.isAuthenticated) return;
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') return;
 
     const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
     const isCompleted =
@@ -70,7 +72,7 @@ export default function DashboardPage() {
     if (!isCompleted) {
       setShowFirstLoginInstructions(true);
     }
-  }, [isHydrated, rider.isAuthenticated, rider.phone, rider.Rider_ID, rider.riderId, rider.rider_instructions_completed]);
+  }, [isHydrated, rider.isAuthenticated, rider.isVerified, rider.verificationStatus, rider.phone, rider.Rider_ID, rider.riderId, rider.rider_instructions_completed]);
 
   const handleCompleteFirstLoginInstructions = () => {
     setShowFirstLoginInstructions(false);
@@ -372,38 +374,77 @@ export default function DashboardPage() {
               onOpenZoneModal={() => setIsZoneModalOpen(true)}
             />
 
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-400 my-1 shadow-2xs">
-              <Power className="w-7 h-7" />
-            </div>
+            {rider.isVerified === false || rider.verificationStatus === 'PENDING' ? (
+              <div className="bg-white rounded-3xl border border-amber-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
+                <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-200 text-amber-600 my-1 shadow-2xs">
+                  <Lock className="w-7 h-7" />
+                </div>
 
-            <div>
-              <h3 className="font-black text-lg text-slate-900">
-                You're Currently Offline
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
-                Ready to earn in <strong className="text-slate-800">{rider.selectedZone || 'Robertsonpet'}</strong>? Start a flexible riding session to receive delivery orders.
-              </p>
-            </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-amber-200 mb-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                    <span>Verification Pending</span>
+                  </div>
+                  <h3 className="font-black text-lg text-slate-900">
+                    Online Access Locked
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
+                    Your rider profile is currently under review by Minnit Admin. Once approved, you will be able to start riding sessions and accept orders.
+                  </p>
+                </div>
 
-            <div className="w-full max-w-xs pt-1 flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={openStartRiding}
-                className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-              >
-                <Power className="w-5 h-5 stroke-[2.5]" />
-                <span>START RIDING</span>
-              </button>
+                <div className="w-full max-w-xs pt-1 flex flex-col gap-2.5">
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full h-14 bg-slate-100 text-slate-400 font-black text-sm rounded-2xl border border-slate-200 flex items-center justify-center gap-2 cursor-not-allowed uppercase tracking-wider shadow-inner"
+                  >
+                    <Lock className="w-4 h-4" />
+                    <span>ONLINE LOCKED</span>
+                  </button>
 
-              <Link
-                href="/availability"
-                className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
-              >
-                ⭐ Availability Preferences
-              </Link>
-            </div>
-          </div>
+                  <Link
+                    href="/availability"
+                    className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
+                  >
+                    ⭐ Availability Preferences
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
+                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-400 my-1 shadow-2xs">
+                  <Power className="w-7 h-7" />
+                </div>
+
+                <div>
+                  <h3 className="font-black text-lg text-slate-900">
+                    You're Currently Offline
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
+                    Ready to earn in <strong className="text-slate-800">{rider.selectedZone || 'Robertsonpet'}</strong>? Start a flexible riding session to receive delivery orders.
+                  </p>
+                </div>
+
+                <div className="w-full max-w-xs pt-1 flex flex-col gap-2.5">
+                  <button
+                    type="button"
+                    onClick={openStartRiding}
+                    className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                  >
+                    <Power className="w-5 h-5 stroke-[2.5]" />
+                    <span>START RIDING</span>
+                  </button>
+
+                  <Link
+                    href="/availability"
+                    className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
+                  >
+                    ⭐ Availability Preferences
+                  </Link>
+                </div>
+              </div>
+            )}
           </>
         )}
 

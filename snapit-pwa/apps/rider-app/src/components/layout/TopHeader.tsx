@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRider } from '@/context/RiderContext';
-import { Power, MapPin, ChevronDown } from 'lucide-react';
+import { Power, MapPin, ChevronDown, Lock } from 'lucide-react';
 import { getSessionRemainingMs, formatRemainingSessionTime } from '@/services/sessionService';
 
 interface TopHeaderProps {
@@ -60,9 +60,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
   }, [showOfflineModal]);
 
   const isBreakActive = riderBreak && !riderBreak.endedAt;
+  const isPendingVerification = rider?.isVerified === false || rider?.verificationStatus === 'PENDING';
 
   // Handle online toggle click
   const handleToggleClick = () => {
+    if (isPendingVerification) {
+      alert('Online access is locked while verification is pending. Minnit Admin will verify your documents shortly.');
+      return;
+    }
     if (isOnline) {
       setShowOfflineModal(true);
     } else {
@@ -77,6 +82,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
   // Online toggle label
   let onlineLabel = isOnline ? 'Online' : 'Offline';
   if (isBreakActive) onlineLabel = 'Break';
+  if (isPendingVerification) onlineLabel = 'Locked';
 
   const remainingMs = getSessionRemainingMs(activeSession);
   const remainingStr = formatRemainingSessionTime(remainingMs);
@@ -160,7 +166,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
           >
             {/* Outside Text Label + Status Indicator */}
             <div className="flex items-center gap-1.5">
-              {isBreakActive ? (
+              {isPendingVerification ? (
+                <Lock className="w-3 h-3 text-amber-500 shrink-0" />
+              ) : isBreakActive ? (
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
@@ -175,7 +183,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
               )}
               <span
                 className={`text-xs font-black uppercase tracking-wider ${
-                  isBreakActive
+                  isPendingVerification
+                    ? 'text-amber-600'
+                    : isBreakActive
                     ? 'text-amber-600'
                     : isOnline
                     ? 'text-emerald-600'
@@ -189,7 +199,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
             {/* Small Compact iOS-Style Switch Slider */}
             <div
               className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 relative flex items-center shrink-0 ${
-                isBreakActive
+                isPendingVerification
+                  ? 'bg-amber-200'
+                  : isBreakActive
                   ? 'bg-amber-400'
                   : isOnline
                   ? 'bg-emerald-500 shadow-2xs'

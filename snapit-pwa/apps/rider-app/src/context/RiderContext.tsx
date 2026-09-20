@@ -184,11 +184,17 @@ interface RiderContextType {
     dob?: string;
     vehicleType?: string;
     vehicleNumber?: string;
+    vehicleModel?: string;
+    hasDrivingLicense?: boolean;
     selectedZone?: string;
     selectedZoneId?: string;
     altPhone?: string;
     email?: string;
     address?: string;
+    addressStreet?: string;
+    addressArea?: string;
+    addressCity?: string;
+    addressPincode?: string;
     aadhaarNumber?: string;
     aadhaarDocUrl?: string;
     panNumber?: string;
@@ -196,6 +202,11 @@ interface RiderContextType {
     dlNumber?: string;
     dlDocUrl?: string;
     upiId?: string;
+    payoutMode?: 'UPI' | 'BANK';
+    bankAccountHolder?: string;
+    bankAccountNo?: string;
+    bankIfsc?: string;
+    bankPassbookDocUrl?: string;
     avatarUrl?: string;
     selfieCapturedUrl?: string;
   }) => Promise<{ success: boolean; riderId?: string; error?: string }>;
@@ -287,12 +298,22 @@ const defaultRider: RiderProfile = {
   dlNumber: '',
   dlDoc: '',
   walletBalance: 0,
+  payoutMode: 'UPI',
   upiId: '',
+  bankAccountHolder: '',
+  bankAccountNo: '',
+  bankIfsc: '',
   rating: 5.0,
   totalDeliveries: 0,
   acceptanceRate: 100,
   vehicleType: 'Bike',
   vehicleNumber: '',
+  vehicleModel: '',
+  hasDrivingLicense: true,
+  addressStreet: '',
+  addressArea: '',
+  addressCity: '',
+  addressPincode: '',
   selectedZone: 'Robertsonpet',
   selectedZoneId: 'zone-1',
   isVerified: true,
@@ -2462,11 +2483,17 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     dob?: string;
     vehicleType?: string;
     vehicleNumber?: string;
+    vehicleModel?: string;
+    hasDrivingLicense?: boolean;
     selectedZone?: string;
     selectedZoneId?: string;
     altPhone?: string;
     email?: string;
     address?: string;
+    addressStreet?: string;
+    addressArea?: string;
+    addressCity?: string;
+    addressPincode?: string;
     aadhaarNumber?: string;
     aadhaarDocUrl?: string;
     panNumber?: string;
@@ -2474,29 +2501,49 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     dlNumber?: string;
     dlDocUrl?: string;
     upiId?: string;
+    payoutMode?: 'UPI' | 'BANK';
+    bankAccountHolder?: string;
+    bankAccountNo?: string;
+    bankIfsc?: string;
+    bankPassbookDocUrl?: string;
     avatarUrl?: string;
     selfieCapturedUrl?: string;
   }): Promise<{ success: boolean; riderId?: string; error?: string }> => {
     try {
       setSessionInvalidatedMessage(null);
+      const computedAddress = data.address || [
+        data.addressStreet,
+        data.addressArea,
+        data.addressCity,
+        data.addressPincode ? `- ${data.addressPincode}` : '',
+      ].filter(Boolean).join(', ');
+
+      const formattedVehicle = data.vehicleModel
+        ? `${data.vehicleType || 'Bike'} (${data.vehicleModel})`
+        : (data.vehicleType || 'Bike');
+
       const result = await registerRiderInDb({
         name: data.name,
         phone: data.phone,
         mpin: data.mpin,
         dob: data.dob,
-        vehicle_type: data.vehicleType || 'Bike',
+        vehicle_type: formattedVehicle,
         vehicle_number: data.vehicleNumber || '',
         selected_zone_id: data.selectedZoneId || 'zone-1',
         selected_zone_name: data.selectedZone || 'Robertsonpet',
         alt_phone: data.altPhone,
         email: data.email,
-        address: data.address,
+        address: computedAddress,
         aadhaar_number: data.aadhaarNumber,
         pan_number: data.panNumber,
         pan_doc_url: data.panDocUrl,
         dl_number: data.dlNumber,
         dl_doc_url: data.dlDocUrl,
         upi_id: data.upiId,
+        payout_mode: data.payoutMode || 'UPI',
+        bank_account_holder: data.bankAccountHolder,
+        bank_account_no: data.bankAccountNo,
+        bank_ifsc: data.bankIfsc,
         avatar_url: data.avatarUrl || data.selfieCapturedUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
         selfie_url: data.selfieCapturedUrl,
       });

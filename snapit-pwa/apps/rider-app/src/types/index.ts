@@ -113,8 +113,13 @@ export interface RiderProfile {
 
   // Financials & Wallet
   walletBalance: number;
+  payoutMode?: 'UPI' | 'BANK';
   upiId: string;
   bankName?: string;
+  bankAccountHolder?: string;
+  bankAccountNo?: string;
+  bankIfsc?: string;
+  bankPassbookDoc?: string;
   accountNumber?: string;
   ifscCode?: string;
 
@@ -127,6 +132,12 @@ export interface RiderProfile {
   onTimeRate?: number;
   vehicleType: string;
   vehicleNumber: string;
+  vehicleModel?: string;
+  hasDrivingLicense?: boolean;
+  addressStreet?: string;
+  addressArea?: string;
+  addressCity?: string;
+  addressPincode?: string;
   selectedZone: string;
   selectedZoneId?: string;
   lastZoneSwitchTimestamp?: number;

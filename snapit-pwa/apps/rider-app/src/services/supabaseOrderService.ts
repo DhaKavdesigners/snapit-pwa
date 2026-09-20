@@ -345,6 +345,10 @@ export async function registerRiderInDb(riderData: {
   dl_number?: string;
   dl_doc_url?: string;
   upi_id?: string;
+  payout_mode?: 'UPI' | 'BANK';
+  bank_account_holder?: string;
+  bank_account_no?: string;
+  bank_ifsc?: string;
   avatar_url?: string;
   selfie_url?: string;
 }): Promise<{ profile?: DbRiderProfile; riderId?: string; error?: string }> {
@@ -369,7 +373,11 @@ export async function registerRiderInDb(riderData: {
       pan_doc_url: riderData.pan_doc_url || null,
       dl_number: riderData.dl_number || null,
       dl_doc_url: riderData.dl_doc_url || null,
-      upi_id: riderData.upi_id || `${cleanPhone}@upi`,
+      upi_id: riderData.upi_id || (riderData.bank_account_no ? `bank:${riderData.bank_account_no}` : `${cleanPhone}@upi`),
+      payout_mode: riderData.payout_mode || 'UPI',
+      bank_account_holder: riderData.bank_account_holder || null,
+      bank_account_no: riderData.bank_account_no || null,
+      bank_ifsc: riderData.bank_ifsc || null,
       avatar_url: riderData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       selfie_url: riderData.selfie_url || null,
       wallet_balance: 0,
@@ -392,16 +400,32 @@ export async function registerRiderInDb(riderData: {
       .select()
       .single();
 
-    // Fallback if verification_status column is not yet migrated in Supabase
-    if (error && error.message?.includes('verification_status')) {
-      delete newRecord.verification_status;
-      const retry = await supabase
-        .from('rider_profiles')
-        .upsert(newRecord, { onConflict: 'phone' })
-        .select()
-        .single();
-      data = retry.data;
-      error = retry.error;
+    // Fallback if newly added columns do not exist yet in public.rider_profiles
+    if (error && error.message) {
+      console.warn('Upsert warning, retrying with core columns:', error.message);
+      const optionalCols = [
+        'verification_status',
+        'payout_mode',
+        'bank_account_holder',
+        'bank_account_no',
+        'bank_ifsc',
+      ];
+      let needsRetry = false;
+      for (const col of optionalCols) {
+        if (error.message.toLowerCase().includes(col.toLowerCase())) {
+          delete newRecord[col];
+          needsRetry = true;
+        }
+      }
+      if (needsRetry) {
+        const retry = await supabase
+          .from('rider_profiles')
+          .upsert(newRecord, { onConflict: 'phone' })
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
     }
 
     if (error) {
