@@ -158,10 +158,10 @@ export const BottomNav: React.FC = () => {
 
   return (
     <nav 
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] z-50"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]"
     >
-      <div className="flex justify-around items-center w-full px-2 h-14">
+      {/* Nav items row — centered up to phone width */}
+      <div className="max-w-md mx-auto flex justify-around items-center w-full px-2 h-14">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const activeTextColor = item.activeTextColor || 'text-emerald-800';
@@ -204,6 +204,8 @@ export const BottomNav: React.FC = () => {
           );
         })}
       </div>
+      {/* Safe-area spacer: fills the Android gesture nav bar area with white */}
+      <div style={{ height: 'env(safe-area-inset-bottom, 0px)', minHeight: 0, backgroundColor: '#ffffff' }} />
     </nav>
   );
 };

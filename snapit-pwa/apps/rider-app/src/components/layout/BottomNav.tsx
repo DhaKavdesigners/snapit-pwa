@@ -63,10 +63,9 @@ export const BottomNav: React.FC = () => {
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 z-50 transition-all duration-200 flex justify-center bg-white border-t border-slate-200/80 shadow-[0px_-4px_20px_rgba(15,23,42,0.05)]"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+      className="fixed bottom-0 left-0 right-0 z-50 transition-all duration-200 bg-white border-t border-slate-200/80 shadow-[0px_-4px_20px_rgba(15,23,42,0.05)]"
     >
-      <div className="w-full max-w-md h-16 px-2 flex items-center justify-around">
+      <div className="w-full max-w-md mx-auto h-16 px-2 flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = item.active;
 
@@ -115,6 +114,8 @@ export const BottomNav: React.FC = () => {
           );
         })}
       </div>
+      {/* Safe-area spacer: fills the Android gesture nav bar area with white */}
+      <div style={{ height: 'env(safe-area-inset-bottom, 0px)', minHeight: 0, backgroundColor: '#ffffff' }} />
     </nav>
   );
 };
