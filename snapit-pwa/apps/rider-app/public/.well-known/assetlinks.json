@@ -1,26 +1,10 @@
 [
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "app.vercel.snapit_kgf.twa",
-      "sha256_cert_fingerprints": [
-        "E8:2D:23:E2:0A:B3:3E:A0:C0:D8:2F:E7:1D:EB:A2:65:63:A1:B0:8B:36:20:AC:BF:4F:97:FC:2A:FF:B9:39:D6"
-      ]
+{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.snapit_rider.twa",
+        "sha256_cert_fingerprints": ["5B:36:0F:F8:EC:EF:54:DE:C4:6E:D4:B3:F6:E6:C8:CF:2D:39:BA:9D:85:DB:68:BF:F8:64:6A:24:ED:31:C5:B0"]
+      }
     }
-  },
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "app.vercel.snapit_rider.twa",
-      "sha256_cert_fingerprints": [
-        "BD:C2:E0:DA:1D:71:CC:EC:49:17:F3:9A:32:76:C0:48:02:C6:FE:90:7B:BF:AD:16:8A:3A:89:77:75:AF:E7:D1"
-      ]
-    }
-  }
 ]
