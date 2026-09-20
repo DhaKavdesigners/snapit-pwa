@@ -4,6 +4,11 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    background-color: #FFFFFF !important;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-text-primary antialiased;
     /* Hide scrollbar for cleaner look in PWA */
@@ -16,6 +21,12 @@
 }
 
 @layer utilities {
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+  }
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 8px);
+  }
   .hide-scrollbar,
   .no-scrollbar,
   .scrollbar-none {

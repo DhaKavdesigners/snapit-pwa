@@ -62,8 +62,11 @@ export const BottomNav: React.FC = () => {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 transition-all duration-200 flex justify-center">
-      <div className="w-full max-w-md h-20 px-2 pb-safe glass-nav border-t border-slate-200/80 shadow-[0px_-4px_20px_rgba(15,23,42,0.05)] rounded-t-2xl flex items-center justify-around">
+    <nav 
+      className="fixed bottom-0 left-0 right-0 z-50 transition-all duration-200 flex justify-center bg-white border-t border-slate-200/80 shadow-[0px_-4px_20px_rgba(15,23,42,0.05)]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+    >
+      <div className="w-full max-w-md h-16 px-2 flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = item.active;
 

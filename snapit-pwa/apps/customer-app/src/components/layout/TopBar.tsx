@@ -57,9 +57,11 @@ export const TopBar: React.FC = () => {
   if (rawArea.toLowerCase().endsWith(', kgf') || rawArea.toLowerCase().endsWith(' kgf')) {
     areaLine1 = rawArea.replace(/,?\s*kgf$/i, '').trim();
   }
-
   return (
-    <header className="sticky top-0 z-40 bg-white px-3 py-2 flex items-center justify-between gap-2">
+    <header 
+      className="sticky top-0 z-40 bg-white px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-100/60"
+      style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)' }}
+    >
       {/* Left: Minnit horizontal logo */}
       <Link to="/" className="shrink-0 group">
         <img

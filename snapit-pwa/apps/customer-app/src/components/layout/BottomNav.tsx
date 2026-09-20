@@ -157,7 +157,10 @@ export const BottomNav: React.FC = () => {
   const isFoodMode = activeContext === 'food';
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-gray-100/90 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] pb-safe z-50">
+    <nav 
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] z-50"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+    >
       <div className="flex justify-around items-center w-full px-2 h-14">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;

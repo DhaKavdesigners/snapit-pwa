@@ -82,10 +82,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
   const remainingStr = formatRemainingSessionTime(remainingMs);
 
   const firstName = rider?.name ? rider.name.split(' ')[0] : 'Rider';
-
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-200 flex justify-center bg-white/95 backdrop-blur-md">
-      <div className="w-full max-w-md h-16 px-4 flex items-center justify-between border-b border-slate-200/80 shadow-xs gap-2">
+    <header 
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-200 flex justify-center bg-white border-b border-slate-200/80 shadow-2xs"
+      style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)' }}
+    >
+      <div className="w-full max-w-md h-16 px-4 flex items-center justify-between gap-2">
 
         {/* Left: Avatar + Greeting / Back button */}
         {showBack ? (

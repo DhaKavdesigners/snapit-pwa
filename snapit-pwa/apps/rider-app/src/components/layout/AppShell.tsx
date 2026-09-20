@@ -29,7 +29,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const { desktopFrame } = useRider();
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-start selection:bg-emerald-100 selection:text-emerald-900">
       {/* Mobile container - perfectly centered with no horizontal shift or clipping */}
       <div
         className={`w-full max-w-md min-h-screen bg-white relative flex flex-col shadow-xl border-x border-slate-200/80 ${
@@ -46,6 +46,10 @@ export const AppShell: React.FC<AppShellProps> = ({
           className={`flex-1 min-h-0 flex flex-col w-full relative ${
             showHeader ? 'pt-16' : ''
           } ${showNav ? 'pb-24' : noPadding ? 'pb-0' : 'pb-6'} ${noPadding ? '' : 'px-4'}`}
+          style={{
+            paddingTop: showHeader ? 'calc(64px + env(safe-area-inset-top, 0px))' : undefined,
+            paddingBottom: showNav ? 'calc(76px + env(safe-area-inset-bottom, 0px))' : undefined,
+          }}
         >
           {children}
         </main>

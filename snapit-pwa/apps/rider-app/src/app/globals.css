@@ -102,10 +102,20 @@
   scrollbar-width: none;
 }
 
-body {
+/* Safe area padding utilities */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+}
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
+}
+
+html, body {
   color: #191c1e;
-  background-color: #f0f2f5;
+  background-color: #ffffff !important;
+  overscroll-behavior-y: none;
   font-family: var(--font-inter);
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Cute Scooter & Smokeout Exhaust Animations ── */

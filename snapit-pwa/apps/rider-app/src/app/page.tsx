@@ -148,6 +148,19 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [incomingOrder, declineIncomingOrder]);
 
+  if (!isHydrated) {
+    return (
+      <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+        <img
+          src="/images/minnit_cart_nd_name.png"
+          alt="Minnit Rider"
+          className="h-10 w-auto object-contain mb-3 animate-pulse"
+        />
+        <div className="w-6 h-6 border-2 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (showFirstLoginInstructions) {
     return (
       <AppShell showNav={false} noPadding={true}>
