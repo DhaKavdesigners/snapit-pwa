@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.snapit_kgf.twa",
+        "sha256_cert_fingerprints": ["C7:50:E9:89:36:8E:09:EB:CA:D1:E7:E7:5D:30:8C:F7:10:9D:B8:E7:E8:4C:AE:57:E9:AD:C8:A7:C7:6C:62:0A"]
+      }
+    }]
