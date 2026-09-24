@@ -284,53 +284,53 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
     <div className="space-y-6">
       {/* 1. Global Financial Overview KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gross Sales (GMV)</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gross Sales (GMV)</span>
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black text-white mt-2">₹{globalKPIs.totalGMVRupees.toLocaleString()}</p>
+          <p className="text-3xl font-black text-slate-900 mt-2">₹{globalKPIs.totalGMVRupees.toLocaleString()}</p>
           <p className="text-xs text-slate-500 mt-1 font-medium">
             {globalKPIs.totalFulfilledCount} fulfilled store orders
           </p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pending Payout Due</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Pending Payout Due</span>
+            <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black text-amber-400 mt-2">₹{globalKPIs.pendingPayoutRupees.toLocaleString()}</p>
+          <p className="text-3xl font-black text-amber-600 mt-2">₹{globalKPIs.pendingPayoutRupees.toLocaleString()}</p>
           <p className="text-xs text-slate-500 mt-1 font-medium">
             To be transferred via UPI / Bank
           </p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Total Settled</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+            <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">Total Settled</span>
+            <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black text-blue-400 mt-2">₹{globalKPIs.totalSettledRupees.toLocaleString()}</p>
+          <p className="text-3xl font-black text-slate-900 mt-2">₹{globalKPIs.totalSettledRupees.toLocaleString()}</p>
           <p className="text-xs text-slate-500 mt-1 font-medium">
             Verified payouts executed
           </p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Platform Take Rate</span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+            <span className="text-xs font-bold text-purple-800 uppercase tracking-wider">Platform Take Rate</span>
+            <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black text-purple-400 mt-2">0%</p>
+          <p className="text-3xl font-black text-slate-900 mt-2">0%</p>
           <p className="text-xs text-slate-500 mt-1 font-medium">
             Zero-commission merchant promo
           </p>
@@ -338,15 +338,15 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
       </div>
 
       {/* 2. Filter & Selection Toolbar */}
-      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 bg-slate-900 p-4 rounded-2xl border border-slate-800">
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           {/* Store Selector */}
           <div className="flex items-center gap-2">
-            <Store className="w-4 h-4 text-emerald-400 shrink-0" />
+            <Store className="w-4 h-4 text-emerald-600 shrink-0" />
             <select
               value={selectedStoreId}
               onChange={(e) => setSelectedStoreId(e.target.value)}
-              className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-emerald-500 cursor-pointer min-w-[200px]"
+              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white cursor-pointer min-w-[200px]"
             >
               <option value="ALL">🏪 All Partner Stores ({stores.length})</option>
               {stores.map((s) => (
@@ -359,11 +359,11 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
 
           {/* Date Period Selector */}
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white cursor-pointer"
             >
               <option value="TODAY">📅 Today (11:00 PM Settlement)</option>
               <option value="YESTERDAY">Yesterday</option>
@@ -377,7 +377,7 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
           <select
             value={paymentModeFilter}
             onChange={(e) => setPaymentModeFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer"
+            className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white cursor-pointer"
           >
             <option value="ALL">💳 All Payment Modes</option>
             <option value="UPI">Prepaid UPI Only</option>
@@ -388,7 +388,7 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer"
+            className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white cursor-pointer"
           >
             <option value="ALL">📦 All Orders Status</option>
             <option value="DELIVERED">✅ Delivered Only</option>
@@ -400,9 +400,9 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer border border-slate-700"
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer border border-slate-200 shadow-xs"
           >
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -411,12 +411,12 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
       {/* 3. Individual Store Settlement & Payout Summary Cards */}
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
-          <h3 className="font-black text-sm text-white uppercase tracking-wider flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-emerald-400" />
+          <h3 className="font-black text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-emerald-600" />
             <span>Store Settlement Summary & Payout Control</span>
           </h3>
-          <span className="text-xs text-slate-400">
-            Cycle: <strong className="text-white">{dateFilter}</strong>
+          <span className="text-xs text-slate-500">
+            Cycle: <strong className="text-slate-900">{dateFilter}</strong>
           </span>
         </div>
 
@@ -431,13 +431,13 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
             return (
               <div
                 key={store.id}
-                className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg flex flex-col justify-between space-y-4 hover:border-slate-700 transition-all"
+                className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition-all"
               >
                 <div>
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-white p-1 border border-slate-700 overflow-hidden shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-50 p-1 border border-slate-200 overflow-hidden shrink-0">
                         <img
                           src={store.logo_url || "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300"}
                           alt={store.name}
@@ -449,12 +449,12 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                         />
                       </div>
                       <div>
-                        <h4 className="font-black text-sm text-white leading-tight">{store.name}</h4>
+                        <h4 className="font-black text-sm text-slate-900 leading-tight">{store.name}</h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[10px] text-slate-400 font-bold">
+                          <span className="font-mono text-[10px] text-slate-500 font-bold">
                             {store.id}
                           </span>
-                          <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                          <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
                             {store.category || "FOOD"}
                           </span>
                         </div>
@@ -465,10 +465,10 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                     <span
                       className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${
                         sf.isSettled
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300"
                           : sf.netPayableRupees > 0
-                          ? "bg-amber-500/20 text-amber-300 border-amber-500/30 animate-pulse"
-                          : "bg-slate-800 text-slate-400 border-slate-700"
+                          ? "bg-amber-50 text-amber-700 border-amber-300 animate-pulse"
+                          : "bg-slate-100 text-slate-500 border-slate-200"
                       }`}
                     >
                       {sf.isSettled ? "✓ Settled" : sf.netPayableRupees > 0 ? "● Due for Payout" : "No Sales"}
@@ -476,43 +476,43 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                   </div>
 
                   {/* Financial Breakdown Box */}
-                  <div className="mt-4 bg-slate-950 p-3 rounded-2xl border border-slate-800/80 space-y-2 text-xs">
-                    <div className="flex items-center justify-between text-slate-300">
-                      <span className="text-slate-400">Fulfilled Orders:</span>
-                      <span className="font-bold text-white">{sf.fulfilledOrdersCount} orders</span>
+                  <div className="mt-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2 text-xs">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-500">Fulfilled Orders:</span>
+                      <span className="font-bold text-slate-900">{sf.fulfilledOrdersCount} orders</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-slate-300">
-                      <span className="text-slate-400">Gross Goods Sales:</span>
-                      <span className="font-bold text-white">₹{sf.grossRupees.toLocaleString()}</span>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-500">Gross Goods Sales:</span>
+                      <span className="font-bold text-slate-900">₹{sf.grossRupees.toLocaleString()}</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-slate-300">
-                      <span className="text-slate-400">Platform Fee (0%):</span>
-                      <span className="font-bold text-slate-500">₹0</span>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-500">Platform Fee (0%):</span>
+                      <span className="font-bold text-slate-400">₹0</span>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                      <span className="font-bold text-slate-200">Net Amount to Store:</span>
-                      <span className="font-black text-emerald-400 text-base">
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                      <span className="font-bold text-slate-800">Net Amount to Store:</span>
+                      <span className="font-black text-emerald-600 text-base">
                         ₹{sf.netPayableRupees.toLocaleString()}
                       </span>
                     </div>
                   </div>
 
                   {/* Bank / UPI Payout Info */}
-                  <div className="mt-3 text-xs text-slate-400 space-y-1">
+                  <div className="mt-3 text-xs text-slate-500 space-y-1">
                     <div className="flex items-center justify-between">
                       <span>UPI ID / Transfer Account:</span>
-                      <div className="flex items-center gap-1 font-mono font-bold text-white">
+                      <div className="flex items-center gap-1 font-mono font-bold text-slate-900">
                         <span>{store.upi_id || upiSuggested}</span>
                         <button
                           onClick={() => handleCopy(store.upi_id || upiSuggested, `upi_${store.id}`)}
-                          className="text-slate-500 hover:text-white cursor-pointer"
+                          className="text-slate-400 hover:text-slate-600 cursor-pointer"
                           title="Copy UPI ID"
                         >
                           {copiedKey === `upi_${store.id}` ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
+                            <Check className="w-3 h-3 text-emerald-600" />
                           ) : (
                             <CreditCard className="w-3 h-3" />
                           )}
@@ -523,13 +523,13 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                 </div>
 
                 {/* Settlement Action Button */}
-                <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
+                <div className="pt-3 border-t border-slate-200 flex items-center gap-2">
                   <button
                     onClick={() => handleOpenPayout(sf)}
-                    className={`w-full py-2 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
+                    className={`w-full py-2 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
                       sf.isSettled
-                        ? "bg-slate-800 hover:bg-slate-700 text-slate-300"
-                        : "bg-emerald-500 hover:bg-emerald-400 text-slate-950"
+                        ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                        : "bg-emerald-600 hover:bg-emerald-500 text-white"
                     }`}
                   >
                     <Receipt className="w-3.5 h-3.5" />
@@ -543,14 +543,14 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
       </div>
 
       {/* 4. Granular Itemized Transaction & Orders Ledger Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="font-black text-base text-white flex items-center gap-2">
-              <FileText className="w-4 h-4 text-emerald-400" />
+            <h3 className="font-black text-base text-slate-900 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-emerald-600" />
               <span>Itemized Order Transactions Ledger</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Live audit trail of all store sales, items ordered, and payment statuses
             </p>
           </div>
@@ -562,15 +562,15 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
               placeholder="Search order ID, customer, item..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
             />
           </div>
         </div>
 
         {/* Ledger Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 text-[10px] uppercase font-black tracking-wider border-b border-slate-800">
+          <table className="w-full text-left text-xs text-slate-700">
+            <thead className="bg-slate-100/80 text-slate-600 text-[10px] uppercase font-black tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3">Order ID</th>
                 <th className="px-4 py-3">Timestamp</th>
@@ -580,10 +580,10 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                 <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Gross Total</th>
-                <th className="px-4 py-3 text-right font-black text-emerald-400">Store Payout</th>
+                <th className="px-4 py-3 text-right font-black text-emerald-600">Store Payout</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-slate-500 text-xs">
@@ -600,42 +600,42 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                   const isRejected = ["REJECTED", "CANCELLED"].includes(o.status);
 
                   return (
-                    <tr key={o.id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="px-4 py-3 font-mono font-black text-white">{o.id}</td>
-                      <td className="px-4 py-3 text-slate-400 text-[11px] whitespace-nowrap">
+                    <tr key={o.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-4 py-3 font-mono font-black text-slate-900">{o.id}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[11px] whitespace-nowrap">
                         {new Date(o.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        <span className="block text-[10px] text-slate-500">
+                        <span className="block text-[10px] text-slate-400">
                           {new Date(o.created_at).toLocaleDateString()}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-bold text-white block truncate max-w-[140px]">
+                        <span className="font-bold text-slate-900 block truncate max-w-[140px]">
                           {storeObj?.name || o.store_id}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono">{o.store_id}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{o.store_id}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-medium text-slate-200 block truncate max-w-[130px]">
+                        <span className="font-medium text-slate-800 block truncate max-w-[130px]">
                           {o.recipient_name || "Registered Customer"}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono">
+                        <span className="text-[10px] text-slate-400 font-mono">
                           {o.recipient_phone || "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3 max-w-xs">
                         <div className="space-y-0.5">
                           {(o.items || []).map((it: any, idx: number) => (
-                            <div key={idx} className="text-[11px] text-slate-300 truncate">
-                              <span className="font-bold text-white">{it.quantity}x</span> {it.name}
+                            <div key={idx} className="text-[11px] text-slate-700 truncate">
+                              <span className="font-bold text-slate-900">{it.quantity}x</span> {it.name}
                             </div>
                           ))}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300">
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
                           {o.payment_method || "UPI_NOW"}
                         </span>
-                        <span className="block text-[9px] text-emerald-400 mt-0.5 font-bold">
+                        <span className="block text-[9px] text-emerald-600 mt-0.5 font-bold">
                           {o.payment_status || "PAID"}
                         </span>
                       </td>
@@ -643,20 +643,20 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                         <span
                           className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
                             isFulfilled
-                              ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-300"
                               : isRejected
-                              ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-                              : "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                              ? "bg-rose-50 text-rose-700 border-rose-300"
+                              : "bg-blue-50 text-blue-700 border-blue-300"
                           }`}
                         >
                           {o.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-slate-300">
+                      <td className="px-4 py-3 text-right font-mono text-slate-700">
                         ₹{goodsTotalRupees}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono font-black text-emerald-400 text-sm">
-                        {isFulfilled ? `₹${goodsTotalRupees}` : <span className="text-slate-500 text-xs">₹0</span>}
+                      <td className="px-4 py-3 text-right font-mono font-black text-emerald-600 text-sm">
+                        {isFulfilled ? `₹${goodsTotalRupees}` : <span className="text-slate-400 text-xs">₹0</span>}
                       </td>
                     </tr>
                   );
@@ -669,15 +669,15 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
 
       {/* 5. Settlement Payout History Audit Log */}
       {settlements.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-3">
-          <h3 className="font-black text-sm text-white uppercase tracking-wider flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+          <h3 className="font-black text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>Completed Payout Audit History</span>
           </h3>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 text-[10px] uppercase font-black tracking-wider border-b border-slate-800">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-100/80 text-slate-600 text-[10px] uppercase font-black tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-2.5">Date & Time</th>
                   <th className="px-4 py-2.5">Store</th>
@@ -688,26 +688,26 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                   <th className="px-4 py-2.5">Settled By</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {settlements.map((setRecord) => (
-                  <tr key={setRecord.id} className="hover:bg-slate-950/40">
-                    <td className="px-4 py-2.5 text-slate-400 font-mono text-[11px]">
+                  <tr key={setRecord.id} className="hover:bg-slate-50/80">
+                    <td className="px-4 py-2.5 text-slate-500 font-mono text-[11px]">
                       {new Date(setRecord.settled_at).toLocaleString()}
                     </td>
-                    <td className="px-4 py-2.5 font-bold text-white">{setRecord.store_name}</td>
-                    <td className="px-4 py-2.5 font-black text-emerald-400 font-mono text-sm">
+                    <td className="px-4 py-2.5 font-bold text-slate-900">{setRecord.store_name}</td>
+                    <td className="px-4 py-2.5 font-black text-emerald-600 font-mono text-sm">
                       ₹{setRecord.amount_rupees.toLocaleString()}
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-amber-300 font-bold">
+                    <td className="px-4 py-2.5 font-mono text-amber-800 font-bold">
                       {setRecord.utr_reference}
                     </td>
                     <td className="px-4 py-2.5">
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
                         {setRecord.payment_method}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-slate-400">{setRecord.period_label}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{setRecord.settled_by}</td>
+                    <td className="px-4 py-2.5 text-slate-500">{setRecord.period_label}</td>
+                    <td className="px-4 py-2.5 text-slate-400">{setRecord.settled_by}</td>
                   </tr>
                 ))}
               </tbody>
@@ -725,23 +725,23 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
         maxWidth="md"
       >
         <form onSubmit={handleConfirmPayout} className="space-y-4">
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2.5 text-xs">
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Merchant Store:</span>
-              <span className="font-bold text-white">{payoutModalStore?.name}</span>
+              <span className="text-slate-500">Merchant Store:</span>
+              <span className="font-bold text-slate-900">{payoutModalStore?.name}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Store Phone:</span>
-              <span className="font-mono text-white">{payoutModalStore?.phone || "—"}</span>
+              <span className="text-slate-500">Store Phone:</span>
+              <span className="font-mono text-slate-900">{payoutModalStore?.phone || "—"}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Reconciliation Period:</span>
-              <span className="font-bold text-amber-400">{dateFilter}</span>
+              <span className="text-slate-500">Reconciliation Period:</span>
+              <span className="font-bold text-amber-700">{dateFilter}</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Payout Amount in Rupees (₹) *
             </label>
             <input
@@ -750,17 +750,17 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
               min="1"
               value={payoutForm.amount_rupees}
               onChange={(e) => setPayoutForm({ ...payoutForm, amount_rupees: Number(e.target.value) })}
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm font-black text-emerald-400 focus:outline-none focus:border-emerald-500 font-mono"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm font-black text-emerald-600 focus:outline-none focus:border-emerald-500 font-mono"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Payment Method</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Payment Method</label>
               <select
                 value={payoutForm.payment_method}
                 onChange={(e) => setPayoutForm({ ...payoutForm, payment_method: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               >
                 <option value="UPI">Direct UPI (GPay / PhonePe)</option>
                 <option value="IMPS">Bank Transfer (IMPS)</option>
@@ -770,40 +770,40 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">UTR / Ref Number *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">UTR / Ref Number *</label>
               <input
                 type="text"
                 required
                 value={payoutForm.utr_reference}
                 onChange={(e) => setPayoutForm({ ...payoutForm, utr_reference: e.target.value })}
                 placeholder="e.g. UPI/425619873421"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Notes / Audit Memo</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Notes / Audit Memo</label>
             <input
               type="text"
               value={payoutForm.notes}
               onChange={(e) => setPayoutForm({ ...payoutForm, notes: e.target.value })}
               placeholder="e.g. Settled after 11:00 PM reconciliation"
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => setPayoutModalStore(null)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
             >
               Confirm Settlement & Save Record →
             </button>

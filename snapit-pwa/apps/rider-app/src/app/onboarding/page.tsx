@@ -47,6 +47,7 @@ export default function OnboardingPage() {
     loginWithRiderId,
     sessionInvalidatedMessage,
     clearSessionInvalidatedMessage,
+    setOnlineStatus,
   } = useRider();
   const [step, setStep] = useState<
     'splash' | 'signin' | 'personal' | 'selfie' | 'vehicle' | 'payout' | 'kyc' | 'zone' | 'reg_waiting' | 'approved' | 'rejected' | 'reg_success' | 'status'
@@ -1742,10 +1743,25 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => {
+                  try {
+                    localStorage.removeItem('minnit_active_shift_session');
+                    localStorage.removeItem('snapit_online_status_v2');
+                    localStorage.removeItem('snapit_active_order_v2');
+                    localStorage.removeItem('snapit_incoming_order_v2');
+                    localStorage.removeItem('snapit_earnings_v2');
+                    localStorage.removeItem('snapit_orders_history_v2');
+                    localStorage.removeItem('snapit_handled_orders_v2');
+                    localStorage.removeItem('snapit_cancelled_orders_v2');
+                    localStorage.removeItem('snapit_rider_break_v1');
+                  } catch {}
+
+                  setOnlineStatus(false);
                   updateRiderProfile({
                     isAuthenticated: true,
                     isVerified: false,
                     verificationStatus: 'PENDING',
+                    walletBalance: 0,
+                    totalDeliveries: 0,
                   });
                   router.push('/');
                 }}

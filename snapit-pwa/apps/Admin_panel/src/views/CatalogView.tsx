@@ -109,7 +109,7 @@ export const CatalogView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-2xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -117,7 +117,7 @@ export const CatalogView: React.FC = () => {
             placeholder="Search items by name, subcategory..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
           />
         </div>
 
@@ -126,7 +126,7 @@ export const CatalogView: React.FC = () => {
           <select
             value={selectedStoreId}
             onChange={(e) => setSelectedStoreId(e.target.value)}
-            className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+            className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white cursor-pointer"
           >
             <option value="ALL">All Stores ({stores.length})</option>
             {stores.map((s) => (
@@ -137,7 +137,7 @@ export const CatalogView: React.FC = () => {
           </select>
 
           {/* Stock Filter */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
             {[
               { id: "ALL", label: `All (${products.length})` },
               { id: "IN_STOCK", label: "In Stock" },
@@ -148,8 +148,8 @@ export const CatalogView: React.FC = () => {
                 onClick={() => setStockFilter(tab.id)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                   stockFilter === tab.id
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {tab.label}
@@ -159,7 +159,7 @@ export const CatalogView: React.FC = () => {
 
           <button
             onClick={handleOpenAddProduct}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Item</span>
@@ -168,10 +168,10 @@ export const CatalogView: React.FC = () => {
       </div>
 
       {/* Catalog Table */}
-      <div className="rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-3xl bg-white border border-slate-200/90 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
+            <thead className="bg-slate-100/80 text-slate-600 uppercase text-[10px] font-bold border-b border-slate-200">
               <tr>
                 <th className="px-5 py-3.5">Product</th>
                 <th className="px-4 py-3.5">Store / Counter</th>
@@ -181,17 +181,17 @@ export const CatalogView: React.FC = () => {
                 <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {filteredProducts.map((p) => {
                 const store = stores.find((s) => s.id === p.store_id);
                 const inStock = p.in_stock !== false;
 
                 return (
-                  <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
+                  <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                     {/* Product Name & Image */}
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white p-0.5 border border-slate-700 overflow-hidden shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 p-0.5 border border-slate-200 overflow-hidden shrink-0">
                           <img
                             src={p.image_url || "/images/products/surf_excel.png"}
                             alt={p.name}
@@ -203,8 +203,8 @@ export const CatalogView: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <p className="font-bold text-white text-xs leading-tight">{p.name}</p>
-                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                          <p className="font-bold text-slate-900 text-xs leading-tight">{p.name}</p>
+                          <p className="text-[10px] text-slate-500 font-medium mt-0.5">
                             {p.sub_category || p.category || "General"}
                           </p>
                         </div>
@@ -213,8 +213,8 @@ export const CatalogView: React.FC = () => {
 
                     {/* Store */}
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-300">
-                        <Store className="w-3.5 h-3.5 text-purple-400" />
+                      <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                        <Store className="w-3.5 h-3.5 text-emerald-600" />
                         <span>{store?.name || p.store_id}</span>
                       </div>
                     </td>
@@ -229,7 +229,7 @@ export const CatalogView: React.FC = () => {
                           }
                         }}
                         title="Click to quickly edit price"
-                        className="font-mono font-black text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                        className="font-mono font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/70 px-2 py-1 rounded-lg transition-colors cursor-pointer"
                       >
                         ₹{p.price}
                       </button>
@@ -241,8 +241,8 @@ export const CatalogView: React.FC = () => {
                         onClick={() => toggleProductStock(p.id, !inStock)}
                         className={`px-3 py-1 rounded-full text-[10px] font-black cursor-pointer transition-all border ${
                           inStock
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                            : "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                            : "bg-rose-50 text-rose-700 border-rose-300"
                         }`}
                       >
                         {inStock ? "🟢 In Stock" : "🔴 Out of Stock"}
@@ -250,7 +250,7 @@ export const CatalogView: React.FC = () => {
                     </td>
 
                     {/* Delivery ETA */}
-                    <td className="px-4 py-3.5 text-slate-400 font-mono">
+                    <td className="px-4 py-3.5 text-slate-500 font-mono">
                       ⚡ {p.delivery_eta_minutes || 10} mins
                     </td>
 
@@ -258,14 +258,14 @@ export const CatalogView: React.FC = () => {
                     <td className="px-4 py-3.5 text-right space-x-1">
                       <button
                         onClick={() => handleOpenEditProduct(p)}
-                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-lg transition-colors cursor-pointer border border-slate-200"
                         title="Edit Item"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteProduct(p.id)}
-                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer border border-rose-200"
                         title="Delete Item"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -292,25 +292,25 @@ export const CatalogView: React.FC = () => {
       >
         <form onSubmit={handleSaveProduct} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Product Title *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Product Title *</label>
             <input
               type="text"
               required
               value={productForm.name}
               onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
               placeholder="e.g. Nandini Pasteurised Toned Milk 500ml"
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Partner Store *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Partner Store *</label>
               <select
                 required
                 value={productForm.store_id}
                 onChange={(e) => setProductForm({ ...productForm, store_id: e.target.value })}
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               >
                 {stores.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -321,66 +321,66 @@ export const CatalogView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Price (₹) *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Price (₹) *</label>
               <input
                 type="number"
                 required
                 value={productForm.price}
                 onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Category</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
               <input
                 type="text"
                 value={productForm.category}
                 onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
                 placeholder="Grocery / Food"
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Subcategory</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Subcategory</label>
               <input
                 type="text"
                 value={productForm.sub_category}
                 onChange={(e) => setProductForm({ ...productForm, sub_category: e.target.value })}
                 placeholder="e.g. Dairy, Oils, Rice"
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Image URL</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Image URL</label>
             <input
               type="text"
               value={productForm.image_url}
               onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })}
               placeholder="/images/products/..."
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => {
                 setAddProductModal(false);
                 setEditProductModal(null);
               }}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
             >
               {editProductModal ? "Save Item" : "Create Item"}
             </button>

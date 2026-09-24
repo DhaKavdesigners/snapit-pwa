@@ -23,8 +23,8 @@ export const Badge: React.FC<BadgeProps> = ({ status, type = "status", className
       <span
         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider ${
           isFood
-            ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-            : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+            ? "bg-amber-50 text-amber-800 border border-amber-300"
+            : "bg-emerald-50 text-emerald-800 border border-emerald-300"
         } ${className}`}
       >
         <span>{isFood ? "🍽️" : "🛒"}</span>
@@ -38,25 +38,25 @@ export const Badge: React.FC<BadgeProps> = ({ status, type = "status", className
     switch (s?.toUpperCase()) {
       case "PLACED":
       case "PENDING":
-        return "bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse";
+        return "bg-amber-50 text-amber-800 border-amber-300 animate-pulse";
       case "ACCEPTED":
       case "PREPARING":
-        return "bg-blue-500/20 text-blue-300 border-blue-500/40";
+        return "bg-blue-50 text-blue-800 border-blue-300";
       case "READY":
       case "READY_FOR_PICKUP":
       case "OUT_OF_SHOP":
-        return "bg-purple-500/20 text-purple-300 border-purple-500/40";
+        return "bg-purple-50 text-purple-800 border-purple-300";
       case "OUT_FOR_DELIVERY":
       case "PICKED_UP":
       case "HANDED_OVER":
-        return "bg-indigo-500/20 text-indigo-300 border-indigo-500/40";
+        return "bg-indigo-50 text-indigo-800 border-indigo-300";
       case "DELIVERED":
-        return "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+        return "bg-emerald-50 text-emerald-800 border-emerald-300 font-bold";
       case "CANCELLED":
       case "REJECTED":
-        return "bg-rose-500/20 text-rose-300 border-rose-500/40";
+        return "bg-rose-50 text-rose-800 border-rose-300";
       default:
-        return "bg-slate-700/50 text-slate-300 border-slate-600";
+        return "bg-slate-100 text-slate-700 border-slate-300";
     }
   };
 

@@ -200,7 +200,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
             <div
               className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 relative flex items-center shrink-0 ${
                 isPendingVerification
-                  ? 'bg-amber-200'
+                  ? 'bg-slate-200 border border-slate-300 cursor-not-allowed'
                   : isBreakActive
                   ? 'bg-amber-400'
                   : isOnline
@@ -210,7 +210,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
             >
               <div
                 className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-out ${
-                  isOnline || isBreakActive ? 'translate-x-4' : 'translate-x-0'
+                  !isPendingVerification && (isOnline || isBreakActive) ? 'translate-x-4' : 'translate-x-0'
                 }`}
               />
             </div>

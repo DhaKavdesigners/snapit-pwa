@@ -83,16 +83,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-black text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                 <span>Live Active Orders ({activeOrders.length})</span>
               </h2>
-              <p className="text-xs text-slate-400">Real-time status updates across all KGF merchant counters</p>
+              <p className="text-xs text-slate-500">Real-time status updates across all KGF merchant counters</p>
             </div>
 
             <button
               onClick={() => setActiveTab("orders")}
-              className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
             >
               <span>View Control Room</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -100,10 +100,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
           </div>
 
           {activeOrders.length === 0 ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center">
-              <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-80" />
-              <p className="text-sm font-bold text-white">All Clear! No Pending Orders</p>
-              <p className="text-xs text-slate-400 mt-1">All incoming orders have been fulfilled or delivered.</p>
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xs">
+              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-90" />
+              <p className="text-sm font-bold text-slate-900">All Clear! No Pending Orders</p>
+              <p className="text-xs text-slate-500 mt-1">All incoming orders have been fulfilled or delivered.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -114,11 +114,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
                 return (
                   <div
                     key={order.id}
-                    className="rounded-2xl bg-slate-900/90 border border-slate-800 p-4 hover:border-slate-700 transition-all shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="rounded-2xl bg-white border border-slate-200 p-4 hover:border-emerald-500/50 hover:shadow-md transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs font-bold text-emerald-400">
+                        <span className="font-mono text-xs font-black text-emerald-700">
                           #{order.id.slice(0, 8)}
                         </span>
                         <Badge status={order.status} />
@@ -131,29 +131,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
                       </div>
 
                       <div className="flex items-center gap-4 text-xs">
-                        <div className="flex items-center gap-1.5 text-slate-300 font-bold">
-                          <Store className="w-3.5 h-3.5 text-purple-400" />
+                        <div className="flex items-center gap-1.5 text-slate-800 font-bold">
+                          <Store className="w-3.5 h-3.5 text-purple-600" />
                           <span className="truncate">{store?.name || order.store_id}</span>
                         </div>
 
-                        <div className="flex items-center gap-1 text-slate-400">
-                          <Bike className="w-3.5 h-3.5 text-blue-400" />
+                        <div className="flex items-center gap-1 text-slate-600">
+                          <Bike className="w-3.5 h-3.5 text-blue-600" />
                           <span>{rider?.name || "Unassigned"}</span>
                         </div>
                       </div>
 
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="text-[11px] text-slate-500 truncate">
                         {order.items?.map((i) => `${i.name} (x${i.quantity})`).join(", ")}
                       </p>
                     </div>
 
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-slate-800 pt-2 sm:pt-0 shrink-0">
-                      <span className="text-base font-black text-white font-mono">
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 shrink-0">
+                      <span className="text-base font-black text-slate-900 font-mono">
                         ₹{order.estimated_total}
                       </span>
                       <button
                         onClick={() => setActiveTab("orders")}
-                        className="text-xs font-bold bg-slate-800 hover:bg-emerald-600 hover:text-white text-emerald-400 px-3 py-1.5 rounded-lg border border-slate-700 transition-all cursor-pointer"
+                        className="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-xs transition-all cursor-pointer"
                       >
                         Dispatch / View →
                       </button>
@@ -168,15 +168,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
         {/* Right Column: Fleet Status & Quick Actions */}
         <div className="space-y-6">
           {/* Active Fleet Preview */}
-          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4 shadow-lg">
+          <div className="rounded-2xl bg-white border border-slate-200 p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-sm text-white flex items-center gap-2">
-                <Bike className="w-4 h-4 text-blue-400" />
+              <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                <Bike className="w-4 h-4 text-blue-600" />
                 <span>Live Fleet Roster</span>
               </h3>
               <button
                 onClick={() => setActiveTab("fleet")}
-                className="text-xs text-blue-400 hover:text-blue-300 font-bold cursor-pointer"
+                className="text-xs text-blue-600 hover:text-blue-700 font-bold cursor-pointer"
               >
                 Manage ({riders.length}) →
               </button>
@@ -186,27 +186,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
               {riders.slice(0, 4).map((rider) => (
                 <div
                   key={rider.id}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs"
                 >
                   <div className="flex items-center gap-2.5">
                     <div
                       className={`w-2.5 h-2.5 rounded-full ${
-                        rider.is_online ? (rider.is_busy ? "bg-amber-400" : "bg-emerald-400") : "bg-slate-600"
+                        rider.is_online ? (rider.is_busy ? "bg-amber-500" : "bg-emerald-500") : "bg-slate-400"
                       }`}
                     />
                     <div>
-                      <p className="font-bold text-white">{rider.name}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">{rider.phone}</p>
+                      <p className="font-bold text-slate-900">{rider.name}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">{rider.phone}</p>
                     </div>
                   </div>
 
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                       rider.is_online
                         ? rider.is_busy
-                          ? "bg-amber-500/20 text-amber-300"
-                          : "bg-emerald-500/20 text-emerald-300"
-                        : "bg-slate-800 text-slate-500"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-slate-100 text-slate-500 border-slate-200"
                     }`}
                   >
                     {rider.is_online ? (rider.is_busy ? "On Delivery" : "Available") : "Offline"}
@@ -217,30 +217,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
           </div>
 
           {/* Quick Partner Summary */}
-          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3 shadow-lg">
-            <h3 className="font-black text-sm text-white flex items-center gap-2">
-              <Store className="w-4 h-4 text-purple-400" />
+          <div className="rounded-2xl bg-white border border-slate-200 p-5 space-y-3 shadow-xs">
+            <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
+              <Store className="w-4 h-4 text-purple-600" />
               <span>Merchant Counters</span>
             </h3>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <p className="text-slate-400 font-medium">Grocery Stores</p>
-                <p className="text-lg font-black text-emerald-400">
-                  {stores.filter((s) => s.category === "grocery").length}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <p className="text-slate-500 font-medium">Grocery Stores</p>
+                <p className="text-lg font-black text-emerald-600">
+                  {stores.filter((s) => s.category?.toLowerCase() === "grocery").length}
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <p className="text-slate-400 font-medium">Restaurants</p>
-                <p className="text-lg font-black text-amber-400">
-                  {stores.filter((s) => s.category === "food").length}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <p className="text-slate-500 font-medium">Restaurants</p>
+                <p className="text-lg font-black text-amber-600">
+                  {stores.filter((s) => s.category?.toLowerCase() === "food").length}
                 </p>
               </div>
             </div>
 
             <button
               onClick={() => setActiveTab("merchants")}
-              className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-xs"
             >
               Open Merchant Directory →
             </button>

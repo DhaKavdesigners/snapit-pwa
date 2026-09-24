@@ -50,7 +50,7 @@ export const AdminLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-100 text-slate-900">
       {/* Sidebar */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
@@ -58,7 +58,7 @@ export const AdminLayout: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopHeader title={titles[activeTab].title} subtitle={titles[activeTab].subtitle} />
 
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-950/60">
+        <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
           {activeTab === "dashboard" && <DashboardView setActiveTab={setActiveTab} />}
           {activeTab === "orders" && <OrdersControlView />}
           {activeTab === "merchants" && (

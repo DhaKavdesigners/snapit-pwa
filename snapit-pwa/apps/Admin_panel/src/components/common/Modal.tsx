@@ -33,23 +33,23 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
         onClick={onClose}
       />
 
       {/* Modal Card */}
       <div
-        className={`relative w-full ${maxWidthClass} rounded-3xl bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200`}
+        className={`relative w-full ${maxWidthClass} rounded-3xl bg-white border border-slate-200 shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200 text-slate-900`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50/80">
           <div>
-            <h3 className="font-black text-lg text-white tracking-tight">{title}</h3>
-            {subtitle && <p className="text-xs text-slate-400 font-medium mt-0.5">{subtitle}</p>}
+            <h3 className="font-black text-lg text-slate-900 tracking-tight">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 font-medium mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

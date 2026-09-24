@@ -11,6 +11,7 @@ import { EndSessionEarlyModal } from '@/components/dashboard/EndSessionEarlyModa
 import { SessionCompleteCard } from '@/components/dashboard/SessionCompleteCard';
 import { BreakOrderPreviewCard } from '@/components/delivery/BreakOrderPreviewCard';
 import { FeaturePromoBanner } from '@/components/dashboard/FeaturePromoBanner';
+import { RiderInstructionSlider } from '@/components/dashboard/RiderInstructionSlider';
 import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [isEndEarlyModalOpen, setIsEndEarlyModalOpen] = useState(false);
   const [showFirstLoginInstructions, setShowFirstLoginInstructions] = useState(false);
+  const [showManualGuideModal, setShowManualGuideModal] = useState(false);
 
   // Check for first login after approval to show instructions automatically
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function DashboardPage() {
   };
 
   const isBreakActive = Boolean(riderBreak && !riderBreak.endedAt);
+  const isPendingVerification = rider.isVerified === false || rider.verificationStatus === 'PENDING';
 
   // Redirect to onboarding if not registered or not authenticated
   useEffect(() => {
@@ -193,7 +196,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Earnings</p>
               <p className="text-[18px] font-black text-slate-900 font-mono leading-tight mt-0.5">
-                ₹{earnings.today.toLocaleString()}
+                ₹{isPendingVerification ? '0' : earnings.today.toLocaleString()}
               </p>
             </div>
           </Link>
@@ -209,7 +212,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Delivered</p>
               <p className="text-[18px] font-black text-slate-900 font-mono leading-tight mt-0.5">
-                {earnings.todayDeliveries}
+                {isPendingVerification ? 0 : earnings.todayDeliveries}
               </p>
             </div>
           </Link>
@@ -222,7 +225,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Duty Time</p>
               <p className="text-[18px] font-black text-slate-900 font-mono leading-tight mt-0.5">
-                {onlineTimeStr}
+                {isPendingVerification ? '0h 00m' : onlineTimeStr}
               </p>
             </div>
           </div>
@@ -231,219 +234,216 @@ export default function DashboardPage() {
 
         {/* ── 3. MAIN INTERACTIVE ORDER / SESSION COCKPIT ── */}
 
-        {/* ─── SCENARIO A: INCOMING ORDER ALERT ─── */}
-        {incomingOrder && !activeOrder && (
-          <div className="bg-white text-slate-900 rounded-[28px] p-5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.12)] border border-slate-200/90 relative overflow-hidden animate-slide-up space-y-4 ring-2 ring-emerald-500/20">
-            {/* Top Timer Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-1000 ease-linear shadow-xs"
-                style={{ width: `${(countdown / 25) * 100}%` }}
-              />
-            </div>
-
-            {/* Header: Offer Badge + Payout */}
-            <div className="flex items-center justify-between pt-1">
-              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-black uppercase px-3 py-1 rounded-full border border-emerald-200">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-                </span>
-                New Delivery Offer • #{formatOrderNumber(incomingOrder.orderNumber)} • {countdown}s
-              </span>
-
-              <div className="flex items-baseline gap-1.5 bg-emerald-50 border border-emerald-200/90 px-3 py-1 rounded-xl shadow-2xs">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
-                  Payout
-                </span>
-                <span className="text-xl font-black text-emerald-600 font-mono">
-                  ₹{incomingOrder.earnings || 45}
-                </span>
-              </div>
-            </div>
-
-            {/* Restaurant Hero Title & Trip Specs */}
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                {incomingOrder.restaurantName}
-              </h3>
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-1.5">
-                <span className="text-slate-800">📍 {incomingOrder.distanceKm} km trip</span>
-                <span className="text-slate-300">•</span>
-                <span>⏱️ ~{incomingOrder.estimatedMinutes} mins</span>
-                <span className="text-slate-300">•</span>
-                <span className="text-emerald-700 font-extrabold">Food Delivery</span>
-              </div>
-            </div>
-
-            {/* Connected Route Timeline */}
-            <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/80 space-y-2">
-              {/* Pickup Point */}
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                  <Store className="w-3.5 h-3.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
-                    Pick Up From Store
-                  </span>
-                  <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
-                    {incomingOrder.restaurantAddress}
-                  </p>
-                </div>
-              </div>
-
-              {/* Connecting Line */}
-              <div className="ml-3.5 border-l-2 border-dashed border-slate-300 h-3" />
-
-              {/* Drop-off Point */}
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                  <Home className="w-3.5 h-3.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 block">
-                    Deliver To Customer
-                  </span>
-                  <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
-                    {incomingOrder.deliveryAddress}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-3 gap-3 pt-1">
-              <button
-                type="button"
-                onClick={declineIncomingOrder}
-                className="col-span-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl border border-slate-300/80 transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center"
-              >
-                <span>Pass</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={acceptIncomingOrder}
-                className="col-span-2 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer tracking-wider"
-              >
-                <Check className="w-5 h-5 stroke-[3]" />
-                <span>ACCEPT ORDER</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ─── SCENARIO B: ACTIVE DELIVERY IN PROGRESS (Top Priority on Home) ─── */}
-        {activeOrder && (
-          <ActiveDeliveryCard
-            activeOrder={activeOrder}
-            onMarkPickedUp={markOrderPickedUp}
-            onAdvanceStatus={advanceActiveOrderStatus}
-          />
-        )}
-
-        {/* ─── SCENARIO C: SESSION COMPLETED SUMMARY (After session finishes naturally) ─── */}
-        {!incomingOrder && !activeOrder && !isOnline && sessionCompletedData && (
-          <SessionCompleteCard onStartAnother={openStartRiding} />
-        )}
-
-        {/* ─── SCENARIO D: ONLINE & ACTIVE RIDING SESSION ─── */}
-        {!incomingOrder && !activeOrder && isOnline && (
+        {/* ─── SCENARIO 0: VERIFICATION PENDING (ONLINE STRICTLY LOCKED) ─── */}
+        {isPendingVerification ? (
           <>
-            {/* Break-Mode Live Order Preview (Read-only ~3s preview) */}
-            {breakOrderPreview && isBreakActive && (
-              <BreakOrderPreviewCard
-                order={breakOrderPreview}
-                onDismiss={dismissBreakOrderPreview}
-              />
-            )}
-
-            <ActiveSessionCard
-              onOpenExtend={() => setIsExtendModalOpen(true)}
-            />
-          </>
-        )}
-
-        {/* ─── SCENARIO E: OFFLINE STATE (START RIDING CTA & FEATURE SHOWCASE) ─── */}
-        {!incomingOrder && !activeOrder && !isOnline && !sessionCompletedData && (
-          <>
-            {/* Premium Moving Feature Advertisement Banner */}
-            <FeaturePromoBanner
-              onOpenStartRiding={openStartRiding}
-              onOpenZoneModal={() => setIsZoneModalOpen(true)}
-            />
-
-            {rider.isVerified === false || rider.verificationStatus === 'PENDING' ? (
-              <div className="bg-white rounded-3xl border border-amber-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
-                <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-200 text-amber-600 my-1 shadow-2xs">
-                  <Lock className="w-7 h-7" />
+            {/* ── 1. Compact Verification Pending Banner (In Place of Small Moving Banner) ── */}
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-50 rounded-2xl p-4 border border-amber-300/90 shadow-2xs">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <Lock className="w-5 h-5 stroke-[2.5]" />
                 </div>
-
-                <div>
-                  <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-amber-200 mb-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                    <span>Verification Pending</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                      Verification Pending
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                      ONLINE LOCKED
+                    </span>
                   </div>
-                  <h3 className="font-black text-lg text-slate-900">
-                    Online Access Locked
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
+                  <h3 className="text-sm font-black text-slate-900">Online Access Locked</h3>
+                  <p className="text-xs text-slate-600 mt-0.5 leading-snug">
                     Your rider profile is currently under review by Minnit Admin. Once approved, you will be able to start riding sessions and accept orders.
                   </p>
                 </div>
-
-                <div className="w-full max-w-xs pt-1 flex flex-col gap-2.5">
-                  <button
-                    type="button"
-                    disabled
-                    className="w-full h-14 bg-slate-100 text-slate-400 font-black text-sm rounded-2xl border border-slate-200 flex items-center justify-center gap-2 cursor-not-allowed uppercase tracking-wider shadow-inner"
-                  >
-                    <Lock className="w-4 h-4" />
-                    <span>ONLINE LOCKED</span>
-                  </button>
-
-                  <Link
-                    href="/availability"
-                    className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
-                  >
-                    ⭐ Availability Preferences
-                  </Link>
-                </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
-                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-400 my-1 shadow-2xs">
-                  <Power className="w-7 h-7" />
+            </div>
+
+            {/* ── 2. Interactive Rider Instructions Slider (In Main Cockpit Space) ── */}
+            <RiderInstructionSlider
+              onOpenFullGuide={() => setShowManualGuideModal(true)}
+            />
+          </>
+        ) : (
+          <>
+            {/* ─── SCENARIO A: INCOMING ORDER ALERT ─── */}
+            {incomingOrder && !activeOrder && (
+              <div className="bg-white text-slate-900 rounded-[28px] p-5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.12)] border border-slate-200/90 relative overflow-hidden animate-slide-up space-y-4 ring-2 ring-emerald-500/20">
+                {/* Top Timer Bar */}
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-1000 ease-linear shadow-xs"
+                    style={{ width: `${(countdown / 25) * 100}%` }}
+                  />
                 </div>
 
+                {/* Header: Offer Badge + Payout */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-black uppercase px-3 py-1 rounded-full border border-emerald-200">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+                    </span>
+                    New Delivery Offer • #{formatOrderNumber(incomingOrder.orderNumber)} • {countdown}s
+                  </span>
+
+                  <div className="flex items-baseline gap-1.5 bg-emerald-50 border border-emerald-200/90 px-3 py-1 rounded-xl shadow-2xs">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                      Payout
+                    </span>
+                    <span className="text-xl font-black text-emerald-600 font-mono">
+                      ₹{incomingOrder.earnings || 45}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Restaurant Hero Title & Trip Specs */}
                 <div>
-                  <h3 className="font-black text-lg text-slate-900">
-                    You're Currently Offline
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                    {incomingOrder.restaurantName}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
-                    Ready to earn in <strong className="text-slate-800">{rider.selectedZone || 'Robertsonpet'}</strong>? Start a flexible riding session to receive delivery orders.
-                  </p>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-1.5">
+                    <span className="text-slate-800">📍 {incomingOrder.distanceKm} km trip</span>
+                    <span className="text-slate-300">•</span>
+                    <span>⏱️ ~{incomingOrder.estimatedMinutes} mins</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-emerald-700 font-extrabold">Food Delivery</span>
+                  </div>
                 </div>
 
-                <div className="w-full max-w-xs pt-1 flex flex-col gap-2.5">
+                {/* Connected Route Timeline */}
+                <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/80 space-y-2">
+                  {/* Pickup Point */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <Store className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                        Pick Up From Store
+                      </span>
+                      <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
+                        {incomingOrder.restaurantAddress}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Connecting Line */}
+                  <div className="ml-3.5 border-l-2 border-dashed border-slate-300 h-3" />
+
+                  {/* Drop-off Point */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <Home className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 block">
+                        Deliver To Customer
+                      </span>
+                      <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
+                        {incomingOrder.deliveryAddress}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-3 gap-3 pt-1">
                   <button
                     type="button"
-                    onClick={openStartRiding}
-                    className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                    onClick={declineIncomingOrder}
+                    className="col-span-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl border border-slate-300/80 transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center"
                   >
-                    <Power className="w-5 h-5 stroke-[2.5]" />
-                    <span>START RIDING</span>
+                    <span>Pass</span>
                   </button>
 
-                  <Link
-                    href="/availability"
-                    className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
+                  <button
+                    type="button"
+                    onClick={acceptIncomingOrder}
+                    className="col-span-2 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer tracking-wider"
                   >
-                    ⭐ Availability Preferences
-                  </Link>
+                    <Check className="w-5 h-5 stroke-[3]" />
+                    <span>ACCEPT ORDER</span>
+                  </button>
                 </div>
               </div>
+            )}
+
+            {/* ─── SCENARIO B: ACTIVE DELIVERY IN PROGRESS (Top Priority on Home) ─── */}
+            {activeOrder && (
+              <ActiveDeliveryCard
+                activeOrder={activeOrder}
+                onMarkPickedUp={markOrderPickedUp}
+                onAdvanceStatus={advanceActiveOrderStatus}
+              />
+            )}
+
+            {/* ─── SCENARIO C: SESSION COMPLETED SUMMARY (After session finishes naturally) ─── */}
+            {!incomingOrder && !activeOrder && !isOnline && sessionCompletedData && (
+              <SessionCompleteCard onStartAnother={openStartRiding} />
+            )}
+
+            {/* ─── SCENARIO D: ONLINE & ACTIVE RIDING SESSION ─── */}
+            {!incomingOrder && !activeOrder && isOnline && (
+              <>
+                {/* Break-Mode Live Order Preview (Read-only ~3s preview) */}
+                {breakOrderPreview && isBreakActive && (
+                  <BreakOrderPreviewCard
+                    order={breakOrderPreview}
+                    onDismiss={dismissBreakOrderPreview}
+                  />
+                )}
+
+                <ActiveSessionCard
+                  onOpenExtend={() => setIsExtendModalOpen(true)}
+                />
+              </>
+            )}
+
+            {/* ─── SCENARIO E: OFFLINE STATE (START RIDING CTA & FEATURE SHOWCASE) ─── */}
+            {!incomingOrder && !activeOrder && !isOnline && !sessionCompletedData && (
+              <>
+                {/* Premium Moving Feature Advertisement Banner */}
+                <FeaturePromoBanner
+                  onOpenStartRiding={openStartRiding}
+                  onOpenZoneModal={() => setIsZoneModalOpen(true)}
+                />
+
+                <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
+                  <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-400 my-1 shadow-2xs">
+                    <Power className="w-7 h-7" />
+                  </div>
+
+                  <div>
+                    <h3 className="font-black text-lg text-slate-900">
+                      You&apos;re Currently Offline
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-[280px] leading-relaxed">
+                      Ready to earn in <strong className="text-slate-800">{rider.selectedZone || 'Robertsonpet'}</strong>? Start a flexible riding session to receive delivery orders.
+                    </p>
+                  </div>
+
+                  <div className="w-full max-w-xs pt-1 flex flex-col gap-2.5">
+                    <button
+                      type="button"
+                      onClick={openStartRiding}
+                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                    >
+                      <Power className="w-5 h-5 stroke-[2.5]" />
+                      <span>START RIDING</span>
+                    </button>
+
+                    <Link
+                      href="/availability"
+                      className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all text-center"
+                    >
+                      ⭐ Availability Preferences
+                    </Link>
+                  </div>
+                </div>
+              </>
             )}
           </>
         )}
@@ -472,6 +472,31 @@ export default function DashboardPage() {
           isOpen={isZoneModalOpen}
           onClose={() => setIsZoneModalOpen(false)}
         />
+
+        {/* Full Visual Training Guide Modal */}
+        {showManualGuideModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center p-2 backdrop-blur-xs animate-fade-in">
+            <div className="bg-white rounded-3xl w-full max-w-md h-[90vh] overflow-hidden flex flex-col relative shadow-2xl animate-scale-up">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white shrink-0">
+                <h3 className="text-sm font-black text-slate-900">Rider Visual Instructions</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowManualGuideModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors text-xs font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 w-full overflow-hidden">
+                <RiderInstructionViewer
+                  isModal={true}
+                  onDone={() => setShowManualGuideModal(false)}
+                  onClose={() => setShowManualGuideModal(false)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </AppShell>

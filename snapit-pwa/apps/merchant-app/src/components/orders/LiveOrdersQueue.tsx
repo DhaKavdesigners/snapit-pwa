@@ -92,7 +92,7 @@ export const LiveOrdersQueue: React.FC = () => {
           onClick={() => setOrderFilter('ALL')}
           className={`px-3 py-1.5 rounded-xl font-extrabold transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
             orderFilter === 'ALL'
-              ? 'bg-slate-950 text-white shadow-xs'
+              ? 'bg-emerald-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
           }`}
         >

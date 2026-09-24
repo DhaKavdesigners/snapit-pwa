@@ -405,57 +405,57 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
     <div className="space-y-6">
       {/* 1. Top Metrics KPI Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Stores</p>
-            <Store className="w-4 h-4 text-slate-500" />
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Stores</p>
+            <Store className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-2xl font-black text-white mt-1.5">{totalStores}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1.5">{totalStores}</p>
           <span className="text-[10px] text-slate-500 font-medium">Hyperlocal partners</span>
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Open / Online</p>
+            <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Open / Online</p>
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
           </div>
-          <p className="text-2xl font-black text-emerald-400 mt-1.5">{openStores}</p>
+          <p className="text-2xl font-black text-emerald-700 mt-1.5">{openStores}</p>
           <span className="text-[10px] text-slate-500 font-medium">Accepting live orders</span>
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Rush Mode</p>
-            <Zap className="w-4 h-4 text-amber-400" />
+            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Rush Mode</p>
+            <Zap className="w-4 h-4 text-amber-600" />
           </div>
-          <p className="text-2xl font-black text-amber-400 mt-1.5">{rushStores}</p>
+          <p className="text-2xl font-black text-amber-600 mt-1.5">{rushStores}</p>
           <span className="text-[10px] text-slate-500 font-medium">Surge / high-load</span>
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-purple-400 uppercase tracking-wider">Menu Items</p>
-            <Package className="w-4 h-4 text-purple-400" />
+            <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Menu Items</p>
+            <Package className="w-4 h-4 text-purple-600" />
           </div>
-          <p className="text-2xl font-black text-purple-400 mt-1.5">{totalProducts}</p>
+          <p className="text-2xl font-black text-purple-700 mt-1.5">{totalProducts}</p>
           <span className="text-[10px] text-slate-500 font-medium">Live in database</span>
         </div>
 
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-sm backdrop-blur-sm col-span-2 sm:col-span-1">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-blue-400 uppercase tracking-wider">Active Pipeline</p>
-            <TrendingUp className="w-4 h-4 text-blue-400" />
+            <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Active Pipeline</p>
+            <TrendingUp className="w-4 h-4 text-blue-600" />
           </div>
-          <p className="text-2xl font-black text-blue-400 mt-1.5">{activeOrdersCount}</p>
+          <p className="text-2xl font-black text-blue-700 mt-1.5">{activeOrdersCount}</p>
           <span className="text-[10px] text-slate-500 font-medium">In preparation / transit</span>
         </div>
       </div>
 
       {/* 2. Controls, Search, Filter & View Mode Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
         {/* Search input */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -464,12 +464,12 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
             placeholder="Search stores, ID, merchant login UID, phone, address..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-9 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -479,15 +479,15 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
         {/* Filters and View Mode Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Category Pills */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
             {["ALL", "FOOD", "GROCERY", "DAIRY"].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   categoryFilter === cat
-                    ? "bg-slate-800 text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {cat}
@@ -499,7 +499,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 bg-slate-950 border border-slate-800 text-slate-300 text-xs font-bold rounded-xl focus:outline-none focus:border-emerald-500 cursor-pointer"
+            className="px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:border-emerald-500 cursor-pointer"
           >
             <option value="ALL">All Status</option>
             <option value="OPEN">🟢 Open Only</option>
@@ -508,13 +508,13 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
           </select>
 
           {/* View Mode Toggle: Grid vs Table */}
-          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === "grid"
-                  ? "bg-slate-800 text-emerald-400 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-white text-emerald-600 shadow-xs"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
               title="Card Grid View"
             >
@@ -524,8 +524,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
               onClick={() => setViewMode("table")}
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === "table"
-                  ? "bg-slate-800 text-emerald-400 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-white text-emerald-600 shadow-xs"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
               title="Compact Table View"
             >
@@ -536,7 +536,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
           {/* Add Store Button */}
           <button
             onClick={handleOpenAddStore}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Add Store & Merchant</span>
@@ -546,10 +546,10 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
 
       {/* 3. Empty State if no stores found */}
       {filteredStores.length === 0 && (
-        <div className="p-12 text-center bg-slate-900/50 rounded-3xl border border-slate-800 space-y-3">
-          <Store className="w-10 h-10 text-slate-600 mx-auto" />
-          <h3 className="text-base font-bold text-white">No partner stores match your filters</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+        <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-xs space-y-3">
+          <Store className="w-10 h-10 text-slate-400 mx-auto" />
+          <h3 className="text-base font-bold text-slate-900">No partner stores match your filters</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
             Try adjusting your search keywords or switching category/status filters.
           </p>
           <button
@@ -558,7 +558,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
               setCategoryFilter("ALL");
               setStatusFilter("ALL");
             }}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
           >
             Reset Filters
           </button>
@@ -591,19 +591,19 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
             return (
               <div
                 key={store.id}
-                className={`rounded-3xl bg-slate-900 border p-5 shadow-lg flex flex-col justify-between space-y-4 transition-all hover:border-slate-700 ${
+                className={`rounded-3xl bg-white border p-5 shadow-xs flex flex-col justify-between space-y-4 transition-all hover:border-slate-300 hover:shadow-md ${
                   isRush
-                    ? "border-amber-500/50 ring-1 ring-amber-500/20"
+                    ? "border-amber-400 ring-1 ring-amber-400/20"
                     : isOnline
-                    ? "border-slate-800"
-                    : "border-slate-800/60 opacity-90"
+                    ? "border-slate-200"
+                    : "border-slate-200 opacity-90"
                 }`}
               >
                 {/* Store Top Header & Badges */}
                 <div className="space-y-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-14 h-14 rounded-2xl bg-white p-1 border border-slate-700 overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-2xl bg-white p-1 border border-slate-200 overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
                         <img
                           src={store.logo_url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200"}
                           alt={store.name}
@@ -615,11 +615,11 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                         />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-black text-base text-white truncate leading-snug">
+                        <h3 className="font-black text-base text-slate-900 truncate leading-snug">
                           {store.name}
                         </h3>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-emerald-800 border border-slate-200">
                             {store.id}
                           </span>
                           <span
@@ -637,10 +637,10 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <button
                         onClick={() => toggleStoreOnline(store.id, !isOnline)}
-                        className={`px-3 py-1 rounded-full text-[11px] font-black transition-all cursor-pointer border shadow-sm ${
+                        className={`px-3 py-1 rounded-full text-[11px] font-black transition-all cursor-pointer border shadow-2xs ${
                           isOnline
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30"
-                            : "bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                            : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
                         }`}
                         title={isOnline ? "Click to set store offline" : "Click to set store online"}
                       >
@@ -651,8 +651,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                         onClick={() => toggleStoreRushMode(store.id, !isRush)}
                         className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black transition-all cursor-pointer border ${
                           isRush
-                            ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm animate-pulse"
-                            : "bg-slate-800 text-slate-400 border-slate-700 hover:text-amber-300"
+                            ? "bg-amber-500 text-slate-950 border-amber-400 shadow-xs animate-pulse"
+                            : "bg-slate-100 text-slate-600 border-slate-200 hover:text-amber-700"
                         }`}
                         title={isRush ? "Disable Rush Mode" : "Activate Rush Mode"}
                       >
@@ -662,12 +662,12 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                     </div>
                   </div>
 
-                  {/* Merchant Login Credentials Box */}
-                  <div className="bg-slate-950/90 p-3 rounded-2xl border border-slate-800/90 space-y-2">
-                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
-                      <div className="flex items-center gap-1.5 text-slate-300 text-xs font-bold">
+                  {/* Merchant Login Credentials Box (Obsidian Black contrast for security) */}
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-900 text-white space-y-2 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                      <div className="flex items-center gap-1.5 text-slate-200 text-xs font-bold">
                         <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Merchant Login</span>
+                        <span>Merchant Login Credentials</span>
                       </div>
                       <button
                         onClick={() => handleOpenEditMerchant(store)}
@@ -762,26 +762,26 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                   </div>
 
                   {/* Financial & Order Performance Metrics */}
-                  <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 grid grid-cols-3 gap-2 text-center text-xs">
                     <div>
-                      <span className="text-[10px] text-slate-400 block">Catalog Items</span>
-                      <span className="font-bold text-white text-sm">{storeProds.length}</span>
+                      <span className="text-[10px] text-slate-500 block font-medium">Catalog Items</span>
+                      <span className="font-black text-slate-900 text-sm">{storeProds.length}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block">Gross Sales</span>
-                      <span className="font-bold text-emerald-400 text-sm">₹{totalSalesRupees}</span>
+                      <span className="text-[10px] text-slate-500 block font-medium">Gross Sales</span>
+                      <span className="font-black text-emerald-700 text-sm">₹{totalSalesRupees}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block">Active Orders</span>
-                      <span className="font-bold text-amber-400 text-sm">{activeStoreOrders}</span>
+                      <span className="text-[10px] text-slate-500 block font-medium">Active Orders</span>
+                      <span className="font-black text-amber-600 text-sm">{activeStoreOrders}</span>
                     </div>
                   </div>
 
                   {/* Location & Landmark */}
-                  <div className="space-y-1 text-xs text-slate-400 px-1">
+                  <div className="space-y-1 text-xs text-slate-600 px-1">
                     <div className="flex items-start gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-                      <span className="text-slate-300 line-clamp-1">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      <span className="text-slate-700 line-clamp-1">
                         {store.store_address || store.address || "KGF"}
                         {store.landmark ? ` (${store.landmark})` : ""}
                       </span>
@@ -792,7 +792,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                         href={store.store_location}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline pl-5"
+                        className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline pl-5"
                       >
                         <span>Google Maps</span>
                         <ExternalLink className="w-2.5 h-2.5" />
@@ -802,14 +802,14 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                 </div>
 
                 {/* Card Action Buttons Toolbar */}
-                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                   <button
                     onClick={() => {
                       setCatalogSearch("");
                       setCatalogCategoryFilter("ALL");
                       setInventoryModal(store);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-purple-500/20 hover:bg-purple-500 hover:text-white text-purple-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold text-xs rounded-xl transition-all cursor-pointer border border-purple-200"
                   >
                     <Package className="w-3.5 h-3.5" />
                     <span>Catalog ({storeProds.length})</span>
@@ -818,7 +818,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                   {onNavigateToSettlements && (
                     <button
                       onClick={() => onNavigateToSettlements(store.id)}
-                      className="flex items-center justify-center gap-1 py-2 px-3 bg-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-1 py-2 px-3 bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-xs rounded-xl transition-all cursor-pointer border border-emerald-200"
                       title="View Ledger & Store Settlements"
                     >
                       <Receipt className="w-3.5 h-3.5" />
@@ -828,7 +828,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
 
                   <button
                     onClick={() => handleOpenEditStore(store)}
-                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 rounded-xl transition-all cursor-pointer border border-slate-200"
                     title="Edit Store & Credentials"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -836,7 +836,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
 
                   <button
                     onClick={() => handleDeleteStore(store)}
-                    className="p-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                    className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition-all cursor-pointer border border-rose-200"
                     title="Delete Store Partner"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -850,10 +850,10 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
 
       {/* 4B. COMPACT TABLE VIEW */}
       {viewMode === "table" && filteredStores.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-lg">
+        <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950/80 text-slate-400 font-black uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-100/80 text-slate-600 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">Store Partner</th>
                   <th className="py-3.5 px-3">Merchant Login</th>
@@ -864,7 +864,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {filteredStores.map((store) => {
                   const storeProds = products.filter((p) => p.store_id === store.id);
                   const isOnline = store.is_online !== false;
@@ -882,11 +882,11 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                   const isPasswordVisible = !!(linkedMerchant && showPasswordMap[linkedMerchant.id]);
 
                   return (
-                    <tr key={store.id} className="hover:bg-slate-800/40 transition-colors">
+                    <tr key={store.id} className="hover:bg-slate-50 transition-colors">
                       {/* Store Partner */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white p-0.5 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-xl bg-white p-0.5 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
                             <img
                               src={store.logo_url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=100"}
                               alt={store.name}
@@ -898,11 +898,11 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                             />
                           </div>
                           <div>
-                            <span className="font-extrabold text-white text-sm block">
+                            <span className="font-extrabold text-slate-900 text-sm block">
                               {store.name}
                             </span>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                              <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-emerald-800 border border-slate-200">
                                 {store.id}
                               </span>
                               <span
@@ -922,30 +922,30 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                         {linkedMerchant ? (
                           <div className="space-y-1">
                             <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-slate-400">UID:</span>
-                              <span className="font-mono font-bold text-white text-xs">
+                              <span className="text-[10px] text-slate-500">UID:</span>
+                              <span className="font-mono font-bold text-slate-900 text-xs">
                                 {linkedMerchant.uid}
                               </span>
                               <button
                                 onClick={() => handleCopy(linkedMerchant.uid, `tbl_uid_${store.id}`)}
-                                className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                                className="text-slate-400 hover:text-slate-800 p-0.5 cursor-pointer"
                                 title="Copy UID"
                               >
                                 {copiedKey === `tbl_uid_${store.id}` ? (
-                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <Check className="w-3 h-3 text-emerald-600" />
                                 ) : (
                                   <Copy className="w-3 h-3" />
                                 )}
                               </button>
                             </div>
                             <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-slate-400">Pass:</span>
-                              <span className="font-mono font-bold text-amber-300 text-xs">
+                              <span className="text-[10px] text-slate-500">Pass:</span>
+                              <span className="font-mono font-bold text-amber-700 text-xs">
                                 {isPasswordVisible ? linkedMerchant.password : "••••••••"}
                               </span>
                               <button
                                 onClick={() => togglePasswordVisibility(linkedMerchant.id)}
-                                className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                                className="text-slate-400 hover:text-slate-800 p-0.5 cursor-pointer"
                                 title={isPasswordVisible ? "Hide" : "Show"}
                               >
                                 {isPasswordVisible ? (
@@ -956,11 +956,11 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                               </button>
                               <button
                                 onClick={() => handleCopy(linkedMerchant.password, `tbl_pass_${store.id}`)}
-                                className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
-                                title="Copy Password"
+                                className="text-slate-400 hover:text-slate-800 p-0.5 cursor-pointer"
+                                title="Copy Pass"
                               >
                                 {copiedKey === `tbl_pass_${store.id}` ? (
-                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <Check className="w-3 h-3 text-emerald-600" />
                                 ) : (
                                   <Copy className="w-3 h-3" />
                                 )}
@@ -968,31 +968,25 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                             </div>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleOpenEditMerchant(store)}
-                            className="text-[10px] text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>Link Credentials</span>
-                          </button>
+                          <span className="text-rose-600 text-xs font-bold">Unlinked</span>
                         )}
                       </td>
 
                       {/* Contact & Address */}
                       <td className="py-3 px-3">
-                        <div className="space-y-0.5">
+                        <div>
                           {store.phone ? (
                             <a
                               href={`tel:${store.phone}`}
-                              className="text-xs font-bold text-emerald-400 hover:underline flex items-center gap-1"
+                              className="text-xs font-bold text-slate-900 hover:text-emerald-700 flex items-center gap-1"
                             >
-                              <Phone className="w-3 h-3" />
+                              <Phone className="w-3 h-3 text-emerald-600" />
                               <span>{store.phone}</span>
                             </a>
                           ) : (
-                            <span className="text-slate-500 text-[10px]">No phone</span>
+                            <span className="text-slate-400 text-[10px]">No phone</span>
                           )}
-                          <p className="text-[11px] text-slate-400 max-w-[200px] truncate">
+                          <p className="text-[11px] text-slate-500 max-w-[200px] truncate">
                             {store.store_address || store.address || "KGF"}
                           </p>
                         </div>
@@ -1004,8 +998,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                           onClick={() => toggleStoreOnline(store.id, !isOnline)}
                           className={`px-3 py-1 rounded-full text-[11px] font-black cursor-pointer border transition-all ${
                             isOnline
-                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30"
-                              : "bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                              : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
                           }`}
                         >
                           {isOnline ? "🟢 Open" : "🔴 Closed"}
@@ -1018,8 +1012,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                           onClick={() => toggleStoreRushMode(store.id, !isRush)}
                           className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer border transition-all ${
                             isRush
-                              ? "bg-amber-500 text-slate-950 border-amber-400 shadow-sm animate-pulse"
-                              : "bg-slate-800 text-slate-400 border-slate-700 hover:text-amber-300"
+                              ? "bg-amber-500 text-slate-950 border-amber-400 shadow-2xs animate-pulse"
+                              : "bg-slate-100 text-slate-600 border-slate-200 hover:text-amber-700"
                           }`}
                         >
                           <Zap className="w-3 h-3" />
@@ -1030,10 +1024,10 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                       {/* Catalog & Sales */}
                       <td className="py-3 px-3">
                         <div className="space-y-0.5">
-                          <span className="text-xs font-bold text-white block">
+                          <span className="text-xs font-bold text-slate-900 block">
                             {storeProds.length} items
                           </span>
-                          <span className="text-[11px] font-bold text-emerald-400">
+                          <span className="text-[11px] font-bold text-emerald-700">
                             ₹{salesRupees} gross
                           </span>
                         </div>
@@ -1048,7 +1042,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                               setCatalogCategoryFilter("ALL");
                               setInventoryModal(store);
                             }}
-                            className="px-2.5 py-1.5 bg-purple-500/20 hover:bg-purple-500 hover:text-white text-purple-300 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold rounded-lg text-xs transition-colors cursor-pointer border border-purple-200"
                             title="Manage Catalog"
                           >
                             Catalog
@@ -1057,7 +1051,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                           {onNavigateToSettlements && (
                             <button
                               onClick={() => onNavigateToSettlements(store.id)}
-                              className="px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold rounded-lg text-xs transition-colors cursor-pointer border border-emerald-200"
                               title="Ledger / Payouts"
                             >
                               Ledger
@@ -1066,7 +1060,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
 
                           <button
                             onClick={() => handleOpenEditStore(store)}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 rounded-lg transition-colors cursor-pointer border border-slate-200"
                             title="Edit Store"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -1074,7 +1068,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
 
                           <button
                             onClick={() => handleDeleteStore(store)}
-                            className="p-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition-colors cursor-pointer border border-rose-200"
                             title="Delete Store"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1099,45 +1093,45 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
         maxWidth="xl"
       >
         <form onSubmit={handleSaveStore} className="space-y-4">
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3.5">
-            <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Store className="w-3.5 h-3.5" />
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3.5">
+            <h4 className="text-xs font-black text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-emerald-600" />
               <span>1. Store Profile</span>
             </h4>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-300 mb-1">Store Name *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Store Name *</label>
                 <input
                   type="text"
                   required
                   value={storeForm.name}
                   onChange={(e) => setStoreForm({ ...storeForm, name: e.target.value })}
                   placeholder="e.g. MR & MRS KITCHEN, Cool Shop"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Store ID *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Store ID *</label>
                 <input
                   type="text"
                   required
                   value={storeForm.id}
                   onChange={(e) => setStoreForm({ ...storeForm, id: e.target.value })}
                   placeholder="e.g. f5, g2"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Category *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Category *</label>
                 <select
                   value={storeForm.category}
                   onChange={(e) => setStoreForm({ ...storeForm, category: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 >
                   <option value="FOOD">FOOD (Restaurant, Cafe, Snacks)</option>
                   <option value="GROCERY">GROCERY (Daily Essentials, Mart)</option>
@@ -1146,119 +1140,119 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Store Phone *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Store Phone *</label>
                 <input
                   type="text"
                   required
                   value={storeForm.phone}
                   onChange={(e) => setStoreForm({ ...storeForm, phone: e.target.value })}
                   placeholder="e.g. 8217649688"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Store Address</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Store Address</label>
                 <input
                   type="text"
                   value={storeForm.store_address}
                   onChange={(e) => setStoreForm({ ...storeForm, store_address: e.target.value })}
                   placeholder="e.g. Robertsonpet Main Road, KGF"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Landmark</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Landmark</label>
                 <input
                   type="text"
                   value={storeForm.landmark}
                   onChange={(e) => setStoreForm({ ...storeForm, landmark: e.target.value })}
                   placeholder="e.g. Near Geetha Theater"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Logo / Banner URL</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Logo / Banner URL</label>
                 <input
                   type="text"
                   value={storeForm.logo_url}
                   onChange={(e) => setStoreForm({ ...storeForm, logo_url: e.target.value })}
                   placeholder="https://... or /images/stores/..."
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Google Maps Link</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Google Maps Link</label>
                 <input
                   type="text"
                   value={storeForm.store_location}
                   onChange={(e) => setStoreForm({ ...storeForm, store_location: e.target.value })}
                   placeholder="https://maps.app.goo.gl/..."
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3.5">
-            <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5" />
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3.5">
+            <h4 className="text-xs font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-amber-600" />
               <span>2. Merchant Login Credentials (For Merchant App)</span>
             </h4>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Login User ID *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Login User ID *</label>
                 <input
                   type="text"
                   required
                   value={storeForm.merchant_uid}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_uid: e.target.value })}
                   placeholder={`m_${storeForm.id || "store"}`}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Store Password *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Store Password *</label>
                 <input
                   type="text"
                   required
                   value={storeForm.merchant_password}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_password: e.target.value })}
                   placeholder="e.g. store123"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Owner / Manager Name</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Owner / Manager Name</label>
                 <input
                   type="text"
                   value={storeForm.merchant_name}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_name: e.target.value })}
                   placeholder="e.g. Suresh Kumar"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Contact Phone</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Contact Phone</label>
                 <input
                   type="text"
                   value={storeForm.merchant_phone}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_phone: e.target.value })}
                   placeholder="e.g. 8217649688"
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -1268,13 +1262,13 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
             <button
               type="button"
               onClick={() => setAddStoreModal(false)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
             >
               Create Store & Merchant Account →
             </button>
@@ -1291,30 +1285,30 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
         maxWidth="xl"
       >
         <form onSubmit={handleSaveStore} className="space-y-4">
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3.5">
-            <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Store className="w-3.5 h-3.5" />
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3.5">
+            <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-emerald-600" />
               <span>Store Information</span>
             </h4>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Store Name *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Store Name *</label>
               <input
                 type="text"
                 required
                 value={storeForm.name}
                 onChange={(e) => setStoreForm({ ...storeForm, name: e.target.value })}
-                className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Category *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Category *</label>
                 <select
                   value={storeForm.category}
                   onChange={(e) => setStoreForm({ ...storeForm, category: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 >
                   <option value="FOOD">FOOD (Restaurant, Cafe, Snacks)</option>
                   <option value="GROCERY">GROCERY (Daily Essentials, Mart)</option>
@@ -1323,107 +1317,107 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Phone Number</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
                 <input
                   type="text"
                   value={storeForm.phone}
                   onChange={(e) => setStoreForm({ ...storeForm, phone: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Address</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Address</label>
                 <input
                   type="text"
                   value={storeForm.store_address}
                   onChange={(e) => setStoreForm({ ...storeForm, store_address: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Landmark</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Landmark</label>
                 <input
                   type="text"
                   value={storeForm.landmark}
                   onChange={(e) => setStoreForm({ ...storeForm, landmark: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Logo / Banner URL</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Logo / Banner URL</label>
               <input
                 type="text"
                 value={storeForm.logo_url}
                 onChange={(e) => setStoreForm({ ...storeForm, logo_url: e.target.value })}
-                className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Google Maps Location Link</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Google Maps Location Link</label>
               <input
                 type="text"
                 value={storeForm.store_location}
                 onChange={(e) => setStoreForm({ ...storeForm, store_location: e.target.value })}
-                className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3.5">
-            <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5" />
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3.5">
+            <h4 className="text-xs font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-amber-600" />
               <span>Merchant Login Credentials</span>
             </h4>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Login UID *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Login UID *</label>
                 <input
                   type="text"
                   required
                   value={storeForm.merchant_uid}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_uid: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Store Password *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Store Password *</label>
                 <input
                   type="text"
                   required
                   value={storeForm.merchant_password}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_password: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Owner / Manager Name</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Owner / Manager Name</label>
                 <input
                   type="text"
                   value={storeForm.merchant_name}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_name: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Contact Phone</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Contact Phone</label>
                 <input
                   type="text"
                   value={storeForm.merchant_phone}
                   onChange={(e) => setStoreForm({ ...storeForm, merchant_phone: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -1433,13 +1427,13 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
             <button
               type="button"
               onClick={() => setEditStoreModal(null)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
             >
               Save Changes
             </button>
@@ -1457,60 +1451,60 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
       >
         <form onSubmit={handleSaveMerchant} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Merchant User ID (UID) *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Merchant User ID (UID) *</label>
             <input
               type="text"
               required
               value={merchantForm.uid}
               onChange={(e) => setMerchantForm({ ...merchantForm, uid: e.target.value })}
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Store Password *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Store Password *</label>
             <input
               type="text"
               required
               value={merchantForm.password}
               onChange={(e) => setMerchantForm({ ...merchantForm, password: e.target.value })}
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Partner / Manager Name</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Partner / Manager Name</label>
               <input
                 type="text"
                 value={merchantForm.name}
                 onChange={(e) => setMerchantForm({ ...merchantForm, name: e.target.value })}
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Phone Number</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
               <input
                 type="text"
                 value={merchantForm.phone}
                 onChange={(e) => setMerchantForm({ ...merchantForm, phone: e.target.value })}
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => setEditMerchantModal(null)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
             >
               Update Credentials
             </button>
@@ -1528,7 +1522,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
       >
         <div className="space-y-4">
           {/* Catalog Top Action Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -1536,7 +1530,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                 placeholder="Search items in this store..."
                 value={catalogSearch}
                 onChange={(e) => setCatalogSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -1545,7 +1539,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                 <select
                   value={catalogCategoryFilter}
                   onChange={(e) => setCatalogCategoryFilter(e.target.value)}
-                  className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  className="px-2.5 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="ALL">All Groups ({storeProducts.length})</option>
                   {catalogCategories.map((c) => (
@@ -1570,7 +1564,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                   });
                   setAddProductModal(true);
                 }}
-                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shadow-sm shrink-0"
+                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition-all cursor-pointer shadow-xs shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Item</span>
@@ -1582,14 +1576,14 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
           <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
             {filteredCatalogProducts.length === 0 ? (
               <div className="p-8 text-center text-slate-500 text-xs space-y-2">
-                <ShoppingBag className="w-8 h-8 mx-auto text-slate-600" />
+                <ShoppingBag className="w-8 h-8 mx-auto text-slate-400" />
                 <p>No products match your search in this store.</p>
                 <button
                   onClick={() => {
                     setCatalogSearch("");
                     setCatalogCategoryFilter("ALL");
                   }}
-                  className="text-emerald-400 hover:underline font-bold text-xs"
+                  className="text-emerald-600 hover:underline font-bold text-xs"
                 >
                   Clear catalog search
                 </button>
@@ -1602,10 +1596,10 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                 return (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs hover:border-slate-700 transition-all gap-3"
+                    className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-200 text-xs hover:border-slate-300 shadow-xs transition-all gap-3"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-12 h-12 rounded-xl bg-white p-0.5 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-xl bg-slate-50 p-0.5 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
                         <img
                           src={p.image_url || "/images/products/surf_excel.png"}
                           alt={p.name}
@@ -1617,11 +1611,11 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                         />
                       </div>
                       <div className="truncate">
-                        <p className="font-bold text-white truncate text-xs">{p.name}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
+                        <p className="font-bold text-slate-900 truncate text-xs">{p.name}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
                           {p.category} {p.sub_category ? `• ${p.sub_category}` : ""} •{" "}
-                          <span className="font-black text-emerald-400">₹{priceRupees}</span>
-                          <span className="text-slate-500 text-[9px] font-mono ml-1">
+                          <span className="font-black text-emerald-600">₹{priceRupees}</span>
+                          <span className="text-slate-400 text-[9px] font-mono ml-1">
                             ({p.price} paise)
                           </span>
                         </p>
@@ -1634,8 +1628,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                         onClick={() => toggleProductStock(p.id, !inStock)}
                         className={`px-3 py-1 rounded-full text-[10px] font-black cursor-pointer border transition-all ${
                           inStock
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30"
-                            : "bg-rose-500/20 text-rose-300 border-rose-500/30 hover:bg-rose-500/30"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                            : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
                         }`}
                       >
                         {inStock ? "In Stock" : "Out of Stock"}
@@ -1652,7 +1646,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                             updateProduct(p.id, { price: Number(newRupees) });
                           }
                         }}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg text-[10px] cursor-pointer"
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[10px] border border-slate-200 cursor-pointer"
                         title="Edit price in Rupees"
                       >
                         ₹ Edit Price
@@ -1664,7 +1658,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                             deleteProduct(p.id);
                           }
                         }}
-                        className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg cursor-pointer transition-colors"
+                        className="p-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
                         title="Delete product"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1688,20 +1682,20 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
       >
         <form onSubmit={handleSaveProduct} className="space-y-3">
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Product Name *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Product Name *</label>
             <input
               type="text"
               required
               value={productForm.name}
               onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
               placeholder="e.g. Special Kool, Chicken Dum Biryani"
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Price in Rupees (₹) *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Price in Rupees (₹) *</label>
               <input
                 type="number"
                 required
@@ -1709,7 +1703,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                 value={productForm.price}
                 onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
                 placeholder="e.g. 40 for ₹40"
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
               <span className="text-[10px] text-slate-500 mt-0.5 block">
                 Saved as {productForm.price * 100} paise in database
@@ -1717,50 +1711,50 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Category / Group</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Category / Group</label>
               <input
                 type="text"
                 value={productForm.category}
                 onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
                 placeholder="e.g. Starters, Rolls, Beverages"
-                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Description</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
             <input
               type="text"
               value={productForm.description}
               onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
               placeholder="e.g. Authentic recipe served fresh"
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Image URL</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Image URL</label>
             <input
               type="text"
               value={productForm.image_url}
               onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })}
               placeholder="https://... or /images/products/..."
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => setAddProductModal(false)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
             >
               Add Item →
             </button>

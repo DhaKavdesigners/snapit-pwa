@@ -20,35 +20,37 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   trendPositive = true,
   color = "emerald",
 }) => {
-  const colorMap = {
-    emerald: "from-emerald-500/20 to-teal-500/5 border-emerald-500/30 text-emerald-400",
-    blue: "from-blue-500/20 to-indigo-500/5 border-blue-500/30 text-blue-400",
-    amber: "from-amber-500/20 to-yellow-500/5 border-amber-500/30 text-amber-400",
-    purple: "from-purple-500/20 to-pink-500/5 border-purple-500/30 text-purple-400",
-    rose: "from-rose-500/20 to-red-500/5 border-rose-500/30 text-rose-400",
+  const iconColorMap = {
+    emerald: "bg-emerald-50 text-emerald-600 border-emerald-200",
+    blue: "bg-blue-50 text-blue-600 border-blue-200",
+    amber: "bg-amber-50 text-amber-600 border-amber-200",
+    purple: "bg-purple-50 text-purple-600 border-purple-200",
+    rose: "bg-rose-50 text-rose-600 border-rose-200",
   };
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${colorMap[color]} border p-5 shadow-lg backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-xl`}
+      className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/90 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300"
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{title}</p>
-          <p className="text-3xl font-black tracking-tight text-white">{value}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{title}</p>
+          <p className="text-3xl font-black tracking-tight text-slate-900">{value}</p>
         </div>
-        <div className="rounded-xl bg-slate-800/80 p-2.5 border border-slate-700/60 shadow-inner">
+        <div className={`rounded-xl p-2.5 border shadow-2xs ${iconColorMap[color]}`}>
           <Icon className="w-5 h-5" />
         </div>
       </div>
 
       {(subtitle || trend) && (
         <div className="mt-3 flex items-center justify-between text-xs">
-          {subtitle && <span className="text-slate-400 font-medium">{subtitle}</span>}
+          {subtitle && <span className="text-slate-500 font-medium">{subtitle}</span>}
           {trend && (
             <span
-              className={`font-bold font-mono px-1.5 py-0.5 rounded ${
-                trendPositive ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"
+              className={`font-bold font-mono px-2 py-0.5 rounded text-[11px] border ${
+                trendPositive
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-rose-50 text-rose-700 border-rose-200"
               }`}
             >
               {trend}

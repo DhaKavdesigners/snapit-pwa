@@ -617,10 +617,16 @@ export async function fetchRiderDeliveredStats(riderPhoneOrName?: string): Promi
   orders: Order[];
 }> {
   try {
+    if (!riderPhoneOrName) {
+      return { todayEarnings: 0, todayDeliveries: 0, totalEarnings: 0, totalDeliveries: 0, orders: [] };
+    }
+    const cleanId = riderPhoneOrName.replace(/[^0-9]/g, '').slice(-10) || riderPhoneOrName;
+
     const { data: dbOrders, error } = await supabase
       .from('orders')
       .select('*')
       .eq('status', 'DELIVERED')
+      .eq('rider_id', cleanId)
       .order('created_at', { ascending: false });
 
     if (error || !dbOrders) {

@@ -74,7 +74,7 @@ export const OrdersControlView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Controls Bar: Search & Status Filter */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-2xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -82,7 +82,7 @@ export const OrdersControlView: React.FC = () => {
             placeholder="Search by Order ID, Customer, Phone or Store..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
           />
         </div>
 
@@ -105,8 +105,8 @@ export const OrdersControlView: React.FC = () => {
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
                 statusFilter === tab.id
-                  ? "bg-emerald-500 text-slate-950 shadow-sm"
-                  : "bg-slate-800/80 text-slate-400 hover:text-slate-200"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
               }`}
             >
               {tab.label}
@@ -117,10 +117,10 @@ export const OrdersControlView: React.FC = () => {
 
       {/* Orders Grid / Table */}
       {filteredOrders.length === 0 ? (
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-12 text-center">
-          <Zap className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <p className="text-base font-bold text-white">No Orders Found</p>
-          <p className="text-xs text-slate-400 mt-1">Try adjusting your search or status filter.</p>
+        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-xs">
+          <Zap className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+          <p className="text-base font-bold text-slate-900">No Orders Found</p>
+          <p className="text-xs text-slate-500 mt-1">Try adjusting your search or status filter.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -132,8 +132,8 @@ export const OrdersControlView: React.FC = () => {
             return (
               <div
                 key={order.id}
-                className={`rounded-3xl bg-slate-900 border p-5 transition-all shadow-lg flex flex-col justify-between ${
-                  isLive ? "border-slate-700/90 hover:border-emerald-500/50" : "border-slate-800/80 opacity-90"
+                className={`rounded-3xl bg-white border p-5 transition-all shadow-xs flex flex-col justify-between ${
+                  isLive ? "border-slate-300 hover:border-emerald-500/50 hover:shadow-md" : "border-slate-200 opacity-90"
                 }`}
               >
                 {/* Order Header */}
@@ -141,38 +141,38 @@ export const OrdersControlView: React.FC = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-black text-emerald-400">
+                        <span className="font-mono text-sm font-black text-emerald-700">
                           #{order.id.slice(0, 10)}
                         </span>
                         <Badge status={order.status} />
                       </div>
-                      <p className="text-[11px] text-slate-400 font-medium mt-1 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
+                      <p className="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>{new Date(order.created_at).toLocaleString()}</span>
                       </p>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-lg font-black text-white font-mono">
+                      <span className="text-lg font-black text-slate-900 font-mono">
                         ₹{order.estimated_total}
                       </span>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">
                         {order.payment_method || "UPI"} • {order.payment_status || "PAID"}
                       </p>
                     </div>
                   </div>
 
                   {/* Merchant & Rider Line */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-950/70 p-3 rounded-2xl border border-slate-800 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200/80 text-xs">
                     {/* Store info */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Store className="w-4 h-4 text-purple-400 shrink-0" />
+                        <Store className="w-4 h-4 text-purple-600 shrink-0" />
                         <div className="truncate">
-                          <p className="font-bold text-slate-200 truncate">
+                          <p className="font-bold text-slate-900 truncate">
                             {store?.name || order.store_id}
                           </p>
-                          <p className="text-[10px] text-slate-400">Merchant Counter</p>
+                          <p className="text-[10px] text-slate-500">Merchant Counter</p>
                         </div>
                       </div>
                       <button
@@ -181,21 +181,21 @@ export const OrdersControlView: React.FC = () => {
                           setSelectedNewStoreId(order.store_id);
                         }}
                         title="Reassign Store"
-                        className="text-[10px] text-purple-400 hover:text-purple-300 font-bold underline shrink-0 cursor-pointer"
+                        className="text-[10px] text-purple-600 hover:text-purple-800 font-bold underline shrink-0 cursor-pointer"
                       >
                         Change
                       </button>
                     </div>
 
                     {/* Rider info */}
-                    <div className="flex items-center justify-between gap-2 sm:border-l sm:border-slate-800 sm:pl-3">
+                    <div className="flex items-center justify-between gap-2 sm:border-l sm:border-slate-200 sm:pl-3">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Bike className="w-4 h-4 text-blue-400 shrink-0" />
+                        <Bike className="w-4 h-4 text-blue-600 shrink-0" />
                         <div className="truncate">
-                          <p className="font-bold text-slate-200 truncate">
+                          <p className="font-bold text-slate-900 truncate">
                             {rider ? rider.name : "Unassigned"}
                           </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[10px] text-slate-500">
                             {rider ? `${rider.vehicle_type || "Bike"} • ${rider.phone}` : "No rider assigned"}
                           </p>
                         </div>
@@ -205,7 +205,7 @@ export const OrdersControlView: React.FC = () => {
                           setAssignRiderModal(order);
                           setSelectedRiderId(order.rider_id || "");
                         }}
-                        className="text-[10px] bg-blue-500/20 text-blue-300 hover:bg-blue-500 hover:text-white px-2 py-1 rounded-md font-bold transition-colors shrink-0 cursor-pointer"
+                        className="text-[10px] bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-2 py-1 rounded-md font-bold transition-colors shrink-0 cursor-pointer border border-blue-200"
                       >
                         {rider ? "Re-assign" : "Assign Rider"}
                       </button>
@@ -213,10 +213,10 @@ export const OrdersControlView: React.FC = () => {
                   </div>
 
                   {/* Customer & Address Details */}
-                  <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800/80 space-y-1.5 text-xs">
+                  <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                        <User className="w-3.5 h-3.5 text-emerald-400" />
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                        <User className="w-3.5 h-3.5 text-emerald-600" />
                         <span>{order.recipient_name || "Customer"}</span>
                         <span className="text-slate-500 font-mono text-[11px]">
                           ({order.recipient_phone || "No phone"})
@@ -229,14 +229,14 @@ export const OrdersControlView: React.FC = () => {
                             href={`https://wa.me/91${order.recipient_phone.replace(/\D/g, "")}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-emerald-400 hover:text-emerald-300 p-1 bg-emerald-500/10 rounded-lg"
+                            className="text-emerald-700 hover:text-emerald-800 p-1 bg-emerald-50 rounded-lg border border-emerald-200"
                             title="Chat on WhatsApp"
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
                           </a>
                           <a
                             href={`tel:${order.recipient_phone}`}
-                            className="text-blue-400 hover:text-blue-300 p-1 bg-blue-500/10 rounded-lg"
+                            className="text-blue-700 hover:text-blue-800 p-1 bg-blue-50 rounded-lg border border-blue-200"
                             title="Call Customer"
                           >
                             <Phone className="w-3.5 h-3.5" />
@@ -245,8 +245,8 @@ export const OrdersControlView: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="flex items-start gap-1.5 text-[11px] text-slate-400">
-                      <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-1.5 text-[11px] text-slate-600">
+                      <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
                       <span className="line-clamp-2">
                         {typeof order.delivery_address === "string"
                           ? order.delivery_address
@@ -256,8 +256,8 @@ export const OrdersControlView: React.FC = () => {
                     </div>
 
                     {order.delivery_pin && (
-                      <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-400 font-bold pt-0.5">
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-amber-900 font-bold px-2 py-0.5 bg-amber-50 rounded border border-amber-200">
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
                         <span>Delivery Handshake PIN: {order.delivery_pin}</span>
                       </div>
                     )}
@@ -272,12 +272,12 @@ export const OrdersControlView: React.FC = () => {
                       {order.items?.map((item, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between text-xs text-slate-300 py-0.5 border-b border-slate-800/40 last:border-0"
+                          className="flex items-center justify-between text-xs text-slate-700 py-0.5 border-b border-slate-100 last:border-0"
                         >
                           <span className="truncate">
                             {item.quantity}x {item.name}
                           </span>
-                          <span className="font-mono text-slate-400 shrink-0">
+                          <span className="font-mono text-slate-600 shrink-0">
                             ₹{(item.price || (item.price_paise ? item.price_paise / 100 : 0)) * item.quantity}
                           </span>
                         </div>
@@ -287,13 +287,13 @@ export const OrdersControlView: React.FC = () => {
                 </div>
 
                 {/* Status Override Buttons */}
-                <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-[10px] font-bold text-slate-500 uppercase">Set Status:</span>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {order.status !== "ACCEPTED" && (
                       <button
                         onClick={() => handleStatusChange(order.id, "ACCEPTED")}
-                        className="px-2.5 py-1 bg-blue-500/20 text-blue-300 hover:bg-blue-500 hover:text-white rounded text-[11px] font-bold transition-all cursor-pointer"
+                        className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white rounded text-[11px] font-bold transition-all cursor-pointer border border-blue-200"
                       >
                         Accept
                       </button>
@@ -301,7 +301,7 @@ export const OrdersControlView: React.FC = () => {
                     {order.status !== "PREPARING" && (
                       <button
                         onClick={() => handleStatusChange(order.id, "PREPARING")}
-                        className="px-2.5 py-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 rounded text-[11px] font-bold transition-all cursor-pointer"
+                        className="px-2.5 py-1 bg-amber-50 text-amber-800 hover:bg-amber-500 hover:text-slate-950 rounded text-[11px] font-bold transition-all cursor-pointer border border-amber-300"
                       >
                         Preparing
                       </button>
@@ -309,7 +309,7 @@ export const OrdersControlView: React.FC = () => {
                     {order.status !== "OUT_FOR_DELIVERY" && (
                       <button
                         onClick={() => handleStatusChange(order.id, "OUT_FOR_DELIVERY")}
-                        className="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500 hover:text-white rounded text-[11px] font-bold transition-all cursor-pointer"
+                        className="px-2.5 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded text-[11px] font-bold transition-all cursor-pointer border border-indigo-200"
                       >
                         Out for Delivery
                       </button>
@@ -317,7 +317,7 @@ export const OrdersControlView: React.FC = () => {
                     {order.status !== "DELIVERED" && (
                       <button
                         onClick={() => handleStatusChange(order.id, "DELIVERED")}
-                        className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950 rounded text-[11px] font-bold transition-all cursor-pointer"
+                        className="px-2.5 py-1 bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white rounded text-[11px] font-bold transition-all cursor-pointer border border-emerald-300"
                       >
                         Delivered ✓
                       </button>
@@ -325,7 +325,7 @@ export const OrdersControlView: React.FC = () => {
                     {order.status !== "CANCELLED" && (
                       <button
                         onClick={() => handleStatusChange(order.id, "CANCELLED")}
-                        className="px-2 py-1 bg-rose-500/20 text-rose-300 hover:bg-rose-500 hover:text-white rounded text-[11px] font-bold transition-all cursor-pointer"
+                        className="px-2 py-1 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white rounded text-[11px] font-bold transition-all cursor-pointer border border-rose-200"
                       >
                         Cancel ✕
                       </button>
@@ -348,7 +348,7 @@ export const OrdersControlView: React.FC = () => {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-300">Select Delivery Rider:</label>
+            <label className="text-xs font-bold text-slate-700">Select Delivery Rider:</label>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {riders.map((r) => (
                 <div
@@ -356,31 +356,31 @@ export const OrdersControlView: React.FC = () => {
                   onClick={() => setSelectedRiderId(r.id)}
                   className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
                     selectedRiderId === r.id
-                      ? "bg-emerald-500/20 border-emerald-500 text-white"
-                      : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300"
+                      ? "bg-emerald-50 border-emerald-500 text-slate-900 shadow-xs"
+                      : "bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-3 h-3 rounded-full ${
-                        r.is_online ? (r.is_busy ? "bg-amber-400" : "bg-emerald-400") : "bg-slate-600"
+                        r.is_online ? (r.is_busy ? "bg-amber-500" : "bg-emerald-500") : "bg-slate-400"
                       }`}
                     />
                     <div>
-                      <p className="font-black text-xs">{r.name}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">
+                      <p className="font-black text-xs text-slate-900">{r.name}</p>
+                      <p className="text-[10px] text-slate-500 font-mono">
                         {r.phone} • {r.vehicle_type || "Bike"} ({r.vehicle_number || "KA-08"})
                       </p>
                     </div>
                   </div>
 
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
                       r.is_online
                         ? r.is_busy
-                          ? "bg-amber-500/20 text-amber-300"
-                          : "bg-emerald-500/20 text-emerald-300"
-                        : "bg-slate-800 text-slate-500"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-slate-100 text-slate-500 border-slate-200"
                     }`}
                   >
                     {r.is_online ? (r.is_busy ? "Busy" : "Ready") : "Offline"}
@@ -390,17 +390,17 @@ export const OrdersControlView: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
             <button
               onClick={() => setAssignRiderModal(null)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleAssignRiderSubmit}
               disabled={!selectedRiderId}
-              className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all cursor-pointer shadow-xs"
             >
               Confirm Dispatch →
             </button>
@@ -418,7 +418,7 @@ export const OrdersControlView: React.FC = () => {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-300">Select Fulfillment Merchant:</label>
+            <label className="text-xs font-bold text-slate-700">Select Fulfillment Merchant:</label>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {stores.map((s) => (
                 <div
@@ -426,21 +426,23 @@ export const OrdersControlView: React.FC = () => {
                   onClick={() => setSelectedNewStoreId(s.id)}
                   className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
                     selectedNewStoreId === s.id
-                      ? "bg-purple-500/20 border-purple-500 text-white"
-                      : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300"
+                      ? "bg-purple-50 border-purple-500 text-slate-900 shadow-xs"
+                      : "bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Store className="w-4 h-4 text-purple-400" />
+                    <Store className="w-4 h-4 text-purple-600" />
                     <div>
-                      <p className="font-black text-xs">{s.name}</p>
-                      <p className="text-[10px] text-slate-400">{s.category} • {s.address || "KGF"}</p>
+                      <p className="font-black text-xs text-slate-900">{s.name}</p>
+                      <p className="text-[10px] text-slate-500">{s.category} • {s.address || "KGF"}</p>
                     </div>
                   </div>
 
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      s.is_online ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      s.is_online
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-rose-50 text-rose-700 border-rose-200"
                     }`}
                   >
                     {s.is_online ? "Open" : "Closed"}
@@ -450,17 +452,17 @@ export const OrdersControlView: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
             <button
               onClick={() => setReassignStoreModal(null)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleReassignStoreSubmit}
               disabled={!selectedNewStoreId}
-              className="px-5 py-2 bg-purple-500 hover:bg-purple-400 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all cursor-pointer"
+              className="px-5 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all cursor-pointer shadow-xs"
             >
               Confirm Store Reassignment →
             </button>

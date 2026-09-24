@@ -316,8 +316,9 @@ const defaultRider: RiderProfile = {
   addressPincode: '',
   selectedZone: 'Robertsonpet',
   selectedZoneId: 'zone-1',
-  isVerified: true,
-  verificationStep: 4,
+  isVerified: false,
+  verificationStep: 1,
+  verificationStatus: 'PENDING',
   isAuthenticated: false,
   riderId: '',
   Rider_ID: '',
@@ -558,10 +559,12 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         setSessionToken(savedToken);
       }
 
+      let isUnverified = false;
       const savedRider = localStorage.getItem('snapit_rider_profile_v2');
       if (savedRider) {
         const parsedRider = JSON.parse(savedRider);
         setRider(parsedRider);
+        isUnverified = parsedRider.isVerified === false || parsedRider.verificationStatus === 'PENDING';
         if (parsedRider.phone && savedToken) {
           validateDeviceSession(parsedRider.phone, savedToken).then((res) => {
             if (!res.isValid) {
@@ -575,93 +578,113 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         setRidingPreferences(multi.todayPreferences);
         setTomorrowPreferences(multi.tomorrowPreferences);
       } else {
+        isUnverified = true;
         const multi = getMultiDayPreferences();
         setRidingPreferences(multi.todayPreferences);
         setTomorrowPreferences(multi.tomorrowPreferences);
       }
 
-      const savedOnline = localStorage.getItem('snapit_online_status_v2');
-      if (savedOnline !== null) setIsOnline(JSON.parse(savedOnline));
-
-      const savedActive = localStorage.getItem('snapit_active_order_v2');
-      if (savedActive) setActiveOrder(JSON.parse(savedActive));
-
-      const savedEarnings = localStorage.getItem('snapit_earnings_v2');
-      if (savedEarnings) setEarnings(JSON.parse(savedEarnings));
-
-      const savedBookedIds = localStorage.getItem('snapit_booked_slot_ids_v1');
-      if (savedBookedIds) setBookedSlotIds(JSON.parse(savedBookedIds));
-
-      const savedBreak = localStorage.getItem('snapit_rider_break_v1');
-      if (savedBreak) setRiderBreak(JSON.parse(savedBreak));
-
-      const savedAcceptance = localStorage.getItem('snapit_acceptance_events_v1');
-      if (savedAcceptance) setOrderAcceptanceEvents(JSON.parse(savedAcceptance));
-
-      const savedNonAcceptance = localStorage.getItem('snapit_non_acceptance_count_v1');
-      if (savedNonAcceptance) setNonAcceptanceCount(JSON.parse(savedNonAcceptance));
-
-      const savedCancelled = localStorage.getItem('snapit_cancelled_orders_v2');
-      if (savedCancelled) setCancelledOrders(JSON.parse(savedCancelled));
-
-      // Restore handled order IDs to prevent repeat buzzing across reloads
-      const savedHandled = localStorage.getItem('snapit_handled_orders_v2');
-      if (savedHandled) {
+      if (isUnverified) {
+        // Unverified riders exploring UI MUST NOT have active sessions, online status, active orders, or past history
+        setIsOnline(false);
+        setActiveSession(null);
+        setActiveOrder(null);
+        setIncomingOrder(null);
+        setOrdersHistory([]);
+        setEarnings(initialEarnings);
+        saveLocalShiftSession(null);
         try {
-          const parsed = JSON.parse(savedHandled);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((id: any) => handledOrderIdsRef.current.add(String(id).trim()));
-          }
+          localStorage.removeItem('snapit_online_status_v2');
+          localStorage.removeItem('snapit_active_order_v2');
+          localStorage.removeItem('snapit_incoming_order_v2');
+          localStorage.removeItem('snapit_earnings_v2');
+          localStorage.removeItem('snapit_orders_history_v2');
+          localStorage.removeItem('minnit_active_shift_session');
         } catch {}
-      }
-      if (savedCancelled) {
-        try {
-          const parsedCancelled = JSON.parse(savedCancelled);
-          if (Array.isArray(parsedCancelled)) {
-            parsedCancelled.forEach((o: any) => {
-              if (o?.id) handledOrderIdsRef.current.add(String(o.id).trim());
-            });
-          }
-        } catch {}
-      }
-      if (savedActive) {
-        try {
-          const parsedActive = JSON.parse(savedActive);
-          if (parsedActive?.id) {
-            handledOrderIdsRef.current.add(String(parsedActive.id).trim());
-          }
-        } catch {}
-      }
+      } else {
+        const savedOnline = localStorage.getItem('snapit_online_status_v2');
+        if (savedOnline !== null) setIsOnline(JSON.parse(savedOnline));
 
-      // Reconstruct flexible riding session from timestamps
-      const savedSession = getLocalShiftSession();
-      if (savedSession && savedSession.status === 'ACTIVE') {
-        const now = Date.now();
-        const endMs = new Date(savedSession.committed_until).getTime();
-        if (now < endMs) {
-          setActiveSession(savedSession);
-          setIsOnline(true);
-          const savedBreakUsed = localStorage.getItem(`minnit_break_used_${savedSession.id}`);
-          if (savedBreakUsed) {
-            setSessionBreakUsedMs(Number(savedBreakUsed) || 0);
-          }
-        } else {
-          // Expired while backgrounded / closed
-          if (savedActive) {
-            // Expired during active delivery: allow completion
-            sessionExpiredPendingDeliveryRef.current = true;
+        const savedActive = localStorage.getItem('snapit_active_order_v2');
+        if (savedActive) setActiveOrder(JSON.parse(savedActive));
+
+        const savedEarnings = localStorage.getItem('snapit_earnings_v2');
+        if (savedEarnings) setEarnings(JSON.parse(savedEarnings));
+
+        const savedBookedIds = localStorage.getItem('snapit_booked_slot_ids_v1');
+        if (savedBookedIds) setBookedSlotIds(JSON.parse(savedBookedIds));
+
+        const savedBreak = localStorage.getItem('snapit_rider_break_v1');
+        if (savedBreak) setRiderBreak(JSON.parse(savedBreak));
+
+        const savedAcceptance = localStorage.getItem('snapit_acceptance_events_v1');
+        if (savedAcceptance) setOrderAcceptanceEvents(JSON.parse(savedAcceptance));
+
+        const savedNonAcceptance = localStorage.getItem('snapit_non_acceptance_count_v1');
+        if (savedNonAcceptance) setNonAcceptanceCount(JSON.parse(savedNonAcceptance));
+
+        const savedCancelled = localStorage.getItem('snapit_cancelled_orders_v2');
+        if (savedCancelled) setCancelledOrders(JSON.parse(savedCancelled));
+
+        // Restore handled order IDs to prevent repeat buzzing across reloads
+        const savedHandled = localStorage.getItem('snapit_handled_orders_v2');
+        if (savedHandled) {
+          try {
+            const parsed = JSON.parse(savedHandled);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((id: any) => handledOrderIdsRef.current.add(String(id).trim()));
+            }
+          } catch {}
+        }
+        if (savedCancelled) {
+          try {
+            const parsedCancelled = JSON.parse(savedCancelled);
+            if (Array.isArray(parsedCancelled)) {
+              parsedCancelled.forEach((o: any) => {
+                if (o?.id) handledOrderIdsRef.current.add(String(o.id).trim());
+              });
+            }
+          } catch {}
+        }
+        if (savedActive) {
+          try {
+            const parsedActive = JSON.parse(savedActive);
+            if (parsedActive?.id) {
+              handledOrderIdsRef.current.add(String(parsedActive.id).trim());
+            }
+          } catch {}
+        }
+
+        // Reconstruct flexible riding session from timestamps
+        const savedSession = getLocalShiftSession();
+        if (savedSession && savedSession.status === 'ACTIVE') {
+          const now = Date.now();
+          const endMs = new Date(savedSession.committed_until).getTime();
+          if (now < endMs) {
             setActiveSession(savedSession);
             setIsOnline(true);
+            const savedBreakUsed = localStorage.getItem(`minnit_break_used_${savedSession.id}`);
+            if (savedBreakUsed) {
+              setSessionBreakUsedMs(Number(savedBreakUsed) || 0);
+            }
           } else {
-            // Expired while idle: finalize session cleanly
-            endShiftSession(savedSession.id, false, savedSession.orders_completed);
-            setActiveSession(null);
-            setIsOnline(false);
-            setSessionCompletedData({
-              ordersCompleted: savedSession.orders_completed,
-              earnings: 0,
-              durationMinutes: savedSession.planned_duration_mins,
-            });
+            // Expired while backgrounded / closed
+            if (savedActive) {
+              // Expired during active delivery: allow completion
+              sessionExpiredPendingDeliveryRef.current = true;
+              setActiveSession(savedSession);
+              setIsOnline(true);
+            } else {
+              // Expired while idle: finalize session cleanly
+              endShiftSession(savedSession.id, false, savedSession.orders_completed);
+              setActiveSession(null);
+              setIsOnline(false);
+              setSessionCompletedData({
+                ordersCompleted: savedSession.orders_completed,
+                earnings: 0,
+                durationMinutes: savedSession.planned_duration_mins,
+              });
+            }
           }
         }
       }
@@ -811,8 +834,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Flexible Session Actions ──────────────────────────────────────────────
 
   const openStartRiding = useCallback(() => {
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      return;
+    }
     setIsStartRidingOpen(true);
-  }, []);
+  }, [rider.isVerified, rider.verificationStatus]);
 
   const closeStartRiding = useCallback(() => {
     setIsStartRidingOpen(false);
@@ -827,6 +853,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     zoneName: string,
     durationHours: number
   ): Promise<RiderShiftSession> => {
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      throw new Error('Verification pending. Rider cannot start a session.');
+    }
     const session = await createShiftSession({
       riderId: rider.phone || 'guest-rider',
       zoneId,
@@ -1669,6 +1698,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const setupLiveOrders = async () => {
+      if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+        setActiveOrder(null);
+        setIncomingOrder(null);
+        setOrdersHistory([]);
+        return;
+      }
+
       try {
         const dbStores = await fetchStores();
         const dbOrders = await fetchLiveOrders();
@@ -1676,13 +1712,19 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         recalculateDemandStatus(dbOrders, dbRiders);
 
         // 1. Sync Active Order with Live Database: Clear stale cache if order is not in DB
+        const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10);
         setActiveOrder((currentActive) => {
           if (!currentActive) {
-            // Check if any live order in DB is assigned to this rider
-            const myAssignedOrder = dbOrders.find((o) =>
-              (o.rider_id === rider.phone || o.rider_id === rider.name || o.rider_id === '9217649600' || o.rider_assignment === 'assigned') &&
-              !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase())
-            );
+            // Check if any live order in DB is assigned specifically to this rider
+            const myAssignedOrder = dbOrders.find((o) => {
+              const oRider = (o.rider_id || '').replace(/[^0-9]/g, '').slice(-10);
+              const isMatch = Boolean(
+                (cleanPhone && oRider === cleanPhone) ||
+                (rider.Rider_ID && o.rider_id === rider.Rider_ID) ||
+                (rider.name && o.rider_id === rider.name)
+              );
+              return isMatch && !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase());
+            });
             if (myAssignedOrder) {
               const store = dbStores.find((s) => s.id === myAssignedOrder.store_id);
               return mapDbOrderToAppOrder(myAssignedOrder, store);
@@ -1705,7 +1747,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         if (dbOrders && dbOrders.length > 0 && !activeOrderRef.current) {
           const eligible = dbOrders.find((o) =>
             isEligibleNotificationStatus(o.status) &&
-            (!o.rider_id || o.rider_id === rider.phone || o.rider_assignment !== 'assigned') &&
+            (!o.rider_id || o.rider_id === rider.phone || (cleanPhone && (o.rider_id || '').replace(/[^0-9]/g, '').slice(-10) === cleanPhone)) &&
+            o.rider_assignment !== 'assigned' &&
             !handledOrderIdsRef.current.has(String(o.id).trim()) &&
             !soundEngine.isOrderHandled(String(o.id).trim())
           );
@@ -1742,10 +1785,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
         unsubscribe = subscribeToOrders(
           (newOrder) => {
+            if (rider.isVerified === false || rider.verificationStatus === 'PENDING') return;
             const newId = String(newOrder.id).trim();
             // Do not notify if rider already has an active order or already handled this order
             if (activeOrderRef.current || handledOrderIdsRef.current.has(newId) || soundEngine.isOrderHandled(newId)) return;
-            if (newOrder.rider_id && newOrder.rider_id !== rider.phone && newOrder.rider_assignment === 'assigned') return;
+            if (newOrder.rider_assignment === 'assigned' && newOrder.rider_id !== rider.phone && newOrder.rider_id !== rider.Rider_ID) return;
 
             // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
             if (isEligibleNotificationStatus(newOrder.status)) {
@@ -1764,6 +1808,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             }
           },
           (updatedOrder) => {
+            if (rider.isVerified === false || rider.verificationStatus === 'PENDING') return;
             const updatedId = String(updatedOrder.id).trim();
             const s = (updatedOrder.status || '').toUpperCase();
 
@@ -1791,7 +1836,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedId) || soundEngine.isOrderHandled(updatedId)) {
               return;
             }
-            if (updatedOrder.rider_id && updatedOrder.rider_id !== rider.phone && updatedOrder.rider_assignment === 'assigned') {
+            if (updatedOrder.rider_assignment === 'assigned' && updatedOrder.rider_id !== rider.phone && updatedOrder.rider_id !== rider.Rider_ID) {
               return;
             }
 
@@ -1824,15 +1869,22 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // ─── Online Gate (Relaxed for testing) ────────────────────────────────────
+  // ─── Online Gate ─────────────────────────────────────────────────────────
 
   const canGoOnline = useCallback((): CanGoOnlineResult => {
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      return { canGo: false, reason: 'Online access is locked while verification is pending.' };
+    }
     return { canGo: true, reason: '' };
-  }, []);
+  }, [rider.isVerified, rider.verificationStatus]);
 
   // ─── Online Toggle ─────────────────────────────────────────────────────────
 
   const toggleOnline = () => {
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      setIsOnline(false);
+      return;
+    }
     if (isOnline) {
       setOnlineStatus(false);
     } else {
@@ -1846,6 +1898,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setOnlineStatus = (status: boolean) => {
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      setIsOnline(false);
+      return;
+    }
     if (status) {
       if (activeSession && isSessionValidAndActive(activeSession)) {
         setIsOnline(true);
@@ -2572,10 +2628,21 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setIsOnline(false);
     setActiveOrder(null);
     setIncomingOrder(null);
+    setActiveSession(null);
+    setOrdersHistory([]);
+    setEarnings(initialEarnings);
+    setSessionCompletedData(null);
+    saveLocalShiftSession(null);
     setRider(defaultRider);
-    localStorage.removeItem('snapit_rider_profile_v2');
-    localStorage.removeItem('snapit_online_status_v2');
-    localStorage.removeItem('snapit_active_order_v2');
+    try {
+      localStorage.removeItem('snapit_rider_profile_v2');
+      localStorage.removeItem('snapit_online_status_v2');
+      localStorage.removeItem('snapit_active_order_v2');
+      localStorage.removeItem('snapit_incoming_order_v2');
+      localStorage.removeItem('snapit_earnings_v2');
+      localStorage.removeItem('snapit_orders_history_v2');
+      localStorage.removeItem('minnit_active_shift_session');
+    } catch {}
   };
 
   const clearSessionInvalidatedMessage = () => {
