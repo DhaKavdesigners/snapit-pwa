@@ -73,9 +73,9 @@ interface AdminState {
   updateCustomerVerification: (customerId: string, verified: boolean) => Promise<boolean>;
 
   // Zone Actions
-  createZone: (data: Partial<AdminZone>) => Promise<boolean>;
-  updateZone: (zoneId: string, updates: Partial<AdminZone>) => Promise<boolean>;
-  deleteZone: (zoneId: string) => Promise<boolean>;
+  createZone: (data: Partial<AdminZone>) => Promise<{ success: boolean; error?: string }>;
+  updateZone: (zoneId: string, updates: Partial<AdminZone>) => Promise<{ success: boolean; error?: string }>;
+  deleteZone: (zoneId: string) => Promise<{ success: boolean; error?: string }>;
   toggleZoneActive: (zoneId: string, isActive: boolean) => Promise<boolean>;
 }
 
@@ -926,7 +926,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   // ---------------- ZONE ACTIONS ----------------
   createZone: async (data: Partial<AdminZone>) => {
     try {
-      const id = data.id || data.name?.toLowerCase().replace(/\s+/g, "_") || `zone_${Date.now()}`;
+      const id = data.id?.trim() || data.name?.toLowerCase().replace(/\s+/g, "_") || `zone_${Date.now()}`;
       const { error } = await supabase.from("zones").insert({
         id,
         name: data.name,
@@ -942,47 +942,64 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         is_active: data.is_active ?? true,
         sort_order: data.sort_order ?? 99,
       });
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase insert zone error:", error);
+        return { success: false, error: error.message };
+      }
       await get().fetchInitialData();
-      return true;
+      return { success: true };
     } catch (err: any) {
       console.error("Failed to create zone:", err);
-      return false;
+      return { success: false, error: err.message || "Failed to create zone" };
     }
   },
 
   updateZone: async (zoneId: string, updates: Partial<AdminZone>) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("zones")
         .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq("id", zoneId);
-      if (error) throw error;
+        .eq("id", zoneId)
+        .select();
+      if (error) {
+        console.error("Supabase update zone error:", error);
+        return { success: false, error: error.message };
+      }
+      if (data && data.length === 0) {
+        return { success: false, error: "No rows updated. Database Row Level Security (RLS) policy may have prevented this change." };
+      }
       set((state) => ({
         zones: state.zones.map((z) => (z.id === zoneId ? { ...z, ...updates } : z)),
       }));
-      return true;
+      return { success: true };
     } catch (err: any) {
       console.error("Failed to update zone:", err);
-      return false;
+      return { success: false, error: err.message || "Failed to update zone" };
     }
   },
 
   deleteZone: async (zoneId: string) => {
     try {
-      const { error } = await supabase.from("zones").delete().eq("id", zoneId);
-      if (error) throw error;
+      const { data, error } = await supabase.from("zones").delete().eq("id", zoneId).select();
+      if (error) {
+        console.error("Supabase delete zone error:", error);
+        return { success: false, error: error.message };
+      }
+      if (data && data.length === 0) {
+        return { success: false, error: "No rows deleted. Database Row Level Security (RLS) policy may have prevented this change." };
+      }
       set((state) => ({
         zones: state.zones.filter((z) => z.id !== zoneId),
       }));
-      return true;
+      return { success: true };
     } catch (err: any) {
       console.error("Failed to delete zone:", err);
-      return false;
+      return { success: false, error: err.message || "Failed to delete zone" };
     }
   },
 
   toggleZoneActive: async (zoneId: string, isActive: boolean) => {
-    return get().updateZone(zoneId, { is_active: isActive });
+    const res = await get().updateZone(zoneId, { is_active: isActive });
+    return res.success;
   },
 }));

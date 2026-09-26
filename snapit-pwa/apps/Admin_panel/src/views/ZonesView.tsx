@@ -454,7 +454,7 @@ export const ZonesView: React.FC = () => {
     }
 
     setIsSaving(true);
-    const ok = await updateZone(selectedZone.id, {
+    const res = await updateZone(selectedZone.id, {
       center_lat: parsed.lat,
       center_lng: parsed.lng,
       inner_radius_km: editInner,
@@ -462,11 +462,11 @@ export const ZonesView: React.FC = () => {
     });
     setIsSaving(false);
 
-    if (ok) {
+    if (res.success) {
       showToast(`Saved coordinates & radii for ${selectedZone.name}!`);
       setActiveTab("map");
     } else {
-      alert("Failed to save changes to database.");
+      alert(`Failed to save changes: ${res.error || "Unknown database error"}`);
     }
   };
 
@@ -474,10 +474,14 @@ export const ZonesView: React.FC = () => {
   const handleDeleteZone = async () => {
     if (!selectedZone) return;
     if (window.confirm(`Permanently delete zone "${selectedZone.name}"?`)) {
-      await deleteZone(selectedZone.id);
-      setSelectedZone(null);
-      showToast(`Zone "${selectedZone.name}" deleted.`);
-      setActiveTab("map");
+      const res = await deleteZone(selectedZone.id);
+      if (res.success) {
+        setSelectedZone(null);
+        showToast(`Zone "${selectedZone.name}" deleted.`);
+        setActiveTab("map");
+      } else {
+        alert(`Failed to delete zone: ${res.error || "Unknown database error"}`);
+      }
     }
   };
 
@@ -491,7 +495,7 @@ export const ZonesView: React.FC = () => {
     }
 
     const id = addForm.id.trim() || addForm.name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
-    const ok = await createZone({
+    const res = await createZone({
       id,
       name: addForm.name,
       center_lat: parsed.lat,
@@ -500,12 +504,12 @@ export const ZonesView: React.FC = () => {
       outer_radius_km: addForm.outer_radius_km,
     });
 
-    if (ok) {
+    if (res.success) {
       setShowAddModal(false);
       showToast(`Zone "${addForm.name}" created!`);
       setActiveTab("map");
     } else {
-      alert("Failed to create zone.");
+      alert(`Failed to create zone: ${res.error || "Check database permissions / RLS"}`);
     }
   };
 
