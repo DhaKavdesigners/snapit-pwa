@@ -25,8 +25,7 @@
         "E8:2D:23:E2:0A:B3:3E:A0:C0:D8:2F:E7:1D:EB:A2:65:63:A1:B0:8B:36:20:AC:BF:4F:97:FC:2A:FF:B9:39:D6"
       ]
     }
-  }
-
+  },
   {
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
