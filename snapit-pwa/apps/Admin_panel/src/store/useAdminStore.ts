@@ -8,6 +8,7 @@ import {
   AdminRider,
   AdminProduct,
   AdminCustomerProfile,
+  AdminZone,
   OrderStatus,
 } from "../types/admin";
 
@@ -19,6 +20,7 @@ interface AdminState {
   riders: AdminRider[];
   products: AdminProduct[];
   customers: AdminCustomerProfile[];
+  zones: AdminZone[];
   isLoading: boolean;
   isRealtimeConnected: boolean;
   lastSyncTime: string | null;
@@ -69,7 +71,14 @@ interface AdminState {
 
   // Customer Actions
   updateCustomerVerification: (customerId: string, verified: boolean) => Promise<boolean>;
+
+  // Zone Actions
+  createZone: (data: Partial<AdminZone>) => Promise<boolean>;
+  updateZone: (zoneId: string, updates: Partial<AdminZone>) => Promise<boolean>;
+  deleteZone: (zoneId: string) => Promise<boolean>;
+  toggleZoneActive: (zoneId: string, isActive: boolean) => Promise<boolean>;
 }
+
 
 const getStoredSettlements = (): StoreSettlementRecord[] => {
   try {
@@ -89,6 +98,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   riders: [],
   products: [],
   customers: [],
+  zones: [],
   isLoading: true,
   isRealtimeConnected: false,
   lastSyncTime: null,
@@ -104,6 +114,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         ridersRes,
         productsRes,
         customersRes,
+        zonesRes,
       ] = await Promise.all([
         supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(200),
         supabase.from("stores").select("*").order("name", { ascending: true }),
@@ -111,6 +122,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         supabase.from("rider_profiles").select("*").order("name", { ascending: true }),
         supabase.from("products").select("*").order("name", { ascending: true }).limit(500),
         supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(100),
+        supabase.from("zones").select("*").order("sort_order", { ascending: true }),
       ]);
 
       // Normalize stores so store_address and address are unified
@@ -127,6 +139,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         riders: (ridersRes.data as AdminRider[]) || [],
         products: (productsRes.data as AdminProduct[]) || [],
         customers: (customersRes.data as AdminCustomerProfile[]) || [],
+        zones: (zonesRes.data as AdminZone[]) || [],
         isLoading: false,
         lastSyncTime: new Date().toLocaleTimeString(),
       });
@@ -749,8 +762,27 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   deleteRider: async (riderId: string) => {
     try {
-      const { error } = await supabase.from("rider_profiles").delete().eq("id", riderId);
-      if (error) throw error;
+      // 1. Try SECURITY DEFINER RPC — bypasses RLS and handles FK cleanup
+      const { error: rpcErr } = await supabase.rpc("admin_delete_rider", {
+        p_rider_id: riderId,
+      });
+
+      if (rpcErr) {
+        // 2. RPC not available yet — fallback: manually nullify FK + direct delete
+        console.warn("RPC not found, using fallback:", rpcErr.message);
+
+        await supabase
+          .from("orders")
+          .update({ rider_id: null })
+          .eq("rider_id", riderId);
+
+        const { error: deleteErr } = await supabase
+          .from("rider_profiles")
+          .delete()
+          .eq("id", riderId);
+
+        if (deleteErr) throw deleteErr;
+      }
 
       set((state) => ({
         riders: state.riders.filter((r) => r.id !== riderId),
@@ -758,7 +790,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
       return true;
     } catch (err: any) {
-      console.error("Failed to delete rider:", err);
+      console.error("Failed to delete rider:", err.message || err);
       return false;
     }
   },
@@ -889,5 +921,68 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       console.error("Failed to update customer:", err);
       return false;
     }
+  },
+
+  // ---------------- ZONE ACTIONS ----------------
+  createZone: async (data: Partial<AdminZone>) => {
+    try {
+      const id = data.id || data.name?.toLowerCase().replace(/\s+/g, "_") || `zone_${Date.now()}`;
+      const { error } = await supabase.from("zones").insert({
+        id,
+        name: data.name,
+        city: data.city || "KGF",
+        center_lat: data.center_lat,
+        center_lng: data.center_lng,
+        inner_radius_km: data.inner_radius_km ?? 1.5,
+        outer_radius_km: data.outer_radius_km ?? 4.5,
+        polygon: data.polygon ?? null,
+        daily_min: data.daily_min ?? 600,
+        daily_max: data.daily_max ?? 1200,
+        demand_level: data.demand_level ?? "NORMAL",
+        is_active: data.is_active ?? true,
+        sort_order: data.sort_order ?? 99,
+      });
+      if (error) throw error;
+      await get().fetchInitialData();
+      return true;
+    } catch (err: any) {
+      console.error("Failed to create zone:", err);
+      return false;
+    }
+  },
+
+  updateZone: async (zoneId: string, updates: Partial<AdminZone>) => {
+    try {
+      const { error } = await supabase
+        .from("zones")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", zoneId);
+      if (error) throw error;
+      set((state) => ({
+        zones: state.zones.map((z) => (z.id === zoneId ? { ...z, ...updates } : z)),
+      }));
+      return true;
+    } catch (err: any) {
+      console.error("Failed to update zone:", err);
+      return false;
+    }
+  },
+
+  deleteZone: async (zoneId: string) => {
+    try {
+      const { error } = await supabase.from("zones").delete().eq("id", zoneId);
+      if (error) throw error;
+      set((state) => ({
+        zones: state.zones.filter((z) => z.id !== zoneId),
+      }));
+      return true;
+    } catch (err: any) {
+      console.error("Failed to delete zone:", err);
+      return false;
+    }
+  },
+
+  toggleZoneActive: async (zoneId: string, isActive: boolean) => {
+    return get().updateZone(zoneId, { is_active: isActive });
   },
 }));

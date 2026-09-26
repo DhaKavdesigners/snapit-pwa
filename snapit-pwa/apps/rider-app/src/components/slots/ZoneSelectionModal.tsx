@@ -34,7 +34,7 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const current = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const current = zones.find((z) => z.id === rider.selectedZoneId) || zones[0] || null;
       setSelectedZone(current);
       setIsSaving(false);
     }
@@ -50,7 +50,7 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
     });
 
     if (rider.phone) {
-      const cleanPhone = rider.phone.replace(/[^0-9+]/g, '');
+      const cleanPhone = rider.phone.replace(/[^0-9]/g, '').slice(-10);
       Promise.resolve(
         supabase
           .from('rider_profiles')
@@ -105,9 +105,15 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
 
         {/* Zone List */}
         <div className="p-5 overflow-y-auto flex-1 space-y-2.5">
-          {zones.map((zone) => {
-            const isCurrent = (rider.selectedZoneId || 'zone-1') === zone.id;
-            const isSelected = selectedZone?.id === zone.id;
+          {zones.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <div className="w-8 h-8 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin mx-auto" />
+              <p className="text-xs text-slate-500 font-medium">Loading live operating zones...</p>
+            </div>
+          ) : (
+            zones.map((zone) => {
+              const isCurrent = (rider.selectedZoneId || zones[0]?.id) === zone.id;
+              const isSelected = selectedZone?.id === zone.id;
 
             return (
               <button
@@ -173,7 +179,7 @@ export const ZoneSelectionModal: React.FC<ZoneSelectionModalProps> = ({
                 </div>
               </button>
             );
-          })}
+          }))}
 
           <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-[11px] text-slate-500 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />

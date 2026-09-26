@@ -150,9 +150,19 @@ export const FleetView: React.FC = () => {
   };
 
   const handleDeleteRider = async (riderId: string) => {
-    if (window.confirm("Are you sure you want to remove this delivery partner?")) {
-      await deleteRider(riderId);
-      showToast("Rider removed.");
+    const rider = riders.find((r) => r.id === riderId);
+    const label = rider?.name || rider?.Rider_ID || riderId;
+    if (
+      window.confirm(
+        `Permanently delete "${label}" from the database?\n\nThis cannot be undone. The rider's application and all KYC data will be removed.`
+      )
+    ) {
+      const success = await deleteRider(riderId);
+      if (success) {
+        showToast(`Rider "${label}" permanently deleted.`);
+      } else {
+        alert("Delete failed — the database may have blocked this action. Check Supabase RLS policies.");
+      }
     }
   };
 
@@ -458,9 +468,17 @@ export const FleetView: React.FC = () => {
                   <button
                     onClick={() => setRejectingRider(rider)}
                     title="Reject Application"
-                    className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all border border-rose-300 cursor-pointer"
+                    className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-all border border-amber-300 cursor-pointer"
                   >
                     <XCircle className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteRider(rider.id)}
+                    title="Permanently Delete Application"
+                    className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all border border-rose-300 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>

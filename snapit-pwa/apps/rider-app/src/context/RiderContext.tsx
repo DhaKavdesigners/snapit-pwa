@@ -52,6 +52,9 @@ import {
   stopWatchingZone,
   setMockLocationConfig,
   getMockLocationConfig,
+  fetchLiveZonesFromSupabase,
+  getCachedZones,
+  setCachedZones,
 } from '@/services/zoneService';
 import {
   getNow,
@@ -98,6 +101,7 @@ import {
   updateRiderLiveLocation,
   updateRiderOnlineStatus,
 } from '@/services/supabaseOrderService';
+import { supabase } from '@/lib/supabase';
 import {
   getLocalSessionToken,
   activateDeviceSession,
@@ -315,7 +319,7 @@ const defaultRider: RiderProfile = {
   addressCity: '',
   addressPincode: '',
   selectedZone: 'Robertsonpet',
-  selectedZoneId: 'zone-1',
+  selectedZoneId: 'Z01',
   isVerified: false,
   verificationStep: 1,
   verificationStatus: 'PENDING',
@@ -350,60 +354,7 @@ const initialEarnings: EarningsSummary = {
   ],
 };
 
-const availableZones: DeliveryZone[] = [
-  {
-    id: 'zone-1',
-    name: 'Robertsonpet',
-    radius: '5km radius',
-    demand: 'HIGH',
-    estDailyEarnings: '₹800 - ₹1,200/day',
-    activeRiders: 18,
-    centerLat: 12.9602,
-    centerLng: 78.2711,
-    radiusMeters: 5000,
-    capacity: 20,
-    booked: 0,
-  },
-  {
-    id: 'zone-2',
-    name: 'Andersonpet',
-    radius: '6km radius',
-    demand: 'HIGH',
-    estDailyEarnings: '₹600 - ₹950/day',
-    activeRiders: 12,
-    centerLat: 12.9358,
-    centerLng: 78.2678,
-    radiusMeters: 6000,
-    capacity: 15,
-    booked: 0,
-  },
-  {
-    id: 'zone-3',
-    name: 'BEML',
-    radius: '5km radius',
-    demand: 'NORMAL',
-    estDailyEarnings: '₹550 - ₹850/day',
-    activeRiders: 10,
-    centerLat: 12.9815,
-    centerLng: 78.2589,
-    radiusMeters: 5000,
-    capacity: 12,
-    booked: 0,
-  },
-  {
-    id: 'zone-4',
-    name: 'Bangarpet',
-    radius: '8km radius',
-    demand: 'HIGH',
-    estDailyEarnings: '₹700 - ₹1,100/day',
-    activeRiders: 14,
-    centerLat: 12.9984,
-    centerLng: 78.1963,
-    radiusMeters: 8000,
-    capacity: 18,
-    booked: 0,
-  },
-];
+const availableZones: DeliveryZone[] = [];
 
 const initialAlerts: AlertNotification[] = [];
 
@@ -424,7 +375,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [ordersHistory, setOrdersHistory] = useState<Order[]>(completedOrdersSeed);
   const [cancelledOrders, setCancelledOrders] = useState<Order[]>([]);
   const [earnings, setEarnings] = useState<EarningsSummary>(initialEarnings);
-  const [zones] = useState<DeliveryZone[]>(availableZones);
+  const [zones, setZones] = useState<DeliveryZone[]>(() => {
+    const cached = getCachedZones();
+    return cached.length > 0 ? cached : [];
+  });
   const [alerts, setAlerts] = useState<AlertNotification[]>(initialAlerts);
   const [desktopFrame, setDesktopFrame] = useState<boolean>(false);
   const handledOrderIdsRef = useRef<Set<string>>(new Set());
@@ -453,7 +407,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     breakRiders: 0,
     outsideZoneRiders: 0,
     offlineRiders: 0,
-    zoneId: 'zone-1',
+    zoneId: 'Z01',
     lastUpdated: Date.now(),
   });
   const [simulatedDemand, setSimulatedDemandState] = useState<{
@@ -745,6 +699,239 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [rider.phone, sessionToken, rider.isAuthenticated]);
 
+  // ── Sync Active Zones from Supabase & Realtime Subscription ──
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchLiveZones = async () => {
+      try {
+        const liveZones = await fetchLiveZonesFromSupabase();
+        if (!isMounted) return;
+
+        if (liveZones && liveZones.length > 0) {
+          setZones(liveZones);
+
+          // Auto-reconcile rider's selected zone if pointing to an invalid/outdated zone ID
+          setRider((prevRider) => {
+            const currentSelectedId = prevRider.selectedZoneId;
+            const match = liveZones.find((z) => z.id === currentSelectedId);
+
+            if (!match) {
+              const defaultZone = liveZones[0];
+              console.log(
+                `[RiderContext] Auto-reconciling rider zone from "${currentSelectedId}" to valid zone "${defaultZone.id}" (${defaultZone.name})`
+              );
+
+              // Persist update to Supabase if rider has phone
+              if (prevRider.phone) {
+                const cleanPhone = prevRider.phone.replace(/[^0-9]/g, '').slice(-10);
+                supabase
+                  .from('rider_profiles')
+                  .update({
+                    selected_zone_id: defaultZone.id,
+                    selected_zone_name: defaultZone.name,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('phone', cleanPhone)
+                  .then();
+              }
+
+              return {
+                ...prevRider,
+                selectedZoneId: defaultZone.id,
+                selectedZone: defaultZone.name,
+              };
+            }
+            return prevRider;
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch live zones from Supabase:', err);
+      }
+    };
+
+    // 1. Initial immediate fetch
+    fetchLiveZones();
+
+    // 2. Realtime subscription to zones table changes
+    const zonesChannel = supabase
+      .channel('realtime:public:zones')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'zones' },
+        (payload) => {
+          console.log('[RiderContext] Realtime zones update detected:', payload.eventType);
+          fetchLiveZones();
+        }
+      )
+      .subscribe();
+
+    // 3. Refresh on tab focus
+    const handleFocus = () => {
+      fetchLiveZones();
+    };
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleFocus);
+
+    // 4. Fallback interval check every 15s
+    const interval = setInterval(fetchLiveZones, 15000);
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(zonesChannel);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleFocus);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // ── Sync Live Verification & Profile Updates from Supabase ──
+  useEffect(() => {
+    const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const cleanRiderId = rider.Rider_ID || rider.riderId || '';
+    if (!cleanPhone && !cleanRiderId) return;
+
+    const fetchLiveProfile = async () => {
+      try {
+        let query = supabase.from('rider_profiles').select('*');
+        if (cleanPhone) {
+          query = query.eq('phone', cleanPhone);
+        } else {
+          query = query.or(`Rider_ID.eq.${cleanRiderId},id.eq.${cleanRiderId}`);
+        }
+
+        const { data: dbProfile, error: profileErr } = await query.maybeSingle();
+
+        if (dbProfile && !profileErr) {
+          // Strictly evaluate isApproved based on is_verified boolean or explicit APPROVED status
+          const isApproved =
+            dbProfile.is_verified === true ||
+            dbProfile.verification_status === 'APPROVED';
+
+          setRider((prev) => {
+            const hasChanged =
+              prev.isVerified !== isApproved ||
+              prev.verificationStatus !== (isApproved ? 'APPROVED' : 'PENDING') ||
+              (!prev.Rider_ID && dbProfile.Rider_ID) ||
+              prev.name !== (dbProfile.name || prev.name) ||
+              prev.selectedZone !== (dbProfile.selected_zone_name || prev.selectedZone) ||
+              prev.walletBalance !== (dbProfile.wallet_balance ?? prev.walletBalance ?? 0);
+
+            if (!hasChanged) return prev;
+
+            if (!isApproved && prev.isVerified) {
+              setIsOnline(false);
+              try {
+                localStorage.setItem('snapit_online_status_v2', JSON.stringify(false));
+              } catch {}
+            }
+
+            const updated: RiderProfile = {
+              ...prev,
+              name: dbProfile.name || prev.name,
+              phone: dbProfile.phone || prev.phone,
+              Rider_ID: dbProfile.Rider_ID || prev.Rider_ID,
+              riderId: dbProfile.Rider_ID || prev.riderId,
+              isVerified: isApproved,
+              verificationStep: isApproved ? 4 : (dbProfile.verification_step || 3),
+              verificationStatus: isApproved ? 'APPROVED' : 'PENDING',
+              isAuthenticated: true,
+              vehicleType: dbProfile.vehicle_type || prev.vehicleType,
+              vehicleNumber: dbProfile.vehicle_number || prev.vehicleNumber,
+              selectedZone: dbProfile.selected_zone_name || prev.selectedZone,
+              selectedZoneId: dbProfile.selected_zone_id || prev.selectedZoneId,
+              walletBalance: dbProfile.wallet_balance ?? prev.walletBalance ?? 0,
+              totalDeliveries: dbProfile.total_deliveries ?? prev.totalDeliveries ?? 0,
+            };
+
+            try {
+              localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updated));
+            } catch {}
+
+            return updated;
+          });
+        }
+      } catch (err) {
+        // Silent catch
+      }
+    };
+
+    // 1. Initial live check immediately
+    fetchLiveProfile();
+
+    // 2. Realtime WebSocket subscription for instant admin approval reflection
+    const channel = supabase
+      .channel(`rider-live-profile-watch-${cleanPhone || cleanRiderId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rider_profiles',
+          filter: cleanPhone ? `phone=eq.${cleanPhone}` : `id=eq.${cleanRiderId}`,
+        },
+        (payload: any) => {
+          if (payload.new) {
+            console.log('⚡ [Rider Realtime] Profile update received from DB:', payload.new);
+            const isApproved =
+              payload.new.is_verified === true ||
+              payload.new.verification_status === 'APPROVED';
+
+            setRider((prev) => {
+              if (!isApproved && prev.isVerified) {
+                setIsOnline(false);
+                try {
+                  localStorage.setItem('snapit_online_status_v2', JSON.stringify(false));
+                } catch {}
+              }
+
+              const updated: RiderProfile = {
+                ...prev,
+                name: payload.new.name || prev.name,
+                phone: payload.new.phone || prev.phone,
+                Rider_ID: payload.new.Rider_ID || prev.Rider_ID,
+                riderId: payload.new.Rider_ID || prev.riderId,
+                isVerified: isApproved,
+                verificationStep: isApproved ? 4 : (payload.new.verification_step || 3),
+                verificationStatus: isApproved ? 'APPROVED' : 'PENDING',
+                isAuthenticated: true,
+                vehicleType: payload.new.vehicle_type || prev.vehicleType,
+                vehicleNumber: payload.new.vehicle_number || prev.vehicleNumber,
+                selectedZone: payload.new.selected_zone_name || prev.selectedZone,
+                selectedZoneId: payload.new.selected_zone_id || prev.selectedZoneId,
+                walletBalance: payload.new.wallet_balance ?? prev.walletBalance ?? 0,
+                totalDeliveries: payload.new.total_deliveries ?? prev.totalDeliveries ?? 0,
+              };
+
+              try {
+                localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updated));
+              } catch {}
+
+              return updated;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. Continuous 2.5s Polling (Guarantees instant sync even without WebSocket replication)
+    const pollTimer = setInterval(fetchLiveProfile, 2500);
+
+    // 4. Instant sync on window focus (When user switches back from Supabase tab)
+    const handleFocus = () => {
+      fetchLiveProfile();
+    };
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollTimer);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [rider.phone, rider.Rider_ID, rider.riderId]);
+
   // Fetch remote availability preferences when rider profile phone changes
   useEffect(() => {
     if (!rider.phone) return;
@@ -953,8 +1140,15 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshSlots = useCallback((customBookedIds?: string[], customZoneId?: string, customZoneName?: string) => {
     const currentBooked = customBookedIds !== undefined ? customBookedIds : bookedSlotIds;
-    const targetZoneId = customZoneId || rider.selectedZoneId || 'zone-1';
-    const selectedZone = zones.find((z) => z.id === targetZoneId) || zones[0];
+    const targetZoneId = customZoneId || rider.selectedZoneId || zones[0]?.id || 'Z01';
+    const selectedZone = zones.find((z) => z.id === targetZoneId) || zones[0] || {
+      id: 'Z01',
+      name: 'Robertsonpet',
+      radius: '5km radius',
+      demand: 'HIGH' as const,
+      estDailyEarnings: '₹800 - ₹1,200/day',
+      activeRiders: 10,
+    };
     const targetZoneName = customZoneName || selectedZone.name;
 
     const generated = generateAllSlots(
@@ -993,7 +1187,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Demand & Capacity Calculation ─────────────────────────────────────────
 
   const recalculateDemandStatus = useCallback((ordersList?: any[], ridersList?: any[]) => {
-    const currentZoneId = rider.selectedZoneId || 'zone-1';
+    const currentZoneId = rider.selectedZoneId || zones[0]?.id || 'Z01';
 
     if (ordersList) cachedDbOrdersRef.current = ordersList;
     if (ridersList) cachedDbRidersRef.current = ridersList;
@@ -1122,7 +1316,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       refreshSlots();
 
       const now = getNow();
-      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const selectedZone = zones.find((z) => z.id === rider.selectedZoneId) || zones[0];
+      if (!selectedZone) return;
       const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
 
       // Check if there is any currently active booked slot running right now
@@ -1236,7 +1431,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Zone Watching ─────────────────────────────────────────────────────────
 
   const refreshZoneStatus = useCallback(async () => {
-    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+    const selectedZone = zones.find((z) => z.id === rider.selectedZoneId) || zones[0];
+    if (!selectedZone) return;
     const result = await checkZoneStatus(selectedZone);
     const newStatus = result.status;
 
@@ -1252,7 +1448,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   }, [zones, rider.selectedZoneId]);
 
   useEffect(() => {
-    const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+    const selectedZone = zones.find((z) => z.id === rider.selectedZoneId) || zones[0];
+    if (!selectedZone) return;
 
     startWatchingZone(selectedZone, (result) => {
       const newStatus = result.status;
@@ -1336,11 +1533,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const enableMockLocation = useCallback(
     (zoneId?: string, customCoords?: { lat: number; lng: number }) => {
-      const targetZoneId = zoneId || rider.selectedZoneId || 'zone-1';
+      const targetZoneId = zoneId || rider.selectedZoneId || zones[0]?.id || 'Z01';
       const targetZone = zones.find((z) => z.id === targetZoneId) || zones[0];
       const coords = customCoords || {
-        lat: targetZone.centerLat ?? 12.9602,
-        lng: targetZone.centerLng ?? 78.2711,
+        lat: targetZone?.centerLat ?? 12.9571457,
+        lng: targetZone?.centerLng ?? 78.274568,
       };
       setIsMockLocationEnabled(true);
       setMockZoneId(targetZoneId);
@@ -1413,7 +1610,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const selectedZone = zones.find((z) => z.id === rider.selectedZoneId) || zones[0];
+      if (!selectedZone) return;
       const allSlots = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
       const booked = allSlots.find((s) => bookedSlotIds.includes(s.id)) || allSlots[2] || allSlots[0];
 
@@ -2192,7 +2390,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       });
     } else if (!activeSession) {
       // Fallback slot check
-      const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const selectedZone = zones.find((z) => z.id === rider.selectedZoneId) || zones[0];
+      if (!selectedZone) return true;
       const generated = generateDailySlots(adminConfig.slot, bookedSlotIds, selectedZone.id, selectedZone.name);
       const hasActiveBookedSlot = generated.some(
         (s) => bookedSlotIds.includes(s.id) && now >= s.startTimestamp && now < s.endTimestamp
@@ -2439,8 +2638,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         acceptanceRate: p.acceptance_rate || 100,
         vehicleType: p.vehicle_type || 'Bike',
         vehicleNumber: p.vehicle_number || '',
-        selectedZone: p.selected_zone_name || 'Robertsonpet',
-        selectedZoneId: p.selected_zone_id || 'zone-1',
+        selectedZone: p.selected_zone_name || zones[0]?.name || 'Robertsonpet',
+        selectedZoneId: p.selected_zone_id || zones[0]?.id || 'Z01',
         isVerified: true,
         verificationStep: 4,
         verificationStatus: 'APPROVED',
@@ -2510,8 +2709,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         acceptanceRate: p.acceptance_rate || 100,
         vehicleType: p.vehicle_type || 'Bike',
         vehicleNumber: p.vehicle_number || '',
-        selectedZone: p.selected_zone_name || 'Robertsonpet',
-        selectedZoneId: p.selected_zone_id || 'zone-1',
+        selectedZone: p.selected_zone_name || zones[0]?.name || 'Robertsonpet',
+        selectedZoneId: p.selected_zone_id || zones[0]?.id || 'Z01',
         isVerified: true,
         verificationStep: 4,
         verificationStatus: 'APPROVED',
@@ -2585,12 +2784,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         dob: data.dob,
         vehicle_type: formattedVehicle,
         vehicle_number: data.vehicleNumber || '',
-        selected_zone_id: data.selectedZoneId || 'zone-1',
-        selected_zone_name: data.selectedZone || 'Robertsonpet',
+        selected_zone_id: data.selectedZoneId || zones[0]?.id || 'Z01',
+        selected_zone_name: data.selectedZone || zones[0]?.name || 'Robertsonpet',
         alt_phone: data.altPhone,
         email: data.email,
         address: computedAddress,
         aadhaar_number: data.aadhaarNumber,
+        aadhaar_doc_url: data.aadhaarDocUrl,
         pan_number: data.panNumber,
         pan_doc_url: data.panDocUrl,
         dl_number: data.dlNumber,

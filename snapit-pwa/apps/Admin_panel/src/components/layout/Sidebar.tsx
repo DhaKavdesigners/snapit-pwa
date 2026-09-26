@@ -9,6 +9,7 @@ import {
   Settings,
   Activity,
   Receipt,
+  MapPin,
 } from "lucide-react";
 import { useAdminStore } from "../../store/useAdminStore";
 
@@ -18,6 +19,7 @@ export type AdminTab =
   | "merchants"
   | "settlements"
   | "fleet"
+  | "zones"
   | "catalog"
   | "customers"
   | "settings";
@@ -28,7 +30,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
-  const { orders, riders, stores } = useAdminStore();
+  const { orders, riders, stores, zones } = useAdminStore();
 
   const activeOrdersCount = orders.filter(
     (o) => !["DELIVERED", "CANCELLED", "REJECTED"].includes(o.status)
@@ -39,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     (r) => r.verification_status === "PENDING" || (r.is_verified === false && !r.verification_status)
   ).length;
   const onlineStoresCount = stores.filter((s) => s.is_online).length;
+  const activeZonesCount = zones.filter((z) => z.is_active).length;
 
   const navItems = [
     {
@@ -77,6 +80,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         pendingRidersCount > 0
           ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse"
           : "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+    },
+    {
+      id: "zones" as AdminTab,
+      label: "Zone Management",
+      icon: MapPin,
+      badge: `${activeZonesCount} Active`,
+      badgeColor: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
     },
     {
       id: "catalog" as AdminTab,

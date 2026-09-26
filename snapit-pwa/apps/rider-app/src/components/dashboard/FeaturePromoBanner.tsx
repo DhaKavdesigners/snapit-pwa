@@ -23,7 +23,7 @@ export interface FeaturePromoSlide {
   description: string;
   pillHighlight: string;
   ctaText: string;
-  ctaAction?: 'availability' | 'start_riding' | 'zone' | 'earnings';
+  ctaAction?: 'availability' | 'start_riding' | 'zone' | 'earnings' | 'tour';
   bgGradient: string;
   borderClass: string;
   accentMedallionBg: string;
@@ -33,6 +33,7 @@ export interface FeaturePromoSlide {
 interface FeaturePromoBannerProps {
   onOpenStartRiding?: () => void;
   onOpenZoneModal?: () => void;
+  onStartTour?: () => void;
 }
 
 const PROMO_SLIDES: FeaturePromoSlide[] = [
@@ -102,8 +103,8 @@ const PROMO_SLIDES: FeaturePromoSlide[] = [
     tagBg: 'bg-rose-100 text-rose-900 border-rose-300/80',
     tagText: 'text-rose-900',
     headline: 'Deliver in Your Zone.',
-    description: 'Choose Robertsonpet, Andersonpet or local hubs to stay near your favorite stores.',
-    pillHighlight: 'KGF Zones',
+    description: 'Select your preferred operating zone to receive high-priority orders from nearby stores.',
+    pillHighlight: 'Live Zones',
     ctaText: 'Change Zone',
     ctaAction: 'zone',
     bgGradient: 'from-rose-500/10 via-pink-500/5 to-rose-500/0 bg-gradient-to-br',
@@ -126,6 +127,21 @@ const PROMO_SLIDES: FeaturePromoSlide[] = [
     accentMedallionBg: 'bg-gradient-to-br from-teal-600 to-emerald-600 text-white shadow-teal-500/25',
     icon: <TrendingUp className="w-5 h-5 stroke-[2.5]" />,
   },
+  {
+    id: 'app_tour',
+    tag: 'APP WALKTHROUGH',
+    tagBg: 'bg-emerald-100 text-emerald-900 border-emerald-300/80',
+    tagText: 'text-emerald-900',
+    headline: 'Explore Rider Features.',
+    description: 'Take the 1-minute guided interactive walkthrough to master shift controls, ZAS zones, and priority dispatches.',
+    pillHighlight: '6 Tour Steps',
+    ctaText: 'Start Tour',
+    ctaAction: 'tour',
+    bgGradient: 'from-emerald-500/10 via-teal-500/5 to-emerald-500/0 bg-gradient-to-br',
+    borderClass: 'border-emerald-200/90 hover:border-emerald-300',
+    accentMedallionBg: 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-emerald-500/25',
+    icon: <Sparkles className="w-5 h-5 stroke-[2.5]" />,
+  },
 ];
 
 const AUTO_SLIDE_INTERVAL = 5500; // 5.5s per slide
@@ -133,6 +149,7 @@ const AUTO_SLIDE_INTERVAL = 5500; // 5.5s per slide
 export const FeaturePromoBanner: React.FC<FeaturePromoBannerProps> = ({
   onOpenStartRiding,
   onOpenZoneModal,
+  onStartTour,
 }) => {
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -195,6 +212,9 @@ export const FeaturePromoBanner: React.FC<FeaturePromoBannerProps> = ({
     } else if (action === 'zone' && onOpenZoneModal) {
       e.preventDefault();
       onOpenZoneModal();
+    } else if (action === 'tour' && onStartTour) {
+      e.preventDefault();
+      onStartTour();
     }
   };
 

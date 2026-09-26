@@ -6,6 +6,7 @@ import { OrdersControlView } from "../../views/OrdersControlView";
 import { MerchantsView } from "../../views/MerchantsView";
 import { SettlementsView } from "../../views/SettlementsView";
 import { FleetView } from "../../views/FleetView";
+import { ZonesView } from "../../views/ZonesView";
 import { CatalogView } from "../../views/CatalogView";
 import { CustomersView } from "../../views/CustomersView";
 import { SettingsView } from "../../views/SettingsView";
@@ -34,6 +35,10 @@ export const AdminLayout: React.FC = () => {
     fleet: {
       title: "Delivery Fleet & Riders",
       subtitle: "Live fleet roster, online availability, current assigned orders, and new rider onboarding",
+    },
+    zones: {
+      title: "Delivery Zone Management",
+      subtitle: "Map-based zone editor — adjust inner/outer dispatch rings, demand levels, and earnings per zone",
     },
     catalog: {
       title: "Master Product Catalog & Inventory",
@@ -73,6 +78,7 @@ export const AdminLayout: React.FC = () => {
             <SettlementsView initialStoreId={selectedStoreForSettlement} />
           )}
           {activeTab === "fleet" && <FleetView />}
+          {activeTab === "zones" && <ZonesView />}
           {activeTab === "catalog" && <CatalogView />}
           {activeTab === "customers" && <CustomersView />}
           {activeTab === "settings" && <SettingsView />}

@@ -64,7 +64,7 @@ export const StartRidingSheet: React.FC<StartRidingSheetProps> = ({ isOpen, onCl
   // Initialize selected zone to current rider's zone or first zone
   useEffect(() => {
     if (isOpen) {
-      const current = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
+      const current = zones.find((z) => z.id === rider.selectedZoneId) || zones[0] || null;
       setSelectedZone(current);
       setSelectedDuration(DEFAULT_SESSION_DURATION);
       setErrorMessage(null);

@@ -33,6 +33,7 @@ import {
   Info,
   CreditCard,
   ExternalLink,
+  MapPin,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -117,19 +118,62 @@ export default function OnboardingPage() {
   const [payoutError, setPayoutError] = useState('');
 
   // Step 5: Preferred Operating Zone
-  const [selectedZoneId, setSelectedZoneId] = useState(zones[0]?.id || 'zone-1');
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+
+  useEffect(() => {
+    if (zones && zones.length > 0) {
+      if (!selectedZoneId || !zones.some((z) => z.id === selectedZoneId)) {
+        setSelectedZoneId(zones[0].id);
+      }
+    }
+  }, [zones, selectedZoneId]);
 
   const router = useRouter();
  
-  // Automatically transition from splash screen to signin after 2 seconds
+  // Check if rider requested specific step via URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedStep = urlParams.get('step');
+
+    if (requestedStep === 'status') {
+      setStep('reg_waiting');
+      if (rider.phone) setRegisteredPhone(rider.phone);
+      if (rider.Rider_ID || rider.riderId) setRegisteredRiderId(rider.Rider_ID || rider.riderId || '');
+      return;
+    }
+
+    if (requestedStep === 'signin') {
+      setStep('signin');
+      return;
+    }
+
+    if (requestedStep === 'register') {
+      setStep('personal');
+      return;
+    }
+  }, [rider.phone, rider.Rider_ID, rider.riderId]);
+
+  // Automatically transition from splash screen to signin after 2 seconds (or reg_waiting if rider already has registered profile)
   useEffect(() => {
     if (step === 'splash') {
+      const hasRegisteredPendingProfile = Boolean(
+        rider.phone &&
+        (rider.Rider_ID || rider.riderId) &&
+        rider.isVerified === false
+      );
+      if (hasRegisteredPendingProfile) {
+        setRegisteredPhone(rider.phone);
+        setRegisteredRiderId(rider.Rider_ID || rider.riderId || '');
+        setStep('reg_waiting');
+        return;
+      }
       const timer = setTimeout(() => {
         setStep('signin');
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [step]);
+  }, [step, rider.phone, rider.isVerified, rider.Rider_ID, rider.riderId]);
 
   // Handle Login with Rider ID + MPIN
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -224,7 +268,7 @@ export default function OnboardingPage() {
 
     const pollTimer = setInterval(async () => {
       try {
-        let query = supabase.from('rider_profiles').select('id, phone, Rider_ID, verification_status, is_verified, rejection_reason');
+        let query = supabase.from('rider_profiles').select('*');
         if (targetPhone) {
           query = query.eq('phone', targetPhone);
         } else {
@@ -259,7 +303,7 @@ export default function OnboardingPage() {
     const targetId = registeredRiderId || rider.Rider_ID || rider.riderId;
 
     try {
-      let query = supabase.from('rider_profiles').select('id, phone, Rider_ID, verification_status, is_verified, rejection_reason');
+      let query = supabase.from('rider_profiles').select('*');
       if (targetPhone) {
         query = query.eq('phone', targetPhone);
       } else if (targetId) {
@@ -316,8 +360,8 @@ export default function OnboardingPage() {
     setDob(val);
     if (val) {
       const age = calculateAge(val);
-      if (age < 16) {
-        setDobError('Riders must be at least 16 years of age to register.');
+      if (age < 18) {
+        setDobError('Entered DOB is less than 18 years. You must be at least 18 years of age to register.');
       } else {
         setDobError('');
       }
@@ -342,9 +386,9 @@ export default function OnboardingPage() {
     }
 
     const age = calculateAge(dob);
-    if (age < 16) {
-      setPersonalError('Riders must be at least 16 years of age to register.');
-      setDobError('Riders must be at least 16 years of age to register.');
+    if (age < 18) {
+      setPersonalError('Entered DOB is less than 18 years. Riders must be at least 18 years of age to register.');
+      setDobError('Entered DOB is less than 18 years. Riders must be at least 18 years of age to register.');
       return;
     }
 
@@ -421,42 +465,24 @@ export default function OnboardingPage() {
   const handleVehicleSubmit = () => {
     setVehicleError('');
 
-    if (hasDrivingLicense) {
-      if (!vehicleNumber.trim()) {
-        setVehicleError('Please enter your vehicle registration number (e.g. KA 08 EJ 1234).');
-        return;
-      }
-
-      if (!dlNumber.trim()) {
-        setVehicleError('Please enter your Driving Licence (DL) number.');
-        return;
-      }
-
-      updateRiderProfile({
-        hasDrivingLicense: true,
-        vehicleType,
-        vehicleModel: vehicleModel.trim(),
-        vehicleNumber: vehicleNumber.toUpperCase().trim(),
-        dlNumber: dlNumber.toUpperCase().trim(),
-        dlDoc: dlDocUrl || undefined,
-      });
-    } else {
-      if (!vehicleModel.trim()) {
-        setVehicleError('Please select or enter your low-speed electric vehicle model.');
-        return;
-      }
-
-      const numStr = vehicleNumber.trim().toUpperCase() || 'EXEMPT-EV';
-
-      updateRiderProfile({
-        hasDrivingLicense: false,
-        vehicleType: 'Electric Scooter (Low-Speed ≤25km/h)',
-        vehicleModel: vehicleModel.trim(),
-        vehicleNumber: numStr,
-        dlNumber: undefined,
-        dlDoc: undefined,
-      });
+    if (!vehicleNumber.trim()) {
+      setVehicleError('Please enter your vehicle registration number (e.g. KA 08 EJ 1234).');
+      return;
     }
+
+    if (!dlNumber.trim()) {
+      setVehicleError('Please enter your Driving Licence (DL) number.');
+      return;
+    }
+
+    updateRiderProfile({
+      hasDrivingLicense: true,
+      vehicleType,
+      vehicleModel: vehicleModel.trim(),
+      vehicleNumber: vehicleNumber.toUpperCase().trim(),
+      dlNumber: dlNumber.toUpperCase().trim(),
+      dlDoc: dlDocUrl || undefined,
+    });
 
     setStep('payout');
   };
@@ -523,13 +549,8 @@ export default function OnboardingPage() {
     const matchedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
     const cleanPhone1 = phone.replace(/[^0-9]/g, '');
 
-    const resolvedVehicleType = hasDrivingLicense
-      ? vehicleType
-      : 'Electric Scooter (Low-Speed ≤25km/h)';
-
-    const resolvedVehicleNumber = hasDrivingLicense
-      ? vehicleNumber.toUpperCase().trim()
-      : (vehicleNumber.trim().toUpperCase() || 'EXEMPT-EV');
+    const resolvedVehicleType = vehicleType;
+    const resolvedVehicleNumber = vehicleNumber.toUpperCase().trim();
 
     const cleanPincode = addressPincode.replace(/[^0-9]/g, '');
     const fullAddress = `${addressStreet.trim()}, ${addressArea.trim()}, ${addressCity.trim()} - ${cleanPincode}`;
@@ -542,12 +563,12 @@ export default function OnboardingPage() {
       phone: cleanPhone1,
       mpin: createMpin,
       dob,
-      hasDrivingLicense,
+      hasDrivingLicense: true,
       vehicleType: resolvedVehicleType,
       vehicleModel: vehicleModel.trim(),
       vehicleNumber: resolvedVehicleNumber,
-      selectedZoneId: matchedZone?.id || 'zone-1',
-      selectedZone: matchedZone?.name || 'Robertsonpet',
+      selectedZoneId: matchedZone?.id || zones[0]?.id || 'Z01',
+      selectedZone: matchedZone?.name || zones[0]?.name || 'Robertsonpet',
       address: fullAddress,
       addressStreet: addressStreet.trim(),
       addressArea: addressArea.trim(),
@@ -556,8 +577,8 @@ export default function OnboardingPage() {
       aadhaarNumber: aadhaarNumber.replace(/[^0-9]/g, ''),
       aadhaarDocUrl,
       panNumber: panNumber.trim().toUpperCase(),
-      dlNumber: hasDrivingLicense ? dlNumber.trim().toUpperCase() : undefined,
-      dlDocUrl: hasDrivingLicense ? dlDocUrl : undefined,
+      dlNumber: dlNumber.trim().toUpperCase(),
+      dlDocUrl: dlDocUrl || undefined,
       payoutMode,
       upiId: payoutMode === 'UPI' ? upiId.trim() : (cleanAccNo ? `bank:${cleanAccNo}` : `${cleanPhone1}@upi`),
       bankAccountHolder: bankAccountHolder.trim(),
@@ -576,6 +597,40 @@ export default function OnboardingPage() {
     setRegisteredRiderId(result.riderId);
     setRegisteredPhone(cleanPhone1);
     setStep('reg_waiting');
+  };
+
+  const handleStartFreshRegistration = () => {
+    setFullName('');
+    setDob('');
+    setPhone('');
+    setConfirmPhone('');
+    setAddressStreet('');
+    setAddressArea('');
+    setAddressCity('KGF');
+    setAddressPincode('');
+    setCreateMpin('');
+    setConfirmMpin('');
+    setAadhaarNumber('');
+    setAadhaarDocUrl('');
+    setVehicleType('Motorcycle');
+    setVehicleModel('');
+    setVehicleNumber('');
+    setDlNumber('');
+    setDlDocUrl('');
+    setPayoutMode('UPI');
+    setUpiId('');
+    setBankAccountHolder('');
+    setBankAccountNo('');
+    setBankIfsc('');
+    setBankPassbookDocUrl('');
+    setPanNumber('');
+    setCapturedSelfie('');
+    setPersonalError('');
+    setDobError('');
+    setVehicleError('');
+    setPayoutError('');
+    setRegError('');
+    setStep('personal');
   };
 
   const handleCopyRiderId = () => {
@@ -751,7 +806,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <button
-                  onClick={() => setStep('personal')}
+                  onClick={handleStartFreshRegistration}
                   className="w-full py-3.5 bg-white border border-primary text-primary font-bold text-xs rounded-2xl shadow-soft hover:bg-primary/5 active:scale-98 transition-all flex items-center justify-center gap-2 mt-1"
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -808,12 +863,16 @@ export default function OnboardingPage() {
                 />
               </div>
 
-              {/* Date of Birth (DOB) - 16+ Validation */}
+              {/* Date of Birth (DOB) - 18+ Validation */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface">Date of Birth (DOB)</label>
+                <label className="text-xs font-bold text-on-surface">
+                  Date of Birth (DOB) <span className="text-primary">*</span>
+                  <span className="text-[10px] text-slate-400 font-normal ml-1.5">(18+ years required)</span>
+                </label>
                 <input
                   type="date"
                   value={dob}
+                  max={new Date().toISOString().split('T')[0]}
                   onChange={(e) => handleDobChange(e.target.value)}
                   className={`w-full bg-white border rounded-xl p-3 text-xs font-semibold text-on-surface outline-none ${
                     dobError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-primary'
@@ -1088,218 +1147,88 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 space-y-4">
-              {/* Question: Do you have a Driving Licence? */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-800 block">
-                  Do you have a Driving Licence (DL)?
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHasDrivingLicense(true);
-                      setVehicleError('');
-                    }}
-                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                      hasDrivingLicense
-                        ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
+              <div className="space-y-3.5 animate-fade-in pt-1">
+                {/* Vehicle Type */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface">Vehicle Type</label>
+                  <select
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                        hasDrivingLicense ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        <FileCheck className="w-4 h-4" />
-                      </div>
-                      {hasDrivingLicense && <CheckCircle2 className="w-4 h-4 text-primary" />}
-                    </div>
-                    <p className="text-xs font-bold text-slate-900">I have a DL</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
-                      Petrol bikes & high-speed EVs
-                    </p>
-                  </button>
+                    <option value="Motorcycle">Motorcycle (Petrol / Geared)</option>
+                    <option value="Scooter">Scooter (Petrol / Non-Geared)</option>
+                    <option value="Electric Scooter (High-Speed)">Electric Scooter (High-Speed RTO)</option>
+                  </select>
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHasDrivingLicense(false);
-                      setVehicleError('');
-                    }}
-                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                      !hasDrivingLicense
-                        ? 'border-emerald-600 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-600'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                        !hasDrivingLicense ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        <ShieldCheck className="w-4 h-4" />
-                      </div>
-                      {!hasDrivingLicense && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-                    </div>
-                    <p className="text-xs font-bold text-slate-900">No DL Needed</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
-                      Low-speed EV (≤25km/h)
-                    </p>
-                  </button>
+                {/* Vehicle Model Name with suggestions */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface">Vehicle Model</label>
+                  <input
+                    type="text"
+                    value={vehicleModel}
+                    onChange={(e) => setVehicleModel(e.target.value)}
+                    placeholder="e.g. Honda Activa 6G, Hero Splendor, Ola S1"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                  />
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {['Honda Activa', 'Hero Splendor', 'Bajaj Pulsar', 'TVS Jupiter', 'Ola S1', 'Ather 450X'].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setVehicleModel(m)}
+                        className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                          vehicleModel === m
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Vehicle Number Plate */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface">
+                    Vehicle Registration Number <span className="text-primary">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                    placeholder="KA 08 EJ 1234"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
+                  />
+                </div>
+
+                {/* DL Number Input */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface">
+                    Driving Licence (DL) Number <span className="text-primary">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={dlNumber}
+                    onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                    placeholder="e.g. KA08 20210001234"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
+                  />
+                </div>
+
+                {/* DL Document Upload */}
+                <div className="space-y-1.5">
+                  <DocumentUploadCard
+                    title="Driving Licence (DL) Document"
+                    subtitle="Front & Back scan/photo (JPG/PNG/PDF)"
+                    documentType="dl"
+                    onFileUploaded={(url) => setDlDocUrl(url)}
+                    required={true}
+                  />
                 </div>
               </div>
-
-              {/* Conditional Form based on DL status */}
-              {hasDrivingLicense ? (
-                <div className="space-y-3.5 animate-fade-in pt-1">
-                  {/* Vehicle Type */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">Vehicle Type</label>
-                    <select
-                      value={vehicleType}
-                      onChange={(e) => setVehicleType(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
-                    >
-                      <option value="Motorcycle">Motorcycle (Petrol / Geared)</option>
-                      <option value="Scooter">Scooter (Petrol / Non-Geared)</option>
-                      <option value="Electric Scooter (High-Speed)">Electric Scooter (High-Speed RTO)</option>
-                    </select>
-                  </div>
-
-                  {/* Vehicle Model Name with suggestions */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-on-surface">Vehicle Model</label>
-                    <input
-                      type="text"
-                      value={vehicleModel}
-                      onChange={(e) => setVehicleModel(e.target.value)}
-                      placeholder="e.g. Honda Activa 6G, Hero Splendor, Ola S1"
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
-                    />
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {['Honda Activa', 'Hero Splendor', 'Bajaj Pulsar', 'TVS Jupiter', 'Ola S1', 'Ather 450X'].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setVehicleModel(m)}
-                          className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
-                            vehicleModel === m
-                              ? 'bg-primary text-white border-primary'
-                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Vehicle Number Plate */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">
-                      Vehicle Registration Number <span className="text-primary">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={vehicleNumber}
-                      onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                      placeholder="KA 08 EJ 1234"
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
-                    />
-                  </div>
-
-                  {/* DL Number Input */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">
-                      Driving Licence (DL) Number <span className="text-primary">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={dlNumber}
-                      onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
-                      placeholder="e.g. KA08 20210001234"
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
-                    />
-                  </div>
-
-                  {/* DL Document Upload */}
-                  <div className="space-y-1.5">
-                    <DocumentUploadCard
-                      title="Driving Licence (DL) Document"
-                      subtitle="Front & Back scan/photo (JPG/PNG/PDF)"
-                      documentType="dl"
-                      onFileUploaded={(url) => setDlDocUrl(url)}
-                      required={true}
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Non-DL Branch */
-                <div className="space-y-3.5 animate-fade-in pt-1">
-                  {/* Legal Compliance Box with MoRTH Official Link */}
-                  <div className="bg-emerald-50/90 border border-emerald-300/80 rounded-2xl p-3.5 shadow-2xs space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Legal Exemption Notice (CMVR Rule 2(u))</span>
-                    </div>
-                    <p className="text-[11px] text-emerald-800 leading-relaxed">
-                      Under the Central Motor Vehicles Rules (CMVR), electric two-wheelers with a maximum speed ≤ 25 km/h & motor power ≤ 250W are classified as non-motor vehicles. They are <strong>legally exempt</strong> from Driving Licence and RTO registration plate requirements.
-                    </p>
-                    <a
-                      href="https://morth.nic.in"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 underline decoration-emerald-400 hover:decoration-emerald-700 cursor-pointer"
-                    >
-                      <span>View Official MoRTH Guidelines (CMVR Rule 2(u))</span>
-                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                    </a>
-                  </div>
-
-                  {/* Low-Speed EV Model Selection */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-on-surface">
-                      Low-Speed EV Model / Brand <span className="text-emerald-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={vehicleModel}
-                      onChange={(e) => setVehicleModel(e.target.value)}
-                      placeholder="e.g. Hero Electric Flash, Okinawa Lite"
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-emerald-600"
-                    />
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {['Hero Electric Flash', 'Hero Electric NYX', 'Ampere Reo', 'Okinawa Lite', 'Komaki XGT VP'].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setVehicleModel(m)}
-                          className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
-                            vehicleModel === m
-                              ? 'bg-emerald-600 text-white border-emerald-600'
-                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Vehicle Number Plate Input */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">
-                      Vehicle Number Plate
-                    </label>
-                    <input
-                      type="text"
-                      value={vehicleNumber}
-                      onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                      placeholder="e.g. KA 08 EJ 1234"
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-emerald-600 uppercase tracking-wider"
-                    />
-                  </div>
-                </div>
-              )}
 
               {vehicleError && (
                 <div className="flex items-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl border border-red-200 text-xs font-semibold">
@@ -1536,69 +1465,60 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 space-y-3">
-              {/* Short and simple selectable option for 2 active zones */}
-              {[
-                {
-                  id: 'zone-1',
-                  name: 'Robertsonpet Zone',
-                  coverage: '5km Hub Coverage',
-                  demand: 'High Demand',
-                  earnings: '₹800 - ₹1,200/day',
-                },
-                {
-                  id: 'zone-3',
-                  name: 'BEML Zone',
-                  coverage: '5km Sub-Hub Coverage',
-                  demand: 'Steady Demand',
-                  earnings: '₹550 - ₹850/day',
-                },
-              ].map((z) => {
-                const isSelected = selectedZoneId === z.id;
-                return (
-                  <div
-                    key={z.id}
-                    onClick={() => setSelectedZoneId(z.id)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
-                      isSelected
-                        ? 'bg-primary/5 border-primary ring-1 ring-primary shadow-xs'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+              {zones.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                  <div className="w-8 h-8 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin mx-auto" />
+                  <p className="text-xs text-slate-500 font-medium">Loading live operating zones...</p>
+                </div>
+              ) : (
+                zones.map((z) => {
+                  const isSelected = selectedZoneId === z.id;
+                  return (
+                    <div
+                      key={z.id}
+                      onClick={() => setSelectedZoneId(z.id)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
+                        isSelected
+                          ? 'bg-primary/5 border-primary ring-1 ring-primary shadow-xs'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                              isSelected
+                                ? 'bg-primary text-white'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            <MapPin className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-black text-slate-900">{z.name}</h3>
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                {z.demand === 'HIGH' ? '🔥 High Demand' : z.demand}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">{z.radius} • Est. {z.estDailyEarnings}</p>
+                          </div>
+                        </div>
+
                         <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                             isSelected
-                              ? 'bg-primary text-white'
-                              : 'bg-slate-100 text-slate-600'
+                              ? 'bg-primary text-white shadow-xs'
+                              : 'border-2 border-slate-300'
                           }`}
                         >
-                          <Radio className="w-5 h-5" />
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-black text-slate-900">{z.name}</h3>
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                              {z.demand}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 mt-0.5">{z.coverage} • Est. {z.earnings}</p>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                          isSelected
-                            ? 'bg-primary text-white shadow-xs'
-                            : 'border-2 border-slate-300'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
 
               {/* Informative note */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
@@ -1744,6 +1664,7 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => {
                   try {
+                    sessionStorage.setItem('minnit_exploring_ui', 'true');
                     localStorage.removeItem('minnit_active_shift_session');
                     localStorage.removeItem('snapit_online_status_v2');
                     localStorage.removeItem('snapit_active_order_v2');
@@ -1775,6 +1696,17 @@ export default function OnboardingPage() {
               <p className="text-[10px] text-slate-400 text-center leading-tight">
                 Preview the delivery dashboard and features while awaiting admin activation.
               </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleStartFreshRegistration();
+                  setStep('signin');
+                }}
+                className="w-full text-center text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors pt-1 cursor-pointer"
+              >
+                Sign In with another Rider ID
+              </button>
             </div>
           </div>
         ) : null}

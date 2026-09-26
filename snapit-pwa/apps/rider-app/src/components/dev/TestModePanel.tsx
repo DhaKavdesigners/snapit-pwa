@@ -65,8 +65,8 @@ export const TestModePanel: React.FC = () => {
     return null;
   }
 
-  const selectedZone = zones.find((z) => z.id === (rider.selectedZoneId || 'zone-1')) || zones[0];
-  const activeOrBookedZoneId = rider.selectedZoneId || 'zone-1';
+  const selectedZone = zones.find((z) => z.id === rider.selectedZoneId) || zones[0];
+  const activeOrBookedZoneId = rider.selectedZoneId || zones[0]?.id || 'Z01';
   const onlineCheck = canGoOnline();
 
   // Handlers for Mock Time

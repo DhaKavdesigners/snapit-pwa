@@ -117,7 +117,7 @@ export const DevTestingToggle: React.FC = () => {
     if (isMockLocationEnabled) {
       disableMockLocation();
     } else {
-      enableMockLocation(rider.selectedZoneId || 'zone-1');
+      enableMockLocation(rider.selectedZoneId || 'Z01');
     }
   };
 
@@ -139,7 +139,7 @@ export const DevTestingToggle: React.FC = () => {
 
   const handleQuickBookSlot = () => {
     if (targetSlot) {
-      bookSlot(targetSlot.id, targetSlot.zoneId || 'zone-1', targetSlot.zoneName || 'Downtown Central');
+      bookSlot(targetSlot.id, targetSlot.zoneId || rider.selectedZoneId || 'Z01', targetSlot.zoneName || rider.selectedZone || 'Robertsonpet');
     }
   };
 

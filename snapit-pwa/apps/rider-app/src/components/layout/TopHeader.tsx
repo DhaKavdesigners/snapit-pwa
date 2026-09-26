@@ -154,7 +154,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
         )}
 
         {/* Right: Compact Professional Online/Offline Switch with Text Outside */}
-        <div className="flex items-center justify-end shrink-0">
+        <div id="tour-online-toggle" className="flex items-center justify-end shrink-0">
           <button
             type="button"
             role="switch"

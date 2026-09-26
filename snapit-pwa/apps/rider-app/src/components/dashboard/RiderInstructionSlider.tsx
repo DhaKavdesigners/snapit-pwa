@@ -24,6 +24,7 @@ interface RiderInstructionSlide {
   badgeColor: string;
   icon: React.ReactNode;
   iconBg: string;
+  momoImg?: string;
   points: string[];
 }
 
@@ -35,8 +36,9 @@ const INSTRUCTION_SLIDES: RiderInstructionSlide[] = [
     subtitle: 'Choose your working hours on your own terms.',
     badge: 'FREEDOM TO RIDE',
     badgeColor: 'bg-blue-100 text-blue-900 border-blue-200',
-    icon: <Bike className="w-6 h-6 stroke-[2.5]" />,
+    icon: <Bike className="w-5 h-5 stroke-[2.5]" />,
     iconBg: 'bg-blue-600 text-white shadow-blue-500/25',
+    momoImg: '/images/momo/characters/momo_online.png',
     points: [
       'Select 1, 2, 3, or 4 hours of duty whenever you want.',
       'Extend by +1 hour anytime with a single tap.',
@@ -50,8 +52,9 @@ const INSTRUCTION_SLIDES: RiderInstructionSlide[] = [
     subtitle: 'Fast dispatch with sound alerts & OTP delivery.',
     badge: 'LIVE DELIVERY',
     badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-    icon: <PackageCheck className="w-6 h-6 stroke-[2.5]" />,
+    icon: <PackageCheck className="w-5 h-5 stroke-[2.5]" />,
     iconBg: 'bg-emerald-600 text-white shadow-emerald-500/25',
+    momoImg: '/images/momo/characters/momo_orders.png',
     points: [
       'Buzzer sounds when a restaurant finishes cooking.',
       'Check payout & distance, then tap Accept.',
@@ -65,8 +68,9 @@ const INSTRUCTION_SLIDES: RiderInstructionSlide[] = [
     subtitle: 'Get first preference on nearby orders.',
     badge: '500M BOOST',
     badgeColor: 'bg-amber-100 text-amber-900 border-amber-200',
-    icon: <Clock className="w-6 h-6 stroke-[2.5]" />,
+    icon: <Clock className="w-5 h-5 stroke-[2.5]" />,
     iconBg: 'bg-amber-500 text-white shadow-amber-500/25',
+    momoImg: '/images/momo/characters/momo_availability.png',
     points: [
       'Set Morning, Afternoon, Evening, or Night windows.',
       'Gives you priority boost over other riders within 500m.',
@@ -80,8 +84,9 @@ const INSTRUCTION_SLIDES: RiderInstructionSlide[] = [
     subtitle: 'Rest, refuel, or take emergency downtime.',
     badge: 'RECHARGE ANYTIME',
     badgeColor: 'bg-rose-100 text-rose-900 border-rose-200',
-    icon: <Coffee className="w-6 h-6 stroke-[2.5]" />,
+    icon: <Coffee className="w-5 h-5 stroke-[2.5]" />,
     iconBg: 'bg-rose-500 text-white shadow-rose-500/25',
+    momoImg: '/images/momo/characters/momo_welcome.png',
     points: [
       'Take 15m or 30m break during any active session.',
       'See read-only order previews while on break.',
@@ -95,8 +100,9 @@ const INSTRUCTION_SLIDES: RiderInstructionSlide[] = [
     subtitle: 'Every rupee earned credited directly.',
     badge: 'WEEKLY PAYOUTS',
     badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-    icon: <Wallet className="w-6 h-6 stroke-[2.5]" />,
+    icon: <Wallet className="w-5 h-5 stroke-[2.5]" />,
     iconBg: 'bg-teal-600 text-white shadow-teal-500/25',
+    momoImg: '/images/momo/characters/momo_earnings.png',
     points: [
       'Transparent earnings per delivery + distance pay.',
       'Automatic transfer to your UPI or Bank every Sunday.',
@@ -183,12 +189,23 @@ export const RiderInstructionSlider: React.FC<RiderInstructionSliderProps> = ({
       </div>
 
       {/* Main Slide Card */}
-      <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 transition-all duration-300 min-h-[160px] flex flex-col justify-between">
+      <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 transition-all duration-300 min-h-[160px] flex flex-col justify-between relative overflow-hidden">
         {/* Slide Header: Icon + Badge + Title */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${current.iconBg}`}>
-              {current.icon}
+            <div className="flex items-center gap-2.5">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${current.iconBg}`}>
+                {current.icon}
+              </div>
+              {current.momoImg && (
+                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 p-0.5 shadow-2xs overflow-hidden flex items-center justify-center">
+                  <img
+                    src={current.momoImg}
+                    alt="Momo Assistant"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
             </div>
 
             <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${current.badgeColor}`}>
@@ -256,10 +273,14 @@ export const RiderInstructionSlider: React.FC<RiderInstructionSliderProps> = ({
         <button
           type="button"
           onClick={onOpenFullGuide}
-          className="w-full py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-2xl border border-emerald-200 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-2xs"
+          className="w-full py-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 text-emerald-900 font-black text-xs rounded-2xl border border-emerald-200/90 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-2xs group"
         >
-          <BookOpen className="w-4 h-4 text-emerald-700" />
-          <span>Read Full Illustrated Rider Guide (7 Slides)</span>
+          <img
+            src="/images/momo/characters/momo_welcome.png"
+            alt="Momo"
+            className="w-6 h-6 object-contain group-hover:scale-110 transition-transform"
+          />
+          <span>Open Momo's 10-Step Visual Guide</span>
           <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
         </button>
       )}

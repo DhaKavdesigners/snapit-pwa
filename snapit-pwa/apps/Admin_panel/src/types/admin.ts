@@ -122,6 +122,10 @@ export interface AdminRider {
   is_online?: boolean;
   is_busy?: boolean;
   current_order_id?: string | null;
+  current_lat?: number;
+  current_lng?: number;
+  lat?: number;
+  lng?: number;
   total_trips?: number;
   rating?: number;
   created_at?: string;
@@ -155,4 +159,30 @@ export interface AdminCustomerProfile {
   pincode?: string;
   delivery_verified?: boolean;
   created_at?: string;
+}
+
+export interface ZonePolygonPoint {
+  lat: number;
+  lng: number;
+}
+
+export interface AdminZone {
+  id: string;                          // slug: 'robertsonpet'
+  name: string;                        // display: 'Robertsonpet'
+  city?: string;
+  center_lat: number;
+  center_lng: number;
+  inner_radius_km: number;             // store cluster ring
+  outer_radius_km: number;             // delivery catchment ring
+  polygon?: ZonePolygonPoint[] | null; // custom shape vertices
+  daily_min?: number;
+  daily_max?: number;
+  session_rate_2h?: number;
+  session_rate_3h?: number;
+  session_rate_4h?: number;
+  demand_level?: 'NORMAL' | 'HIGH' | 'SURGE';
+  is_active?: boolean;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
 }

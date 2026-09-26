@@ -1,0 +1,29 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.minnit_store.twa",
+      "sha256_cert_fingerprints": [
+        "C7:50:E9:89:36:8E:09:EB:CA:D1:E7:E7:5D:30:8C:F7:10:9D:B8:E7:E8:4C:AE:57:E9:AD:C8:A7:C7:6C:62:0A",
+        "E8:2D:23:E2:0A:B3:3E:A0:C0:D8:2F:E7:1D:EB:A2:65:63:A1:B0:8B:36:20:AC:BF:4F:97:FC:2A:FF:B9:39:D6",
+        "BD:C2:E0:DA:1D:71:CC:EC:49:17:F3:9A:32:76:C0:48:02:C6:FE:90:7B:BF:AD:16:8A:3A:89:77:75:AF:E7:D1"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.snapit_kgf.twa",
+      "sha256_cert_fingerprints": [
+        "C7:50:E9:89:36:8E:09:EB:CA:D1:E7:E7:5D:30:8C:F7:10:9D:B8:E7:E8:4C:AE:57:E9:AD:C8:A7:C7:6C:62:0A",
+        "E8:2D:23:E2:0A:B3:3E:A0:C0:D8:2F:E7:1D:EB:A2:65:63:A1:B0:8B:36:20:AC:BF:4F:97:FC:2A:FF:B9:39:D6"
+      ]
+    }
+  }
+]

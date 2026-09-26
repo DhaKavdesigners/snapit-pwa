@@ -212,6 +212,7 @@ export interface EarningsSummary {
 export interface DeliveryZone {
   id: string;
   name: string;
+  city?: string;
   radius: string;
   demand: 'HIGH' | 'MEDIUM' | 'NORMAL';
   estDailyEarnings: string;
@@ -220,6 +221,18 @@ export interface DeliveryZone {
   centerLat?: number;
   centerLng?: number;
   radiusMeters?: number;
+  innerRadiusKm?: number;
+  outerRadiusKm?: number;
+  polygon?: Array<{ lat: number; lng: number }>;
+  // Earnings & Session Rates
+  dailyMin?: number;
+  dailyMax?: number;
+  sessionRate2h?: number;
+  sessionRate3h?: number;
+  sessionRate4h?: number;
+  demandLevel?: string;
+  isActive?: boolean;
+  sortOrder?: number;
   // Capacity
   capacity?: number;
   booked?: number;

@@ -16,18 +16,21 @@ export const BottomNav: React.FC = () => {
   const navItems = [
     {
       label: 'Home',
+      id: 'tour-nav-home',
       href: '/',
       icon: 'home',
       active: pathname === '/',
     },
     {
       label: 'Orders',
+      id: 'tour-nav-orders',
       href: '/orders',
       icon: 'local_mall',
       active: pathname.startsWith('/orders'),
     },
     {
       label: 'Availability',
+      id: 'tour-nav-availability',
       href: '/availability',
       icon: 'event_available',
       active: pathname.startsWith('/availability') || pathname.startsWith('/slots'),
@@ -42,12 +45,14 @@ export const BottomNav: React.FC = () => {
     },
     {
       label: 'Earnings',
+      id: 'tour-nav-earnings',
       href: '/earnings',
       icon: 'payments',
       active: pathname === '/earnings',
     },
     {
       label: 'Alerts',
+      id: 'tour-nav-alerts',
       href: '/alerts',
       icon: 'notifications',
       active: pathname.startsWith('/alerts'),
@@ -72,6 +77,7 @@ export const BottomNav: React.FC = () => {
           return (
             <Link
               key={item.label}
+              id={item.id}
               href={item.href}
               className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 active:scale-90 ${
                 isActive

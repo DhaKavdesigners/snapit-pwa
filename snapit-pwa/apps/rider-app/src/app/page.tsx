@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ZoneSelectionModal } from '@/components/slots/ZoneSelectionModal';
 import { ActiveDeliveryCard } from '@/components/dashboard/ActiveDeliveryCard';
@@ -13,6 +13,9 @@ import { BreakOrderPreviewCard } from '@/components/delivery/BreakOrderPreviewCa
 import { FeaturePromoBanner } from '@/components/dashboard/FeaturePromoBanner';
 import { RiderInstructionSlider } from '@/components/dashboard/RiderInstructionSlider';
 import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
+import { ApprovedRiderWelcomeModal } from '@/components/dashboard/ApprovedRiderWelcomeModal';
+import { RiderGuidedTour } from '@/components/dashboard/RiderGuidedTour';
+import { MomoVisualGuideModal } from '@/components/dashboard/MomoVisualGuideModal';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -60,28 +63,51 @@ export default function DashboardPage() {
   const [isEndEarlyModalOpen, setIsEndEarlyModalOpen] = useState(false);
   const [showFirstLoginInstructions, setShowFirstLoginInstructions] = useState(false);
   const [showManualGuideModal, setShowManualGuideModal] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
+  const [isMomoVisualGuideOpen, setIsMomoVisualGuideOpen] = useState(false);
 
-  // Check for first login after approval to show instructions automatically
+  // Track previous verified state to detect live admin approval transitions instantly
+  const prevIsVerifiedRef = useRef<boolean | null>(null);
+
+  // Check for first login after approval or live transition to show celebration & tour
   useEffect(() => {
     if (!isHydrated || !rider.isAuthenticated) return;
-    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') return;
+
+    const isPending = rider.isVerified === false || rider.verificationStatus === 'PENDING';
+
+    if (isPending) {
+      prevIsVerifiedRef.current = false;
+      return;
+    }
 
     const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
-    const isCompleted =
-      Boolean(rider.rider_instructions_completed) ||
-      (typeof window !== 'undefined' && localStorage.getItem(`minnit_first_login_instructions_${riderKey}`) === 'true');
 
-    if (!isCompleted) {
+    // 1. Live transition from unverified to verified while user has the app open!
+    if (prevIsVerifiedRef.current === false && rider.isVerified === true) {
       setShowFirstLoginInstructions(true);
+    } 
+    // 2. Fresh app visit as verified rider: check if welcome celebration was already seen
+    else if (prevIsVerifiedRef.current === null && rider.isVerified === true) {
+      const isCompleted =
+        Boolean(rider.rider_instructions_completed) ||
+        (typeof window !== 'undefined' && localStorage.getItem(`minnit_approval_welcome_seen_${riderKey}`) === 'true');
+
+      if (!isCompleted) {
+        setShowFirstLoginInstructions(true);
+      }
     }
+
+    prevIsVerifiedRef.current = true;
   }, [isHydrated, rider.isAuthenticated, rider.isVerified, rider.verificationStatus, rider.phone, rider.Rider_ID, rider.riderId, rider.rider_instructions_completed]);
 
   const handleCompleteFirstLoginInstructions = () => {
     setShowFirstLoginInstructions(false);
+    setShowManualGuideModal(false);
     const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
     try {
       localStorage.setItem(`minnit_first_login_instructions_${riderKey}`, 'true');
       localStorage.setItem(`minnit_rider_instructions_completed_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_approval_welcome_seen_${riderKey}`, 'true');
     } catch {}
 
     updateRiderProfile({ rider_instructions_completed: true });
@@ -99,13 +125,20 @@ export default function DashboardPage() {
   const isBreakActive = Boolean(riderBreak && !riderBreak.endedAt);
   const isPendingVerification = rider.isVerified === false || rider.verificationStatus === 'PENDING';
 
-  // Redirect to onboarding if not registered or not authenticated
+  // Redirect to onboarding if not registered or not authenticated, or show status screen if verification pending
   useEffect(() => {
     if (!isHydrated) return;
     if (!rider.phone || !rider.isAuthenticated) {
       router.push('/onboarding');
+      return;
     }
-  }, [isHydrated, rider.phone, rider.isAuthenticated, router]);
+
+    // When verification pending rider opens the app on their device, show Registration Submitted status first
+    const isExploring = typeof window !== 'undefined' && sessionStorage.getItem('minnit_exploring_ui') === 'true';
+    if (isPendingVerification && !isExploring) {
+      router.push('/onboarding?step=status');
+    }
+  }, [isHydrated, rider.phone, rider.isAuthenticated, isPendingVerification, router]);
 
   // Guarantee buzzer is stopped if leaving or unmounting dashboard
   useEffect(() => {
@@ -163,19 +196,6 @@ export default function DashboardPage() {
         />
         <div className="w-6 h-6 border-2 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
       </div>
-    );
-  }
-
-  if (showFirstLoginInstructions) {
-    return (
-      <AppShell showNav={false} noPadding={true}>
-        <div className="flex-1 min-h-0 w-full flex flex-col justify-between overflow-hidden">
-          <RiderInstructionViewer
-            isModal={false}
-            onDone={handleCompleteFirstLoginInstructions}
-          />
-        </div>
-      </AppShell>
     );
   }
 
@@ -237,25 +257,35 @@ export default function DashboardPage() {
         {/* ─── SCENARIO 0: VERIFICATION PENDING (ONLINE STRICTLY LOCKED) ─── */}
         {isPendingVerification ? (
           <>
-            {/* ── 1. Compact Verification Pending Banner (In Place of Small Moving Banner) ── */}
-            <div className="bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-50 rounded-2xl p-4 border border-amber-300/90 shadow-2xs">
+            <div
+              onClick={() => {
+                sessionStorage.removeItem('minnit_exploring_ui');
+                router.push('/onboarding?step=status');
+              }}
+              className="bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-50 rounded-2xl p-4 border border-amber-300/90 shadow-2xs cursor-pointer hover:border-amber-400 transition-all group"
+            >
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                   <Lock className="w-5 h-5 stroke-[2.5]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                      Verification Pending
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
-                      ONLINE LOCKED
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                        Verification Pending
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                        ONLINE LOCKED
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300/70 flex items-center gap-0.5 group-hover:bg-amber-200 transition-colors shrink-0">
+                      Status <ChevronRight className="w-3 h-3" />
                     </span>
                   </div>
                   <h3 className="text-sm font-black text-slate-900">Online Access Locked</h3>
                   <p className="text-xs text-slate-600 mt-0.5 leading-snug">
-                    Your rider profile is currently under review by Minnit Admin. Once approved, you will be able to start riding sessions and accept orders.
+                    Your rider profile is currently under review by Minnit Admin. Tap to view status tracker &amp; progress.
                   </p>
                 </div>
               </div>
@@ -263,7 +293,7 @@ export default function DashboardPage() {
 
             {/* ── 2. Interactive Rider Instructions Slider (In Main Cockpit Space) ── */}
             <RiderInstructionSlider
-              onOpenFullGuide={() => setShowManualGuideModal(true)}
+              onOpenFullGuide={() => setIsMomoVisualGuideOpen(true)}
             />
           </>
         ) : (
@@ -404,11 +434,12 @@ export default function DashboardPage() {
 
             {/* ─── SCENARIO E: OFFLINE STATE (START RIDING CTA & FEATURE SHOWCASE) ─── */}
             {!incomingOrder && !activeOrder && !isOnline && !sessionCompletedData && (
-              <>
+              <div id="tour-zas-area" className="space-y-4">
                 {/* Premium Moving Feature Advertisement Banner */}
                 <FeaturePromoBanner
                   onOpenStartRiding={openStartRiding}
                   onOpenZoneModal={() => setIsZoneModalOpen(true)}
+                  onStartTour={() => setIsTourOpen(true)}
                 />
 
                 <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
@@ -443,7 +474,7 @@ export default function DashboardPage() {
                     </Link>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </>
         )}
@@ -473,30 +504,41 @@ export default function DashboardPage() {
           onClose={() => setIsZoneModalOpen(false)}
         />
 
-        {/* Full Visual Training Guide Modal */}
-        {showManualGuideModal && (
-          <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center p-2 backdrop-blur-xs animate-fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-md h-[90vh] overflow-hidden flex flex-col relative shadow-2xl animate-scale-up">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white shrink-0">
-                <h3 className="text-sm font-black text-slate-900">Rider Visual Instructions</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowManualGuideModal(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors text-xs font-bold"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="flex-1 min-h-0 w-full overflow-hidden">
-                <RiderInstructionViewer
-                  isModal={true}
-                  onDone={() => setShowManualGuideModal(false)}
-                  onClose={() => setShowManualGuideModal(false)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Welcoming Pop-up for Approved Riders */}
+        <ApprovedRiderWelcomeModal
+          rider={rider}
+          isOpen={showFirstLoginInstructions || showManualGuideModal}
+          onClose={handleCompleteFirstLoginInstructions}
+          onStartTour={() => {
+            setShowFirstLoginInstructions(false);
+            setShowManualGuideModal(false);
+            setIsTourOpen(true);
+          }}
+        />
+
+        {/* Interactive Guided Spotlight Tour */}
+        <RiderGuidedTour
+          isOpen={isTourOpen}
+          onClose={() => {
+            setIsTourOpen(false);
+            handleCompleteFirstLoginInstructions();
+          }}
+          onComplete={() => {
+            setIsTourOpen(false);
+            handleCompleteFirstLoginInstructions();
+            openStartRiding();
+          }}
+        />
+
+        {/* Momo's 10-Step Visual Guide Modal */}
+        <MomoVisualGuideModal
+          isOpen={isMomoVisualGuideOpen}
+          onClose={() => setIsMomoVisualGuideOpen(false)}
+          onStartInteractiveTour={() => {
+            setIsMomoVisualGuideOpen(false);
+            setIsTourOpen(true);
+          }}
+        />
 
       </div>
     </AppShell>

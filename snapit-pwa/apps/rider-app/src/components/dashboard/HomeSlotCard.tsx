@@ -96,8 +96,8 @@ export const HomeSlotCard: React.FC = () => {
       const nextSlotId = `slot-${displaySlot.date}-${h}`;
       bookSlot(
         nextSlotId,
-        displaySlot.zoneId || rider.selectedZoneId || 'zone-1',
-        displaySlot.zoneName || rider.selectedZone || 'Downtown Central'
+        displaySlot.zoneId || rider.selectedZoneId || 'Z01',
+        displaySlot.zoneName || rider.selectedZone || 'Robertsonpet'
       );
     }
 
