@@ -274,26 +274,70 @@ export async function updateDbOrderHandover(
 /** Upload file/photo to Supabase Storage */
 export async function uploadFileToSupabaseStorage(
   file: File | Blob | string,
-  bucket: string,
+  bucketOrCategory: string,
   path: string
 ): Promise<string> {
   try {
-    if (typeof file === 'string' && file.startsWith('data:')) {
-      return file;
+    // 1. Resolve canonical bucket ('rider-documents') and target path
+    let targetBucket = 'rider-documents';
+    let targetPath = path;
+
+    if (bucketOrCategory === 'kyc') {
+      targetBucket = 'rider-documents';
+      targetPath = path.startsWith('kyc/') ? path : `kyc/${path}`;
+    } else if (bucketOrCategory === 'selfies') {
+      targetBucket = 'rider-documents';
+      targetPath = path.startsWith('selfies/') ? path : `selfies/${path}`;
+    } else if (bucketOrCategory) {
+      targetBucket = bucketOrCategory;
     }
+
+    // 2. Prepare upload payload (convert base64 data: URLs to Blob)
+    let uploadPayload: Blob | File;
+    let contentType = 'image/jpeg';
+
+    if (typeof file === 'string' && file.startsWith('data:')) {
+      try {
+        const parts = file.split(';base64,');
+        contentType = parts[0].split(':')[1] || 'image/jpeg';
+        const binaryString = typeof window !== 'undefined' ? window.atob(parts[1]) : Buffer.from(parts[1], 'base64').toString('binary');
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        uploadPayload = new Blob([bytes], { type: contentType });
+      } catch (convErr) {
+        console.warn('Failed to convert base64 dataUrl to Blob:', convErr);
+        return file;
+      }
+    } else if (typeof file === 'string') {
+      // It's already a full URL or path
+      return file;
+    } else {
+      uploadPayload = file;
+      if (file.type) contentType = file.type;
+    }
+
+    // 3. Upload to Supabase Storage
     const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, file as any, { upsert: true });
+      .from(targetBucket)
+      .upload(targetPath, uploadPayload, {
+        upsert: true,
+        contentType,
+      });
 
     if (error) {
-      const { data: pubUrl } = supabase.storage.from(bucket).getPublicUrl(path);
-      return pubUrl?.publicUrl || (typeof window !== 'undefined' && typeof file !== 'string' ? URL.createObjectURL(file) : String(file));
+      console.error(`[Storage] Upload error to ${targetBucket}/${targetPath}:`, error);
+      return typeof window !== 'undefined' ? URL.createObjectURL(uploadPayload) : '';
     }
 
-    const { data: pubUrl } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    // 4. Return valid public URL from Supabase Storage
+    const { data: pubUrl } = supabase.storage.from(targetBucket).getPublicUrl(data.path);
     return pubUrl.publicUrl;
   } catch (err: any) {
-    return typeof window !== 'undefined' && typeof file !== 'string' ? URL.createObjectURL(file) : String(file);
+    console.error('[Storage] Upload exception:', err);
+    return typeof window !== 'undefined' && typeof file !== 'string' ? URL.createObjectURL(file as Blob) : String(file);
   }
 }
 

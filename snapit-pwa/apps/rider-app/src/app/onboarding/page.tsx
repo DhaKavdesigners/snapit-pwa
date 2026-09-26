@@ -996,6 +996,7 @@ export default function OnboardingPage() {
                   title="Aadhaar Card Document"
                   subtitle="Front & Back scan/photo (JPG/PNG/PDF)"
                   documentType="aadhaar"
+                  riderPhone={phone}
                   onFileUploaded={(url) => setAadhaarDocUrl(url)}
                   required={true}
                 />
@@ -1094,6 +1095,7 @@ export default function OnboardingPage() {
             <div className="py-4 my-auto">
               <SelfieCamera
                 initialPhotoUrl={capturedSelfie}
+                riderPhone={phone}
                 onPhotoCaptured={(url) => {
                   setCapturedSelfie(url);
                   updateRiderProfile({ selfieCapturedUrl: url, avatarUrl: url });
@@ -1224,6 +1226,7 @@ export default function OnboardingPage() {
                     title="Driving Licence (DL) Document"
                     subtitle="Front & Back scan/photo (JPG/PNG/PDF)"
                     documentType="dl"
+                    riderPhone={phone}
                     onFileUploaded={(url) => setDlDocUrl(url)}
                     required={true}
                   />
@@ -1408,6 +1411,7 @@ export default function OnboardingPage() {
                         title="Bank Passbook / Cheque"
                         subtitle="Photo of passbook or cheque (Optional)"
                         documentType="bank"
+                        riderPhone={phone}
                         onFileUploaded={(url) => setBankPassbookDocUrl(url)}
                       />
                     </div>

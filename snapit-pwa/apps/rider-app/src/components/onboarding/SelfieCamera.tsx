@@ -8,11 +8,13 @@ import { uploadFileToSupabaseStorage } from '@/services/supabaseOrderService';
 interface SelfieCameraProps {
   onPhotoCaptured: (photoUrl: string) => void;
   initialPhotoUrl?: string;
+  riderPhone?: string;
 }
 
 export const SelfieCamera: React.FC<SelfieCameraProps> = ({
   onPhotoCaptured,
   initialPhotoUrl = '',
+  riderPhone = '',
 }) => {
   const [photoUrl, setPhotoUrl] = useState<string>(initialPhotoUrl);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -93,7 +95,12 @@ export const SelfieCamera: React.FC<SelfieCameraProps> = ({
 
       // Upload to Supabase Storage
       setIsUploading(true);
-      const uploadedUrl = await uploadFileToSupabaseStorage(dataUrl, 'selfies', `selfie-${Date.now()}.jpg`);
+      const cleanPhone = (riderPhone || '').replace(/[^0-9]/g, '').slice(-10);
+      const selfiePath = cleanPhone
+        ? `selfies/${cleanPhone}/selfie_${Date.now()}.jpg`
+        : `selfies/selfie_${Date.now()}.jpg`;
+
+      const uploadedUrl = await uploadFileToSupabaseStorage(dataUrl, 'rider-documents', selfiePath);
       setIsUploading(false);
 
       onPhotoCaptured(uploadedUrl || dataUrl);
@@ -115,7 +122,13 @@ export const SelfieCamera: React.FC<SelfieCameraProps> = ({
       stopCamera();
 
       setIsUploading(true);
-      const uploadedUrl = await uploadFileToSupabaseStorage(file, 'selfies', `selfie-${Date.now()}-${file.name}`);
+      const cleanPhone = (riderPhone || '').replace(/[^0-9]/g, '').slice(-10);
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const selfiePath = cleanPhone
+        ? `selfies/${cleanPhone}/selfie_${Date.now()}_${cleanFileName}`
+        : `selfies/selfie_${Date.now()}_${cleanFileName}`;
+
+      const uploadedUrl = await uploadFileToSupabaseStorage(file, 'rider-documents', selfiePath);
       setIsUploading(false);
 
       onPhotoCaptured(uploadedUrl || localUrl);

@@ -10,6 +10,7 @@ interface DocumentUploadCardProps {
   subtitle?: string;
   documentType?: 'aadhaar' | 'pan' | 'dl' | 'bank' | string;
   documentNumber?: string;
+  riderPhone?: string;
   onNumberChange?: (val: string) => void;
   onFileUploaded?: (url: string, name: string) => void;
   isUploaded?: boolean;
@@ -23,6 +24,7 @@ export const DocumentUploadCard: React.FC<DocumentUploadCardProps> = ({
   subtitle,
   documentType,
   documentNumber = '',
+  riderPhone = '',
   onNumberChange,
   onFileUploaded,
   isUploaded = false,
@@ -38,7 +40,13 @@ export const DocumentUploadCard: React.FC<DocumentUploadCardProps> = ({
       setFileName(file.name);
       setIsUploading(true);
 
-      const publicUrl = await uploadFileToSupabaseStorage(file, 'kyc', `${documentType || 'doc'}-${Date.now()}-${file.name}`);
+      const cleanPhone = (riderPhone || '').replace(/[^0-9]/g, '').slice(-10);
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = cleanPhone
+        ? `kyc/${cleanPhone}/${documentType || 'doc'}_${Date.now()}_${cleanFileName}`
+        : `kyc/${documentType || 'doc'}_${Date.now()}_${cleanFileName}`;
+
+      const publicUrl = await uploadFileToSupabaseStorage(file, 'rider-documents', storagePath);
       setIsUploading(false);
       setUploaded(true);
 
