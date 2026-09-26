@@ -25,5 +25,13 @@
         "E8:2D:23:E2:0A:B3:3E:A0:C0:D8:2F:E7:1D:EB:A2:65:63:A1:B0:8B:36:20:AC:BF:4F:97:FC:2A:FF:B9:39:D6"
       ]
     }
-  }
+  },
+  {
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.minnit_store.twa",
+        "sha256_cert_fingerprints": ["00:CD:BC:DC:FE:44:EF:AB:E9:4C:35:02:92:B9:4A:83:0B:D0:DD:70:16:23:57:BF:05:73:51:36:AF:4C:5B:C4"]
+      }
+    }
 ]
