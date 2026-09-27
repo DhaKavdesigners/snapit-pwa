@@ -49,6 +49,7 @@ export default function OnboardingPage() {
     sessionInvalidatedMessage,
     clearSessionInvalidatedMessage,
     setOnlineStatus,
+    startTour,
   } = useRider();
   const [step, setStep] = useState<
     'splash' | 'signin' | 'personal' | 'selfie' | 'vehicle' | 'payout' | 'kyc' | 'zone' | 'reg_waiting' | 'approved' | 'rejected' | 'reg_success' | 'status'
@@ -1669,6 +1670,7 @@ export default function OnboardingPage() {
                 onClick={() => {
                   try {
                     sessionStorage.setItem('minnit_exploring_ui', 'true');
+                    sessionStorage.setItem('minnit_start_tour_on_home', 'true');
                     localStorage.removeItem('minnit_active_shift_session');
                     localStorage.removeItem('snapit_online_status_v2');
                     localStorage.removeItem('snapit_active_order_v2');
@@ -1688,6 +1690,7 @@ export default function OnboardingPage() {
                     walletBalance: 0,
                     totalDeliveries: 0,
                   });
+                  startTour();
                   router.push('/');
                 }}
                 className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm rounded-2xl shadow-lift hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"

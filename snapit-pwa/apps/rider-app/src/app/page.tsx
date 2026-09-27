@@ -136,6 +136,19 @@ export default function DashboardPage() {
     }
   }, [isHydrated, rider.phone, rider.isAuthenticated, isPendingVerification, router]);
 
+  // Auto-launch Momo live guided tour when unapproved rider arrives from "Explore Rider UI"
+  useEffect(() => {
+    if (!isHydrated || !rider.isAuthenticated) return;
+
+    if (typeof window !== 'undefined') {
+      const tourFlag = sessionStorage.getItem('minnit_start_tour_on_home');
+      if (tourFlag === 'true') {
+        sessionStorage.removeItem('minnit_start_tour_on_home');
+        startTour();
+      }
+    }
+  }, [isHydrated, rider.isAuthenticated, startTour]);
+
   // Guarantee buzzer is stopped if leaving or unmounting dashboard
   useEffect(() => {
     return () => {
@@ -511,9 +524,8 @@ export default function DashboardPage() {
           isOpen={showFirstLoginInstructions || showManualGuideModal}
           onClose={handleCompleteFirstLoginInstructions}
           onStartTour={() => {
-            setShowFirstLoginInstructions(false);
-            setShowManualGuideModal(false);
-            startTour();
+            handleCompleteFirstLoginInstructions();
+            startInteractiveDemo();
           }}
         />
       </div>

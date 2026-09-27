@@ -553,12 +553,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(`minnit_approval_welcome_seen_${riderKey}`, 'true');
     } catch {}
     setRider((prev) => ({ ...prev, rider_instructions_completed: true }));
-
-    const isApproved = rider.isVerified === true && rider.verificationStatus === 'APPROVED';
-    if (isApproved) {
-      startInteractiveDemo();
-    }
-  }, [rider, startInteractiveDemo]);
+    // NOTE: Approved riders start the interactive demo directly from ApprovedRiderWelcomeModal.
+    // This function only handles the unapproved-rider navigation tour completion.
+  }, [rider]);
 
   const advanceDemoStep = useCallback(() => {
     setDemoStep((prev) => {
