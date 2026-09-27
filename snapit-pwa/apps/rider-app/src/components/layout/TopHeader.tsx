@@ -142,6 +142,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
                 {getGreeting()}, {firstName} 👋
               </h2>
               <Link
+                id="tour-zone-pill"
                 href="/availability"
                 className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors mt-0.5 cursor-pointer truncate"
               >

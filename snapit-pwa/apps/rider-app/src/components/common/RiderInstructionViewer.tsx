@@ -102,10 +102,10 @@ export const RiderInstructionViewer: React.FC<RiderInstructionViewerProps> = ({
   };
 
   const content = (
-    <div className="flex-1 w-full h-full flex flex-col justify-between min-h-0 relative select-none bg-white">
+    <div className="flex-1 w-full h-full flex flex-col justify-between min-h-0 relative select-none bg-white overflow-hidden">
       {/* ── 1. MAIN INSTRUCTION IMAGE AREA (HERO / "MOST PART") ── */}
       <div
-        className="flex-1 min-h-0 w-full px-1.5 pt-1 pb-1 flex items-center justify-center relative touch-pan-y"
+        className="flex-1 min-h-0 w-full px-2 sm:px-3 pt-1 pb-1 flex items-center justify-center relative touch-pan-y overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onClick={handleNext}
@@ -153,16 +153,21 @@ export const RiderInstructionViewer: React.FC<RiderInstructionViewerProps> = ({
       </div>
 
       {/* ── 2. PINNED BOTTOM CONTROLS: PROGRESS DOTS + NEXT/DONE BUTTON ── */}
-      <div className="shrink-0 w-full px-4 pt-2.5 pb-3 flex flex-col gap-2.5 z-20 bg-white border-t border-slate-100 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
+      <div
+        className="shrink-0 w-full px-3.5 sm:px-4 pt-2 sm:pt-2.5 flex flex-col gap-2 sm:gap-2.5 z-20 bg-white border-t border-slate-100 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]"
+        style={{
+          paddingBottom: 'max(12px, calc(10px + env(safe-area-inset-bottom, 0px)))',
+        }}
+      >
         {/* Progress Dots + Number Indicator */}
         <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             {RIDER_INSTRUCTIONS.map((_, idx) => (
               <div
                 key={idx}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   idx === currentIndex
-                    ? 'w-6 bg-emerald-600'
+                    ? 'w-5 sm:w-6 bg-emerald-600'
                     : idx < currentIndex
                     ? 'w-2 bg-emerald-400'
                     : 'w-1.5 bg-slate-200'
@@ -179,7 +184,7 @@ export const RiderInstructionViewer: React.FC<RiderInstructionViewerProps> = ({
         </div>
 
         {/* Action Buttons: Back & Next/Done */}
-        <div className="w-full flex items-center gap-2.5">
+        <div className="w-full flex items-center gap-2 sm:gap-2.5">
           {!isFirst && (
             <button
               type="button"
@@ -187,7 +192,7 @@ export const RiderInstructionViewer: React.FC<RiderInstructionViewerProps> = ({
                 e.stopPropagation();
                 handleBack();
               }}
-              className="h-13 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-2xl border border-slate-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+              className="h-11 sm:h-12 px-3.5 sm:px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-2xl border border-slate-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
             >
               <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
               <span>Back</span>
@@ -200,7 +205,7 @@ export const RiderInstructionViewer: React.FC<RiderInstructionViewerProps> = ({
               e.stopPropagation();
               handleNext();
             }}
-            className="flex-1 h-13 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+            className="flex-1 h-11 sm:h-12 px-5 sm:px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
           >
             <span>{isLast ? 'Done' : 'Next'}</span>
             {isLast ? (

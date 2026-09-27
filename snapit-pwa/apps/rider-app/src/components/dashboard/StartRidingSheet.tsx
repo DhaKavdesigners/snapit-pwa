@@ -54,7 +54,7 @@ const DURATION_OPTIONS: DurationOption[] = [
 ];
 
 export const StartRidingSheet: React.FC<StartRidingSheetProps> = ({ isOpen, onClose }) => {
-  const { rider, zones, startSession } = useRider();
+  const { rider, zones, startSession, isDemoMode } = useRider();
 
   const [selectedZone, setSelectedZone] = useState<DeliveryZone | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<SessionDurationHours>(DEFAULT_SESSION_DURATION);
@@ -72,7 +72,7 @@ export const StartRidingSheet: React.FC<StartRidingSheetProps> = ({ isOpen, onCl
     }
   }, [isOpen, rider.selectedZoneId, zones]);
 
-  if (!isOpen) return null;
+  if (!isOpen || isDemoMode) return null;
 
   const handleStartRiding = async () => {
     if (!selectedZone) {

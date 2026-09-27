@@ -24,6 +24,16 @@ import { RiderInstructionViewer } from '@/components/common/RiderInstructionView
 export default function ProfilePage() {
   const { rider, updateRiderProfile, logout } = useRider();
   const [showInstructions, setShowInstructions] = useState(false);
+
+  // Auto-open instructions if navigated via ?instructions=true
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('instructions') === 'true') {
+        setShowInstructions(true);
+      }
+    }
+  }, []);
   
   // Editable fields state
   const [altPhone, setAltPhone] = useState(rider.altPhone || '');
@@ -44,8 +54,15 @@ export default function ProfilePage() {
 
   if (showInstructions) {
     return (
-      <AppShell showNav={false} showBack={true} onBack={() => setShowInstructions(false)} title="Rider Instructions" noPadding={true}>
-        <div className="flex-1 min-h-0 w-full flex flex-col justify-between overflow-hidden">
+      <AppShell
+        showNav={false}
+        showBack={true}
+        onBack={() => setShowInstructions(false)}
+        title="Rider Instructions"
+        noPadding={true}
+        fullHeight={true}
+      >
+        <div className="flex-1 min-h-0 w-full h-full flex flex-col justify-between overflow-hidden">
           <RiderInstructionViewer
             isModal={false}
             onDone={() => setShowInstructions(false)}

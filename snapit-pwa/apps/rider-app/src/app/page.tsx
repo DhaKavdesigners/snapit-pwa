@@ -216,6 +216,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-2">
           {/* Earnings */}
           <Link
+            id="tour-today-earnings"
             href="/earnings"
             className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs flex flex-col justify-between active:scale-98 transition-transform"
           >
@@ -525,6 +526,7 @@ export default function DashboardPage() {
           onClose={handleCompleteFirstLoginInstructions}
           onStartTour={() => {
             handleCompleteFirstLoginInstructions();
+            router.push('/');
             startInteractiveDemo();
           }}
         />

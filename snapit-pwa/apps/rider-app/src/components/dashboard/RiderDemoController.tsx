@@ -7,7 +7,6 @@ import { useRider } from '@/context/RiderContext';
 import {
   MapPin,
   CheckCircle2,
-  ArrowRight,
   Power,
   Store,
   Clock,
@@ -16,8 +15,8 @@ import {
   KeyRound,
   X,
   Sparkles,
-  Wallet,
   ShoppingBag,
+  Wallet,
 } from 'lucide-react';
 
 interface DemoStepConfig {
@@ -27,10 +26,10 @@ interface DemoStepConfig {
   category: string;
   title: string;
   description: string;
-  heroImg: string;
-  placement: 'top' | 'bottom';
+  avatarImg: string;
   icon: React.ElementType;
-  iconBg: string;
+  buttonText: string;
+  buttonIcon: React.ElementType;
 }
 
 export const RiderDemoController: React.FC = () => {
@@ -38,16 +37,15 @@ export const RiderDemoController: React.FC = () => {
     isDemoMode,
     demoStep,
     setDemoStep,
-    advanceDemoStep,
     completeInteractiveDemo,
     rider,
-    isOnline,
-    toggleOnline,
+    setOnlineStatus,
     triggerMockOrder,
     simulateShopkeeperHandover,
     markOrderPickedUp,
     advanceActiveOrderStatus,
     acceptIncomingOrder,
+    completeDeliveryWithOtp,
     activeOrder,
     incomingOrder,
     demoCreditedAmount,
@@ -62,126 +60,137 @@ export const RiderDemoController: React.FC = () => {
     setMounted(true);
   }, []);
 
-  // Determine current step configuration
+  // Determine current step configuration aligned to the real rider order flow
   const getStepConfig = (): DemoStepConfig | null => {
+    const earningsAmount = incomingOrder?.earnings || activeOrder?.earnings || demoCreditedAmount || 49;
+
     switch (demoStep) {
       case 'zone_check':
         return {
-          targetId: 'tour-zas-area',
+          targetId: 'tour-zone-pill',
           stepNumber: 1,
           totalSteps: 8,
           category: 'Zone Verification',
-          title: 'Verify Your Operating Zone 📍',
-          description: `Always ensure you are inside your allotted zone (${rider.selectedZone || 'Robertsonpet, KGF'}) before going online so orders are dispatched to you.`,
-          heroImg: '/images/momo/templates/momo_zas_store.png',
-          placement: 'bottom',
+          title: 'Operating Zone 📍',
+          description: `Stay inside your allotted zone (${rider.selectedZone || 'Robertsonpet'}) to receive dispatches.`,
+          avatarImg: '/images/momo/characters/momo_zone.png',
           icon: MapPin,
-          iconBg: 'bg-emerald-600 text-white',
+          buttonText: "I'm Inside Zone 📍 → Next",
+          buttonIcon: CheckCircle2,
         };
+
       case 'go_online':
         return {
           targetId: 'tour-online-toggle',
           stepNumber: 2,
           totalSteps: 8,
-          category: 'Start Riding Shift',
-          title: 'Switch Online to Receive Orders',
-          description: 'Flip this switch in the header to go Online and start receiving incoming delivery offers in your zone.',
-          heroImg: '/images/momo/tour/step_1_online.png',
-          placement: 'bottom',
+          category: 'Go Online',
+          title: 'Switch Online ⚡',
+          description: 'Flip this switch in the header to go online and receive customer orders.',
+          avatarImg: '/images/momo/characters/momo_online.png',
           icon: Power,
-          iconBg: 'bg-emerald-600 text-white',
+          buttonText: 'Turn Online & Get Order 🚀',
+          buttonIcon: Power,
         };
+
       case 'accept_order':
         return {
-          targetId: 'tour-incoming-order',
+          targetId: 'accept-order-btn',
           stepNumber: 3,
           totalSteps: 8,
-          category: 'Incoming Delivery Offer',
-          title: 'Check Payout & Store Details',
-          description: `Before accepting, review the Delivery Payout (₹${incomingOrder?.earnings || 49}), trip distance, and Store Name (${incomingOrder?.restaurantName || 'Biryani Paradise'}). Tap Accept to lock it in!`,
-          heroImg: '/images/momo/tour/step_3_orders.png',
-          placement: 'top',
+          category: 'Incoming Offer',
+          title: 'New Delivery Offer 🛍️',
+          description: `Check payout (₹${earningsAmount}), store, and distance. Tap Accept to lock it in!`,
+          avatarImg: '/images/momo/characters/momo_orders.png',
           icon: ShoppingBag,
-          iconBg: 'bg-emerald-600 text-white',
+          buttonText: `Accept Order (₹${earningsAmount}) ✅`,
+          buttonIcon: CheckCircle2,
         };
+
       case 'navigate_store':
         return {
           targetId: 'navigate-to-store-btn',
           stepNumber: 4,
           totalSteps: 8,
           category: 'Store Navigation',
-          title: 'Navigate to Store via Google Maps',
-          description: `Tap 'Navigate to Store' to open Google Maps for turn-by-turn directions to ${activeOrder?.restaurantName || 'the restaurant'}. When you reach the store counter, tap below to confirm arrival!`,
-          heroImg: '/images/momo/cards/step_4.png',
-          placement: 'top',
+          title: 'Navigate to Store 🗺️',
+          description: `Tap 'Navigate to Store' for GPS directions to ${activeOrder?.restaurantName || 'the store'}.`,
+          avatarImg: '/images/momo/characters/momo_nav.png',
           icon: Navigation,
-          iconBg: 'bg-blue-600 text-white',
+          buttonText: "I've Arrived at Store 🏬",
+          buttonIcon: Store,
         };
+
       case 'wait_packaging':
         return {
           targetId: 'store-handover-section',
           stepNumber: 5,
           totalSteps: 8,
-          category: 'Store Packaging & Handover',
-          title: 'Wait for Merchant Handover Swipe',
-          description: 'Wait by the counter while the store finishes packing. The merchant must swipe "Handover" on their Minnit Merchant app before pickup unlocks.',
-          heroImg: '/images/momo/cards/step_5.png',
-          placement: 'top',
+          category: 'Store Handover',
+          title: 'Merchant Packaging 📦',
+          description: 'Wait at counter while merchant packs and swipes Handover on their app.',
+          avatarImg: '/images/momo/characters/momo_ready.png',
           icon: Clock,
-          iconBg: 'bg-amber-500 text-white',
+          buttonText: 'Merchant Swiped Handover ✅',
+          buttonIcon: CheckCircle2,
         };
+
       case 'handover_ready':
         return {
           targetId: 'store-handover-section',
           stepNumber: 6,
           totalSteps: 8,
           category: 'Confirm Pickup',
-          title: 'Slide to Confirm Pickup',
-          description: 'Handover is verified! Slide the green bar below to collect the order package and begin transit to the customer doorstep.',
-          heroImg: '/images/momo/cards/step_6.png',
-          placement: 'top',
+          title: 'Slide to Confirm Pickup 🚴',
+          description: 'Handover verified! Slide the green bar to collect package and start delivery.',
+          avatarImg: '/images/momo/characters/momo_ready.png',
           icon: Package,
-          iconBg: 'bg-emerald-600 text-white',
+          buttonText: 'Confirm Pickup & Start Transit 🚴',
+          buttonIcon: Package,
         };
+
       case 'navigate_customer':
         return {
           targetId: 'customer-slide-section',
           stepNumber: 7,
           totalSteps: 8,
           category: 'Customer Delivery',
-          title: 'Customer Doorstep Delivery',
-          description: `Head to customer address (${activeOrder?.deliveryAddress || 'Customer Doorstep'}). When you reach their location, slide 'Arrived at Location' to proceed to PIN verification.`,
-          heroImg: '/images/momo/cards/step_7.png',
-          placement: 'top',
+          title: 'Deliver to Customer 📍',
+          description: 'Ride to customer doorstep. Slide below when arrived to enter delivery PIN.',
+          avatarImg: '/images/momo/characters/momo_nav.png',
           icon: Navigation,
-          iconBg: 'bg-purple-600 text-white',
+          buttonText: 'Arrived at Customer Doorstep 📍',
+          buttonIcon: Navigation,
         };
+
       case 'confirm_delivery':
         return {
           targetId: 'delivery-pin-section',
           stepNumber: 8,
           totalSteps: 8,
           category: 'PIN Verification',
-          title: 'Customer Delivery PIN (Demo: 1234)',
-          description: 'Ask customer for 4-digit PIN. For this demo order, enter 1234 or show Minnit UPI QR code for digital payment!',
-          heroImg: '/images/momo/cards/step_8.png',
-          placement: 'top',
+          title: 'Enter Delivery PIN 🔑',
+          description: 'Ask customer for 4-digit PIN. For demo, enter 1234 to complete delivery!',
+          avatarImg: '/images/momo/characters/momo_ready.png',
           icon: KeyRound,
-          iconBg: 'bg-emerald-600 text-white',
+          buttonText: 'Auto-fill PIN 1234 & Complete ✅',
+          buttonIcon: CheckCircle2,
         };
+
       case 'earnings_reflection':
         return {
           targetId: 'tour-today-earnings',
           stepNumber: 8,
           totalSteps: 8,
-          category: 'Earnings Reflected & Auto-Vanish',
-          title: '₹49 Earning Credited! 💰',
-          description: `Your ₹${demoCreditedAmount || 49} payout is reflected in today's earnings & Minnit Wallet. When you tap Finish below, this demo earning vanishes automatically so your real account stays clean at ₹0!`,
-          heroImg: '/images/momo/tour/step_5_earnings.png',
-          placement: 'bottom',
+          category: 'Earnings Credited',
+          title: `₹${earningsAmount} Payout Credited! 💰`,
+          description: 'Payout reflected in wallet! Finishing demo auto-clears test balance for real riding.',
+          avatarImg: '/images/momo/characters/momo_earnings.png',
           icon: Wallet,
-          iconBg: 'bg-emerald-600 text-white',
+          buttonText: 'Finish Demo & Start Real Riding ✨',
+          buttonIcon: Sparkles,
         };
+
       default:
         return null;
     }
@@ -192,9 +201,20 @@ export const RiderDemoController: React.FC = () => {
   // Measure target element rect dynamically
   const updateRect = useCallback(() => {
     if (!isDemoMode || !stepConfig) return;
-    const targetElement = document.getElementById(stepConfig.targetId);
+
+    let targetElement = document.getElementById(stepConfig.targetId);
+
+    // Fallbacks if specific ID isn't found yet
+    if (!targetElement && stepConfig.targetId === 'accept-order-btn') {
+      targetElement = document.getElementById('tour-incoming-order');
+    }
+    if (!targetElement && stepConfig.targetId === 'tour-zone-pill') {
+      targetElement = document.getElementById('tour-zas-area');
+    }
+
     if (targetElement) {
-      setTargetRect(targetElement.getBoundingClientRect());
+      const rect = targetElement.getBoundingClientRect();
+      setTargetRect(rect);
     } else {
       setTargetRect(null);
     }
@@ -204,11 +224,18 @@ export const RiderDemoController: React.FC = () => {
     if (!isDemoMode || !stepConfig) return;
 
     const measure = () => {
-      const targetElement = document.getElementById(stepConfig.targetId);
+      let targetElement = document.getElementById(stepConfig.targetId);
+      if (!targetElement && stepConfig.targetId === 'accept-order-btn') {
+        targetElement = document.getElementById('tour-incoming-order');
+      }
+      if (!targetElement && stepConfig.targetId === 'tour-zone-pill') {
+        targetElement = document.getElementById('tour-zas-area');
+      }
+
       if (targetElement) {
         const rect = targetElement.getBoundingClientRect();
         const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
-        if (!isVisible && stepConfig.targetId !== 'tour-online-toggle') {
+        if (!isVisible && stepConfig.targetId !== 'tour-online-toggle' && stepConfig.targetId !== 'tour-zone-pill') {
           targetElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         setTargetRect(targetElement.getBoundingClientRect());
@@ -218,8 +245,8 @@ export const RiderDemoController: React.FC = () => {
     };
 
     measure();
-    const timer = setTimeout(measure, 250);
-    const timer2 = setTimeout(measure, 600);
+    const timer = setTimeout(measure, 150);
+    const timer2 = setTimeout(measure, 400);
 
     return () => {
       clearTimeout(timer);
@@ -246,7 +273,77 @@ export const RiderDemoController: React.FC = () => {
     router.push('/');
   };
 
-  // Geometry calculations with guaranteed mobile centering
+  // Perform step advancement and update real order flow state synchronously
+  const handleStepAction = () => {
+    switch (demoStep) {
+      case 'zone_check':
+        setDemoStep('go_online');
+        break;
+
+      case 'go_online':
+        setOnlineStatus(true);
+        setDemoStep('accept_order');
+        triggerMockOrder();
+        break;
+
+      case 'accept_order':
+        acceptIncomingOrder();
+        setDemoStep('navigate_store');
+        break;
+
+      case 'navigate_store':
+        setDemoStep('wait_packaging');
+        break;
+
+      case 'wait_packaging':
+        simulateShopkeeperHandover(true);
+        setDemoStep('handover_ready');
+        break;
+
+      case 'handover_ready':
+        markOrderPickedUp();
+        setDemoStep('navigate_customer');
+        break;
+
+      case 'navigate_customer':
+        advanceActiveOrderStatus();
+        router.push('/confirm-delivery');
+        setDemoStep('confirm_delivery');
+        break;
+
+      case 'confirm_delivery': {
+        const pinInputs = document.querySelectorAll<HTMLInputElement>('#delivery-pin-section input');
+        if (pinInputs && pinInputs.length === 4) {
+          const digits = ['1', '2', '3', '4'];
+          pinInputs.forEach((inp, idx) => {
+            inp.value = digits[idx];
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+          setTimeout(() => {
+            const verifyBtn = document.getElementById('confirm-delivery-verify-btn') as HTMLButtonElement | null;
+            if (verifyBtn) {
+              verifyBtn.click();
+            } else {
+              completeDeliveryWithOtp('1234');
+            }
+          }, 250);
+        } else {
+          completeDeliveryWithOtp('1234');
+        }
+        break;
+      }
+
+      case 'earnings_reflection':
+        handleSkipOrExit();
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  // Geometry calculations: smart anchor to top or bottom to guarantee zero overflow on mobile
   const pad = 6;
   const rect = targetRect;
 
@@ -254,75 +351,33 @@ export const RiderDemoController: React.FC = () => {
     position: 'fixed',
     left: '16px',
     right: '16px',
-    maxWidth: '360px',
+    maxWidth: '350px',
     margin: '0 auto',
   };
 
-  let arrowStyle: React.CSSProperties = {};
-  let isPlacedTop = stepConfig.placement === 'top';
-
   if (rect) {
-    const tooltipWidth = Math.min(360, window.innerWidth - 32);
-    const cardLeft = (window.innerWidth - tooltipWidth) / 2;
-    const targetCenterX = rect.left + rect.width / 2;
+    const targetCenterY = rect.top + rect.height / 2;
+    const isTargetInTopHalf = targetCenterY < window.innerHeight * 0.48;
 
-    const spaceAbove = rect.top;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const estimatedCardHeight = 310;
-
-    if (stepConfig.placement === 'top') {
-      isPlacedTop = true;
-    } else if (stepConfig.placement === 'bottom') {
-      if (spaceBelow < estimatedCardHeight + 20 && spaceAbove > spaceBelow) {
-        isPlacedTop = true;
-      } else {
-        isPlacedTop = false;
-      }
-    }
-
-    if (isPlacedTop) {
-      const rawBottom = window.innerHeight - rect.top + pad + 12;
-      const bottomDistance = Math.min(
-        window.innerHeight - estimatedCardHeight - 16,
-        Math.max(16, rawBottom)
-      );
-
+    if (isTargetInTopHalf) {
+      // Element is in upper half: anchor card cleanly at bottom
       tooltipStyle = {
         position: 'fixed',
         left: '16px',
         right: '16px',
-        maxWidth: '360px',
+        maxWidth: '350px',
         margin: '0 auto',
-        bottom: `${bottomDistance}px`,
-      };
-
-      const arrowLeft = Math.max(24, Math.min(tooltipWidth - 24, targetCenterX - cardLeft));
-      arrowStyle = {
-        left: `${arrowLeft}px`,
-        bottom: '-8px',
-        transform: 'translateX(-50%) rotate(45deg)',
+        bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
       };
     } else {
-      const rawTop = rect.bottom + pad + 12;
-      const topDistance = Math.min(
-        window.innerHeight - estimatedCardHeight - 16,
-        Math.max(16, rawTop)
-      );
-
+      // Element is in lower half: anchor card cleanly at top
       tooltipStyle = {
         position: 'fixed',
         left: '16px',
         right: '16px',
-        maxWidth: '360px',
+        maxWidth: '350px',
         margin: '0 auto',
-        top: `${topDistance}px`,
-      };
-
-      const arrowLeft = Math.max(24, Math.min(tooltipWidth - 24, targetCenterX - cardLeft));
-      arrowStyle = {
-        left: `${arrowLeft}px`,
-        top: '-8px',
-        transform: 'translateX(-50%) rotate(45deg)',
+        top: 'max(16px, env(safe-area-inset-top, 16px))',
       };
     }
   } else {
@@ -331,17 +386,17 @@ export const RiderDemoController: React.FC = () => {
       top: '50%',
       left: '16px',
       right: '16px',
-      maxWidth: '360px',
+      maxWidth: '350px',
       margin: '0 auto',
       transform: 'translateY(-50%)',
     };
   }
 
-  const StepIcon = stepConfig.icon;
+  const ButtonIcon = stepConfig.buttonIcon;
 
   return createPortal(
     <div className="fixed inset-0 z-[99990] overflow-hidden select-none animate-fade-in">
-      {/* ── 1. SVG Cutout Mask for Dark Backdrop ── */}
+      {/* ── 1. SVG Cutout Mask for Dark Scrim ── */}
       <svg className="fixed inset-0 w-full h-full pointer-events-auto">
         <defs>
           <mask id="demo-spotlight-mask">
@@ -352,8 +407,8 @@ export const RiderDemoController: React.FC = () => {
                 y={Math.max(0, rect.top - pad)}
                 width={rect.width + pad * 2}
                 height={rect.height + pad * 2}
-                rx={18}
-                ry={18}
+                rx={16}
+                ry={16}
                 fill="black"
               />
             )}
@@ -362,7 +417,7 @@ export const RiderDemoController: React.FC = () => {
         <rect
           width="100%"
           height="100%"
-          fill="rgba(15, 23, 42, 0.78)"
+          fill="rgba(15, 23, 42, 0.72)"
           mask="url(#demo-spotlight-mask)"
         />
       </svg>
@@ -376,36 +431,26 @@ export const RiderDemoController: React.FC = () => {
             left: `${Math.max(0, rect.left - pad)}px`,
             width: `${rect.width + pad * 2}px`,
             height: `${rect.height + pad * 2}px`,
-            border: '2.5px solid #10b981',
-            boxShadow: '0 0 25px rgba(16, 185, 129, 0.65), inset 0 0 15px rgba(16, 185, 129, 0.25)',
+            border: '2px solid #10b981',
+            boxShadow: '0 0 20px rgba(16, 185, 129, 0.65), inset 0 0 10px rgba(16, 185, 129, 0.2)',
           }}
         >
-          <span className="absolute -inset-1 rounded-2xl border-2 border-emerald-400/60 animate-ping opacity-60 pointer-events-none" />
+          <span className="absolute -inset-1 rounded-2xl border-2 border-emerald-400/60 animate-ping opacity-50 pointer-events-none" />
         </div>
       )}
 
-      {/* ── 3. Interactive Floating Momo Tooltip Card ── */}
+      {/* ── 3. Compact Floating Momo Tooltip Card ── */}
       <div
         ref={tooltipRef}
         style={tooltipStyle}
         onClick={(e) => e.stopPropagation()}
-        className="z-[99995] bg-white rounded-3xl p-4 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] border border-slate-100 flex flex-col space-y-2.5 animate-scale-up"
+        className="z-[99995] bg-white rounded-2xl p-3.5 sm:p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.4)] border border-emerald-500/25 ring-1 ring-emerald-500/10 flex flex-col gap-2.5 animate-scale-up"
       >
-        {/* Dynamic Arrow pointer */}
-        {rect && (
-          <div
-            style={arrowStyle}
-            className="absolute w-4 h-4 bg-white border-l border-t border-slate-100 shadow-2xs pointer-events-none"
-          />
-        )}
-
-        {/* Top Header */}
-        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between pb-1 border-b border-slate-100">
           <div className="flex items-center gap-1.5">
-            <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center">
-              {stepConfig.stepNumber}
-            </span>
-            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
               Step {stepConfig.stepNumber} of {stepConfig.totalSteps} • {stepConfig.category}
             </span>
           </div>
@@ -413,164 +458,41 @@ export const RiderDemoController: React.FC = () => {
           <button
             type="button"
             onClick={handleSkipOrExit}
-            className="text-[11px] font-bold text-slate-400 hover:text-slate-700 px-2 py-0.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
+            className="text-[11px] font-bold text-slate-400 hover:text-slate-600 px-2 py-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
           >
-            <span>Skip Demo</span>
+            <span>Skip</span>
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Visual Hero */}
-        <div className="relative w-full h-[120px] flex items-center justify-center bg-gradient-to-b from-slate-50/80 to-slate-100/50 rounded-2xl overflow-hidden p-1 border border-slate-100/80">
-          <img
-            src={stepConfig.heroImg}
-            alt={stepConfig.title}
-            className="w-full h-full object-contain filter drop-shadow-sm select-none"
-          />
-        </div>
-
-        {/* Sharp, Concise Title & Description */}
-        <div className="px-0.5 space-y-1">
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 shadow-xs ${stepConfig.iconBg}`}
-            >
-              <StepIcon className="w-3.5 h-3.5 stroke-[2.5]" />
-            </div>
-            <h3 className="text-sm font-black text-slate-900 leading-tight">
+        {/* Momo Mascot Avatar & Concise Content Row */}
+        <div className="flex items-center gap-3 py-0.5">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-100 via-teal-50 to-emerald-50 border border-emerald-200/90 flex items-center justify-center shrink-0 shadow-2xs p-1">
+            <img
+              src={stepConfig.avatarImg}
+              alt="Momo Assistant"
+              className="w-full h-full object-contain filter drop-shadow-2xs select-none"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight truncate">
               {stepConfig.title}
             </h3>
+            <p className="text-[11px] text-slate-600 leading-tight font-medium mt-0.5 line-clamp-2">
+              {stepConfig.description}
+            </p>
           </div>
-          <p className="text-[11px] text-slate-600 leading-relaxed font-medium pl-8">
-            {stepConfig.description}
-          </p>
         </div>
 
-        {/* Dynamic Action Buttons per Step */}
-        <div className="pt-1.5 border-t border-slate-100">
-          {/* STEP 1: ZONE CHECK */}
-          {demoStep === 'zone_check' && (
-            <button
-              type="button"
-              onClick={() => setDemoStep('go_online')}
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>I&apos;m Inside Zone 📍 → Next</span>
-            </button>
-          )}
-
-          {/* STEP 2: GO ONLINE */}
-          {demoStep === 'go_online' && (
-            <button
-              type="button"
-              onClick={() => {
-                if (!isOnline) toggleOnline();
-                setDemoStep('accept_order');
-                setTimeout(() => {
-                  triggerMockOrder();
-                }, 500);
-              }}
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <Power className="w-4 h-4 stroke-[2.5]" />
-              <span>Turn Online &amp; Get Order 🚀</span>
-            </button>
-          )}
-
-          {/* STEP 3: ACCEPT ORDER */}
-          {demoStep === 'accept_order' && (
-            <button
-              type="button"
-              onClick={() => {
-                acceptIncomingOrder();
-                setDemoStep('navigate_store');
-              }}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Accept Order (₹{incomingOrder?.earnings || 49}) ✅</span>
-            </button>
-          )}
-
-          {/* STEP 4: NAVIGATE TO STORE */}
-          {demoStep === 'navigate_store' && (
-            <button
-              type="button"
-              onClick={() => setDemoStep('wait_packaging')}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <Store className="w-4 h-4" />
-              <span>I&apos;ve Arrived at Store 🏬</span>
-            </button>
-          )}
-
-          {/* STEP 5: WAIT FOR PACKAGING & STORE HANDOVER */}
-          {demoStep === 'wait_packaging' && (
-            <button
-              type="button"
-              onClick={() => {
-                simulateShopkeeperHandover(true);
-                setDemoStep('handover_ready');
-              }}
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Merchant Swiped Handover ✅</span>
-            </button>
-          )}
-
-          {/* STEP 6: CONFIRM PICKUP SLIDER */}
-          {demoStep === 'handover_ready' && (
-            <button
-              type="button"
-              onClick={() => {
-                markOrderPickedUp();
-                setDemoStep('navigate_customer');
-              }}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <Package className="w-4 h-4" />
-              <span>Confirm Pickup &amp; Start Transit 🚴</span>
-            </button>
-          )}
-
-          {/* STEP 7: NAVIGATE TO CUSTOMER */}
-          {demoStep === 'navigate_customer' && (
-            <button
-              type="button"
-              onClick={() => {
-                advanceActiveOrderStatus();
-                router.push('/confirm-delivery');
-              }}
-              className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <Navigation className="w-4 h-4" />
-              <span>Arrived at Customer Doorstep 📍</span>
-            </button>
-          )}
-
-          {/* STEP 8: CONFIRM DELIVERY (PIN ENTRY) */}
-          {demoStep === 'confirm_delivery' && (
-            <div className="space-y-1.5 text-center">
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 block">
-                Enter PIN <strong>1234</strong> in the input boxes below!
-              </span>
-            </div>
-          )}
-
-          {/* STEP 9: EARNINGS REFLECTION & AUTO-VANISH */}
-          {demoStep === 'earnings_reflection' && (
-            <button
-              type="button"
-              onClick={handleSkipOrExit}
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Finish Demo &amp; Vanish Demo Earnings ✨</span>
-            </button>
-          )}
-        </div>
+        {/* Dynamic Action Button */}
+        <button
+          type="button"
+          onClick={handleStepAction}
+          className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+        >
+          <ButtonIcon className="w-4 h-4 stroke-[2.5]" />
+          <span>{stepConfig.buttonText}</span>
+        </button>
       </div>
     </div>,
     document.body

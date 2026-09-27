@@ -529,6 +529,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       console.log('Demo order skipped: Rider is not approved yet.');
       return;
     }
+    setIsStartRidingOpen(false);
+    setIsTourOpen(false);
+    setActiveOrder(null);
+    setIncomingOrder(null);
+    setIsOnline(false);
     setIsDemoMode(true);
     setDemoStep('zone_check');
   }, [rider.isVerified, rider.verificationStatus]);
@@ -2205,6 +2210,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       setIsOnline(false);
       return;
     }
+    if (isDemoMode) {
+      setIsOnline((prev) => !prev);
+      setIsStartRidingOpen(false);
+      return;
+    }
     if (isOnline) {
       setOnlineStatus(false);
     } else {
@@ -2220,6 +2230,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const setOnlineStatus = (status: boolean) => {
     if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
       setIsOnline(false);
+      return;
+    }
+    if (isDemoMode) {
+      setIsOnline(status);
+      setIsStartRidingOpen(false);
       return;
     }
     if (status) {
@@ -2443,7 +2458,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
     // Strict Verification via common_logic
     const expectedPin = activeOrder.delivery_pin || activeOrder.otp || '4821';
-    const isPinValid = verifyDeliveryPin(enteredOtp, expectedPin);
+    const isPinValid = verifyDeliveryPin(enteredOtp, expectedPin) || (isDemoMode && enteredOtp === '1234');
 
     if (!isPinValid) {
       return false;

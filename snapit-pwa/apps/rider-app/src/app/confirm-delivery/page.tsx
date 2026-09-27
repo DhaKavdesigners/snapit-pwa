@@ -288,6 +288,7 @@ export default function ConfirmDeliveryPage() {
           {/* Action Button */}
           <div className="pt-1 w-full">
             <button
+              id="confirm-delivery-verify-btn"
               onClick={handleVerify}
               disabled={enteredOtp.length !== 4}
               className="w-full h-13 sm:h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 active:scale-98 transition-all flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:ring-0 cursor-pointer tracking-wider uppercase"
