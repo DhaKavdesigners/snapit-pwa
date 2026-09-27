@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, ShoppingBag, Bike, Zap, Store } from "lucide-react";
+import { CheckCircle2, ShoppingBag, Bike, Zap, Store, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCartStore } from "../../store/cartStore";
 import { useOrderStore } from "../../store/orderStore";
@@ -135,8 +135,19 @@ export const OrderSuccessView: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-white/70 text-[11px] uppercase tracking-widest font-black">Paid via</span>
-            <span className="text-xs font-black text-emerald-200 bg-emerald-500/20 border border-emerald-300/20 px-2.5 py-0.5 rounded-full">UPI · 100% Paid</span>
+            <span className="text-white/70 text-[11px] uppercase tracking-widest font-black">
+              {lastOrder?.paymentMethod === 'pod_qr' ? 'Payment' : 'Paid via'}
+            </span>
+            {lastOrder?.paymentMethod === 'pod_qr' ? (
+              <span className="text-xs font-black text-amber-200 bg-amber-500/25 border border-amber-300/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <QrCode className="w-3.5 h-3.5 text-amber-300" />
+                Pay on Delivery · Rider QR
+              </span>
+            ) : (
+              <span className="text-xs font-black text-emerald-200 bg-emerald-500/20 border border-emerald-300/20 px-2.5 py-0.5 rounded-full">
+                Online · 100% Paid
+              </span>
+            )}
           </div>
 
           {top2Items.length > 0 && (
@@ -159,6 +170,31 @@ export const OrderSuccessView: React.FC = () => {
             </>
           )}
         </motion.div>
+
+        {/* ⑤ Doorstep QR Payment Instructions Banner for POD */}
+        {lastOrder?.paymentMethod === 'pod_qr' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.48 }}
+            className="w-full bg-amber-400/20 backdrop-blur-md border border-amber-300/40 rounded-2xl p-4 mb-5 text-left flex items-start gap-3 shadow-lg"
+          >
+            <div className="w-10 h-10 rounded-xl bg-amber-400/30 border border-amber-300/40 flex items-center justify-center shrink-0 text-amber-300">
+              <QrCode className="w-5 h-5 text-amber-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <h4 className="font-black text-xs text-amber-200 uppercase tracking-wide">
+                  Doorstep QR Payment
+                </h4>
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              </div>
+              <p className="text-[11px] text-white/95 font-medium leading-relaxed">
+                Your delivery rider will present an order-specific UPI QR code on their phone upon arrival. Simply scan and pay using any UPI app (GPay, PhonePe, or Paytm).
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {/* ⑤ ACTIONS */}
         <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }}

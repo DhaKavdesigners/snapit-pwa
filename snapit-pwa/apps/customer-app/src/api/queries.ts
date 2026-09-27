@@ -83,6 +83,13 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
         });
       }
 
+      // Prioritize products from ONLINE stores that are IN STOCK first
+      mappedDbProducts.sort((a, b) => {
+        const aScore = (a.storeIsOpen ? 2 : 0) + (a.inStock ? 1 : 0);
+        const bScore = (b.storeIsOpen ? 2 : 0) + (b.inStock ? 1 : 0);
+        return bScore - aScore;
+      });
+
       const filteredByContext = mappedDbProducts.filter(p => {
         if (!context) return true;
         if (context === 'shopping') return p.category === 'grocery';
@@ -98,13 +105,23 @@ export async function fetchLiveProducts(context?: 'shopping' | 'food', category?
 
     // Fallback only if database is completely empty or offline
     const base = context === 'shopping' ? mockShoppingProducts : context === 'food' ? mockFoodProducts : [...mockShoppingProducts, ...mockFoodProducts];
-    if (category) return base.filter(p => p.category === category || p.subCategory === category);
-    return base;
+    const sortedBase = [...base].sort((a, b) => {
+      const aScore = (a.storeIsOpen ? 2 : 0) + (a.inStock ? 1 : 0);
+      const bScore = (b.storeIsOpen ? 2 : 0) + (b.inStock ? 1 : 0);
+      return bScore - aScore;
+    });
+    if (category) return sortedBase.filter(p => p.category === category || p.subCategory === category);
+    return sortedBase;
   } catch (err) {
     console.warn("Using mock products fallback:", err);
     const base = context === 'shopping' ? mockShoppingProducts : context === 'food' ? mockFoodProducts : [...mockShoppingProducts, ...mockFoodProducts];
-    if (category) return base.filter(p => p.category === category || p.subCategory === category);
-    return base;
+    const sortedBase = [...base].sort((a, b) => {
+      const aScore = (a.storeIsOpen ? 2 : 0) + (a.inStock ? 1 : 0);
+      const bScore = (b.storeIsOpen ? 2 : 0) + (b.inStock ? 1 : 0);
+      return bScore - aScore;
+    });
+    if (category) return sortedBase.filter(p => p.category === category || p.subCategory === category);
+    return sortedBase;
   }
 }
 
@@ -153,7 +170,12 @@ export const useTrending = (context: 'shopping' | 'food') => {
     queryKey: ['trending', context],
     queryFn: async (): Promise<Product[]> => {
       const all = await fetchLiveProducts(context);
-      return all.slice(0, 6);
+      const sorted = [...all].sort((a, b) => {
+        const aScore = (a.storeIsOpen ? 2 : 0) + (a.inStock ? 1 : 0);
+        const bScore = (b.storeIsOpen ? 2 : 0) + (b.inStock ? 1 : 0);
+        return bScore - aScore;
+      });
+      return sorted.slice(0, 8);
     },
     staleTime: 0,
     refetchInterval: 2500,

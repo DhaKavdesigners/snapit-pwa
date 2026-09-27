@@ -5,7 +5,7 @@ export interface LastOrder {
   orderId: string;
   total: number;       // in paise
   itemNames: string[]; // product names at time of order
-  paymentMethod: 'upi' | 'upiDelivery';
+  paymentMethod: 'upi' | 'upiDelivery' | 'razorpay' | 'pod_qr' | 'online';
   isFood?: boolean;
 }
 

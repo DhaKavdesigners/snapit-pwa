@@ -55,17 +55,24 @@ export const HomeView: React.FC = () => {
   ).values()).slice(0, 5);
   const isSearching = searchQuery.trim().length > 0;
 
+  // Helper: Strictly prioritize online store products in all lists
+  const sortOnlineFirst = (list: typeof products) => (list || []).slice().sort((a, b) => {
+    const aOnline = (a.storeIsOpen ? 2 : 0) + (a.inStock ? 1 : 0);
+    const bOnline = (b.storeIsOpen ? 2 : 0) + (b.inStock ? 1 : 0);
+    return bOnline - aOnline;
+  });
+
   // Shopping Categories
-  const snacks = products?.filter(p => 
+  const snacks = sortOnlineFirst(products?.filter(p => 
     p.subCategory === 'Snacks & Beverages' || 
     p.subCategory?.toLowerCase().includes('snack') || 
     p.subCategory?.toLowerCase().includes('juice') || 
     p.subCategory?.toLowerCase().includes('drink') ||
     p.subCategory?.toLowerCase().includes('tea') ||
     p.subCategory?.toLowerCase().includes('coffee')
-  ) || [];
+  ));
 
-  const dairy = products?.filter(p => 
+  const dairy = sortOnlineFirst(products?.filter(p => 
     ['Milk & Curd', 'Butter, Ghee & Cream', 'Butter & Ghee', 'Paneer & Cheese', 'Ice Cream'].includes(p.subCategory || '') ||
     p.subCategory?.toLowerCase().includes('dairy') ||
     p.subCategory?.toLowerCase().includes('milk') ||
@@ -73,9 +80,9 @@ export const HomeView: React.FC = () => {
     p.subCategory?.toLowerCase().includes('paneer') ||
     p.subCategory?.toLowerCase().includes('ghee') ||
     p.subCategory?.toLowerCase().includes('butter')
-  ) || [];
+  ));
 
-  const masalas = products?.filter(p => 
+  const masalas = sortOnlineFirst(products?.filter(p => 
     ['Cooking Essentials', 'Atta & Flours', 'Edible Oils', 'Rice & Dals', 'Spices & Masalas'].includes(p.subCategory || '') ||
     p.subCategory?.toLowerCase().includes('oil') ||
     p.subCategory?.toLowerCase().includes('atta') ||
@@ -85,26 +92,26 @@ export const HomeView: React.FC = () => {
     p.subCategory?.toLowerCase().includes('masala') ||
     p.subCategory?.toLowerCase().includes('salt') ||
     p.subCategory?.toLowerCase().includes('sugar')
-  ) || [];
+  ));
 
-  const homecare = products?.filter(p => 
+  const homecare = sortOnlineFirst(products?.filter(p => 
     ['Home Essentials', 'Personal Care', 'Soaps & Detergents'].includes(p.subCategory || '') ||
     p.subCategory?.toLowerCase().includes('soap') ||
     p.subCategory?.toLowerCase().includes('detergent') ||
     p.subCategory?.toLowerCase().includes('clean') ||
     p.subCategory?.toLowerCase().includes('shampoo') ||
     p.subCategory?.toLowerCase().includes('wash')
-  ) || [];
+  ));
 
   // Food Categories
-  const biryani = products?.filter(p => 
+  const biryani = sortOnlineFirst(products?.filter(p => 
     p.subCategory === 'Biryani Specials' || 
     p.subCategory === 'Biryani Specialties' || 
     p.subCategory?.toLowerCase().includes('biryani') || 
     p.subCategory?.toLowerCase().includes('rice')
-  ) || [];
+  ));
 
-  const fastfood = products?.filter(p => 
+  const fastfood = sortOnlineFirst(products?.filter(p => 
     ['Starters & Grills', 'Fast Food & Rolls', 'Fried Chicken', 'Burgers', 'Sides & Fries', 'Starters'].includes(p.subCategory || '') ||
     p.subCategory?.toLowerCase().includes('starter') ||
     p.subCategory?.toLowerCase().includes('grill') ||
@@ -112,9 +119,9 @@ export const HomeView: React.FC = () => {
     p.subCategory?.toLowerCase().includes('burger') ||
     p.subCategory?.toLowerCase().includes('roll') ||
     p.subCategory?.toLowerCase().includes('chicken 65')
-  ) || [];
+  ));
 
-  const bakery = products?.filter(p => 
+  const bakery = sortOnlineFirst(products?.filter(p => 
     ['Veg Gravies', 'Gravies & Curries', 'Breads & Cakes', 'Puffs & Savories'].includes(p.subCategory || '') ||
     p.subCategory?.toLowerCase().includes('gravy') ||
     p.subCategory?.toLowerCase().includes('curry') ||
@@ -122,15 +129,15 @@ export const HomeView: React.FC = () => {
     p.subCategory?.toLowerCase().includes('bread') ||
     p.subCategory?.toLowerCase().includes('cake') ||
     p.subCategory?.toLowerCase().includes('puff')
-  ) || [];
+  ));
 
   // Deduplication Logic for "All Essentials" / "All Menu Items"
   const featuredIds = activeContext === 'shopping' 
     ? new Set([...snacks.map(p => p.id), ...dairy.map(p => p.id), ...masalas.map(p => p.id), ...homecare.map(p => p.id)])
     : new Set([...biryani, ...fastfood, ...bakery].map(p => p.id));
     
-  const nonFeaturedProducts = products?.filter(p => !featuredIds.has(p.id)) || [];
-  const featuredProductsList = products?.filter(p => featuredIds.has(p.id)) || [];
+  const nonFeaturedProducts = sortOnlineFirst(products?.filter(p => !featuredIds.has(p.id)));
+  const featuredProductsList = sortOnlineFirst(products?.filter(p => featuredIds.has(p.id)));
   const deduplicatedAllEssentials = [...nonFeaturedProducts, ...featuredProductsList];
 
   const scrollToSection = (id: string) => {
