@@ -79,6 +79,7 @@ export const BottomNav: React.FC = () => {
               key={item.label}
               id={item.id}
               href={item.href}
+              prefetch={true}
               className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 active:scale-90 ${
                 isActive
                   ? 'bg-primary-container/20 text-on-primary-container'

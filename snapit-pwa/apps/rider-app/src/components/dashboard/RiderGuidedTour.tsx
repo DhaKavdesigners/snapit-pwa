@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Power,
-  Store,
+  Home,
   ShoppingBag,
   Calendar,
   Wallet,
@@ -28,36 +27,22 @@ export interface TourStep {
 
 const TOUR_STEPS: TourStep[] = [
   {
-    targetId: 'tour-online-toggle',
-    stepNumber: 1,
-    category: 'Shift Controls',
-    title: 'Switch Online & Go On-Duty',
-    description:
-      'Tap this switch at the top right to start receiving orders. Choose your session duration or go offline whenever you want.',
-    icon: Power,
-    iconColor: 'bg-emerald-500 text-white',
-    placement: 'bottom',
-    heroImg: '/images/momo/tour/step_1_online.png',
-  },
-  {
     targetId: 'tour-zas-area',
-    stepNumber: 2,
-    category: 'Order Dispatch Priority',
-    title: 'Stay Inside Your ZAS Zone',
-    description:
-      'Store proximity is priority #1! Station yourself inside active store clusters to receive nearby delivery requests first.',
-    icon: Store,
-    iconColor: 'bg-blue-600 text-white',
+    stepNumber: 1,
+    category: 'Home Cockpit',
+    title: 'Home Dashboard',
+    description: 'Your central hub to view status, operating zone, and shift controls.',
+    icon: Home,
+    iconColor: 'bg-emerald-600 text-white',
     placement: 'bottom',
     heroImg: '/images/momo/tour/step_2_zas.png',
   },
   {
     targetId: 'tour-nav-orders',
-    stepNumber: 3,
-    category: 'Active Deliveries',
-    title: 'Orders & Trip Navigation',
-    description:
-      'Track your ongoing deliveries with turn-by-turn navigation, store pickup addresses, and view your complete past trip log.',
+    stepNumber: 2,
+    category: 'Trip Navigation',
+    title: 'Orders & Routes',
+    description: 'Live turn-by-turn navigation for active trips and past delivery history.',
     icon: ShoppingBag,
     iconColor: 'bg-amber-500 text-white',
     placement: 'top',
@@ -65,11 +50,10 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     targetId: 'tour-nav-availability',
-    stepNumber: 4,
+    stepNumber: 3,
     category: 'Schedule Planning',
-    title: 'Reserve Riding Windows',
-    description:
-      'Plan ahead! Reserve your preferred riding time slots for today and tomorrow to unlock dispatch priority boosts during peak rush.',
+    title: 'Slot Booking',
+    description: 'Reserve riding shifts in advance for peak rush priority dispatch.',
     icon: Calendar,
     iconColor: 'bg-purple-600 text-white',
     placement: 'top',
@@ -77,11 +61,10 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     targetId: 'tour-nav-earnings',
-    stepNumber: 5,
-    category: 'Earnings & Payouts',
-    title: 'Live Pay & Instant UPI Cashout',
-    description:
-      'Monitor your daily earnings, trip payouts, tips, and surge incentives in real time. Request instant cashouts directly to your bank.',
+    stepNumber: 4,
+    category: 'Payouts',
+    title: 'Daily Earnings',
+    description: 'Track real-time trip payouts, bonuses, and instant UPI bank withdrawals.',
     icon: Wallet,
     iconColor: 'bg-emerald-600 text-white',
     placement: 'top',
@@ -89,11 +72,10 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     targetId: 'tour-nav-alerts',
-    stepNumber: 6,
-    category: 'Announcements & OPS',
-    title: 'Surge Alerts & Hotspots',
-    description:
-      'Get real-time alerts for live demand surges, rain bonuses, active store hotspots, and important notices from Minnit OPS.',
+    stepNumber: 5,
+    category: 'Updates',
+    title: 'Surge & OPS Alerts',
+    description: 'Real-time surge bonuses, rain pay notifications, and dispatch updates.',
     icon: Bell,
     iconColor: 'bg-rose-500 text-white',
     placement: 'top',
@@ -141,20 +123,15 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
 
     const targetElement = document.getElementById(currentStep.targetId);
     if (targetElement) {
-      // Smooth scroll if not fully visible
       const rect = targetElement.getBoundingClientRect();
-      const isVisible =
-        rect.top >= 0 &&
-        rect.bottom <= window.innerHeight;
+      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
 
-      if (!isVisible && currentStep.targetId !== 'tour-online-toggle') {
+      if (!isVisible && currentStep.targetId !== 'tour-zas-area') {
         targetElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
 
-      // Initial measure
       setTargetRect(targetElement.getBoundingClientRect());
 
-      // Delayed measure to account for smooth scroll finishing
       const timer = setTimeout(() => {
         setTargetRect(targetElement.getBoundingClientRect());
       }, 200);
@@ -198,16 +175,16 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
 
   if (!isOpen || !mounted) return null;
 
-  // Tooltip geometry calculations with viewport boundary safety
+  // Geometry calculations with guaranteed horizontal centering on mobile
   const pad = 6;
   const rect = targetRect;
 
   let tooltipStyle: React.CSSProperties = {
     position: 'fixed',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: 'calc(100vw - 32px)',
+    left: '16px',
+    right: '16px',
     maxWidth: '350px',
+    margin: '0 auto',
   };
 
   let arrowStyle: React.CSSProperties = {};
@@ -215,22 +192,16 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
 
   if (rect) {
     const tooltipWidth = Math.min(350, window.innerWidth - 32);
-    // Center horizontally on target, clamped safely within viewport padding
+    const cardLeft = (window.innerWidth - tooltipWidth) / 2;
     const targetCenterX = rect.left + rect.width / 2;
-    const computedLeft = Math.max(
-      16,
-      Math.min(window.innerWidth - tooltipWidth - 16, targetCenterX - tooltipWidth / 2)
-    );
 
-    // Dynamic vertical placement: check available space above and below
     const spaceAbove = rect.top;
     const spaceBelow = window.innerHeight - rect.bottom;
-    const estimatedCardHeight = 295;
+    const estimatedCardHeight = 285;
 
     if (currentStep.placement === 'top') {
       isPlacedTop = true;
     } else if (currentStep.placement === 'bottom') {
-      // If space below is too tight, flip safely above target
       if (spaceBelow < estimatedCardHeight + 20 && spaceAbove > spaceBelow) {
         isPlacedTop = true;
       } else {
@@ -239,9 +210,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
     }
 
     if (isPlacedTop) {
-      // Place above target
       const rawBottom = window.innerHeight - rect.top + pad + 12;
-      // Clamp to ensure tooltip doesn't go off top of screen
       const bottomDistance = Math.min(
         window.innerHeight - estimatedCardHeight - 16,
         Math.max(16, rawBottom)
@@ -249,22 +218,21 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
 
       tooltipStyle = {
         position: 'fixed',
-        left: `${computedLeft}px`,
-        bottom: `${bottomDistance}px`,
-        width: `${tooltipWidth}px`,
+        left: '16px',
+        right: '16px',
         maxWidth: '350px',
+        margin: '0 auto',
+        bottom: `${bottomDistance}px`,
       };
 
-      const arrowLeft = Math.max(20, Math.min(tooltipWidth - 20, targetCenterX - computedLeft));
+      const arrowLeft = Math.max(24, Math.min(tooltipWidth - 24, targetCenterX - cardLeft));
       arrowStyle = {
         left: `${arrowLeft}px`,
         bottom: '-8px',
         transform: 'translateX(-50%) rotate(45deg)',
       };
     } else {
-      // Place below target
       const rawTop = rect.bottom + pad + 12;
-      // Clamp to ensure tooltip doesn't go off bottom of screen
       const topDistance = Math.min(
         window.innerHeight - estimatedCardHeight - 16,
         Math.max(16, rawTop)
@@ -272,13 +240,14 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
 
       tooltipStyle = {
         position: 'fixed',
-        left: `${computedLeft}px`,
-        top: `${topDistance}px`,
-        width: `${tooltipWidth}px`,
+        left: '16px',
+        right: '16px',
         maxWidth: '350px',
+        margin: '0 auto',
+        top: `${topDistance}px`,
       };
 
-      const arrowLeft = Math.max(20, Math.min(tooltipWidth - 20, targetCenterX - computedLeft));
+      const arrowLeft = Math.max(24, Math.min(tooltipWidth - 24, targetCenterX - cardLeft));
       arrowStyle = {
         left: `${arrowLeft}px`,
         top: '-8px',
@@ -286,14 +255,14 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
       };
     }
   } else {
-    // Centered fallback if element not yet measured
     tooltipStyle = {
       position: 'fixed',
       top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: 'calc(100vw - 32px)',
+      left: '16px',
+      right: '16px',
       maxWidth: '350px',
+      margin: '0 auto',
+      transform: 'translateY(-50%)',
     };
   }
 
@@ -308,9 +277,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
       >
         <defs>
           <mask id="tour-spotlight-mask">
-            {/* White base = fully dark backdrop */}
             <rect width="100%" height="100%" fill="white" />
-            {/* Black hole = transparent spotlight cutout revealing target */}
             {rect && (
               <rect
                 x={Math.max(0, rect.left - pad)}
@@ -324,7 +291,6 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
             )}
           </mask>
         </defs>
-        {/* Semi-transparent backdrop with cutout */}
         <rect
           width="100%"
           height="100%"
@@ -351,7 +317,6 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
           }}
           title="Click to proceed to next tour step"
         >
-          {/* Subtle pulse ring */}
           <span className="absolute -inset-1 rounded-2xl border-2 border-emerald-400/60 animate-ping opacity-60 pointer-events-none" />
         </div>
       )}
@@ -361,9 +326,9 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
         ref={tooltipRef}
         style={tooltipStyle}
         onClick={(e) => e.stopPropagation()}
-        className="z-[99995] bg-white rounded-3xl p-3.5 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] border border-slate-100 flex flex-col space-y-2.5 animate-scale-up"
+        className="z-[99995] bg-white rounded-3xl p-3.5 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] border border-slate-100 flex flex-col space-y-2 animate-scale-up"
       >
-        {/* Arrow pointer indicator */}
+        {/* Dynamic Arrow pointer */}
         {rect && (
           <div
             style={arrowStyle}
@@ -371,7 +336,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
           />
         )}
 
-        {/* Top Header: Step Counter & Skip button */}
+        {/* Top Header */}
         <div className="flex items-center justify-between pb-1 border-b border-slate-100">
           <div className="flex items-center gap-1.5">
             <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center">
@@ -392,8 +357,8 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
           </button>
         </div>
 
-        {/* Hero Visual: Cropped Momo with Speech Bubble */}
-        <div className="relative w-full h-[135px] flex items-center justify-center bg-gradient-to-b from-slate-50/80 to-slate-100/50 rounded-2xl overflow-hidden p-1 border border-slate-100/80">
+        {/* Visual Hero */}
+        <div className="relative w-full h-[125px] flex items-center justify-center bg-gradient-to-b from-slate-50/80 to-slate-100/50 rounded-2xl overflow-hidden p-1 border border-slate-100/80">
           <img
             src={currentStep.heroImg}
             alt={currentStep.title}
@@ -401,7 +366,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
           />
         </div>
 
-        {/* Single Clean Title & Instruction (No redundant nested boxes) */}
+        {/* Sharp, Concise Title & Description */}
         <div className="px-1 space-y-1">
           <div className="flex items-center gap-2">
             <div
@@ -418,7 +383,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
           </p>
         </div>
 
-        {/* Footer: Progress Dots + Back / Next Action Buttons */}
+        {/* Footer */}
         <div className="pt-1.5 flex items-center justify-between gap-2 border-t border-slate-100">
           {/* Progress dots */}
           <div className="flex items-center gap-1.5">
@@ -456,7 +421,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
               className="py-1.5 px-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider active:scale-95"
             >
               {currentStepIndex === TOUR_STEPS.length - 1 ? (
-                <span>Got it! 🚀</span>
+                <span>Next: Demo Order 🚀</span>
               ) : (
                 <>
                   <span>Next</span>
