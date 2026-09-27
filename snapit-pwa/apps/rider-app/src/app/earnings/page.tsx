@@ -7,7 +7,6 @@ import { TodayEarningsSummary } from '@/components/earnings/TodayEarningsSummary
 import { WeeklyEarningsChart } from '@/components/earnings/WeeklyEarningsChart';
 import { PayoutHistorySection } from '@/components/earnings/PayoutHistorySection';
 import { useRider } from '@/context/RiderContext';
-import { RiderDemoController } from '@/components/dashboard/RiderDemoController';
 import {
   getNextSundayDate,
   getRealWeeklyEarnings,
@@ -79,9 +78,6 @@ export default function EarningsPage() {
           monthOptions={MONTH_OPTIONS}
           monthlyPayouts={MONTHLY_PAYOUTS}
         />
-
-        {/* Interactive Delivery Demo Order Step Controller */}
-        <RiderDemoController />
       </div>
     </AppShell>
   );

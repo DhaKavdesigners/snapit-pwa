@@ -288,6 +288,11 @@ interface RiderContextType {
   setDemoStep: (step: 'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'earnings_reflection' | 'completed') => void;
   advanceDemoStep: () => void;
   completeInteractiveDemo: () => void;
+  // Live Guided App Tour Flow
+  isTourOpen: boolean;
+  startTour: () => void;
+  closeTour: () => void;
+  completeTour: () => void;
 }
 
 // ─── Default Data ─────────────────────────────────────────────────────────────
@@ -519,9 +524,41 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [demoCreditedAmount, setDemoCreditedAmount] = useState<number>(0);
 
   const startInteractiveDemo = useCallback(() => {
+    const isApproved = rider.isVerified === true && rider.verificationStatus === 'APPROVED';
+    if (!isApproved) {
+      console.log('Demo order skipped: Rider is not approved yet.');
+      return;
+    }
     setIsDemoMode(true);
     setDemoStep('zone_check');
+  }, [rider.isVerified, rider.verificationStatus]);
+
+  // ─── Live Guided App Tour Flow State ────────────────────────────────────────
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+
+  const startTour = useCallback(() => {
+    setIsTourOpen(true);
   }, []);
+
+  const closeTour = useCallback(() => {
+    setIsTourOpen(false);
+  }, []);
+
+  const completeTour = useCallback(() => {
+    setIsTourOpen(false);
+    const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
+    try {
+      localStorage.setItem(`minnit_first_login_instructions_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_rider_instructions_completed_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_approval_welcome_seen_${riderKey}`, 'true');
+    } catch {}
+    setRider((prev) => ({ ...prev, rider_instructions_completed: true }));
+
+    const isApproved = rider.isVerified === true && rider.verificationStatus === 'APPROVED';
+    if (isApproved) {
+      startInteractiveDemo();
+    }
+  }, [rider, startInteractiveDemo]);
 
   const advanceDemoStep = useCallback(() => {
     setDemoStep((prev) => {
@@ -3064,6 +3101,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         setDemoStep,
         advanceDemoStep,
         completeInteractiveDemo,
+        // Live Guided App Tour Flow
+        isTourOpen,
+        startTour,
+        closeTour,
+        completeTour,
       }}
     >
       {children}

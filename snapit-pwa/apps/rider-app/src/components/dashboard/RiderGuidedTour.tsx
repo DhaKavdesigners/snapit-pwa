@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter, usePathname } from 'next/navigation';
+import { useRider } from '@/context/RiderContext';
 import {
   Home,
   ShoppingBag,
@@ -23,19 +25,21 @@ export interface TourStep {
   iconColor: string;
   placement: 'top' | 'bottom';
   heroImg: string;
+  route: string;
 }
 
 const TOUR_STEPS: TourStep[] = [
   {
-    targetId: 'tour-zas-area',
+    targetId: 'tour-nav-home',
     stepNumber: 1,
     category: 'Home Cockpit',
     title: 'Home Dashboard',
-    description: 'Your central hub to view status, operating zone, and shift controls.',
+    description: 'Your central hub to view live status, operating zone, and shift controls.',
     icon: Home,
     iconColor: 'bg-emerald-600 text-white',
-    placement: 'bottom',
+    placement: 'top',
     heroImg: '/images/momo/tour/step_2_zas.png',
+    route: '/',
   },
   {
     targetId: 'tour-nav-orders',
@@ -47,6 +51,7 @@ const TOUR_STEPS: TourStep[] = [
     iconColor: 'bg-amber-500 text-white',
     placement: 'top',
     heroImg: '/images/momo/tour/step_3_orders.png',
+    route: '/orders',
   },
   {
     targetId: 'tour-nav-availability',
@@ -58,6 +63,7 @@ const TOUR_STEPS: TourStep[] = [
     iconColor: 'bg-purple-600 text-white',
     placement: 'top',
     heroImg: '/images/momo/tour/step_4_availability.png',
+    route: '/availability',
   },
   {
     targetId: 'tour-nav-earnings',
@@ -69,6 +75,7 @@ const TOUR_STEPS: TourStep[] = [
     iconColor: 'bg-emerald-600 text-white',
     placement: 'top',
     heroImg: '/images/momo/tour/step_5_earnings.png',
+    route: '/earnings',
   },
   {
     targetId: 'tour-nav-alerts',
@@ -80,6 +87,7 @@ const TOUR_STEPS: TourStep[] = [
     iconColor: 'bg-rose-500 text-white',
     placement: 'top',
     heroImg: '/images/momo/tour/step_6_alerts.png',
+    route: '/alerts',
   },
 ];
 
@@ -94,53 +102,69 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
   onClose,
   onComplete,
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { rider } = useRider();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [mounted, setMounted] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
+  const isApproved = rider?.isVerified === true && rider?.verificationStatus === 'APPROVED';
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // When tour opens, reset step to 0 and ensure we are on Home page
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStepIndex(0);
+      if (pathname !== '/') {
+        router.push('/');
+      }
+    }
+  }, [isOpen]);
+
   const currentStep = TOUR_STEPS[currentStepIndex];
 
-  // Measure target element rect
-  const updateRect = useCallback(() => {
-    if (!isOpen) return;
-    const targetElement = document.getElementById(currentStep.targetId);
-    if (targetElement) {
-      const rect = targetElement.getBoundingClientRect();
-      setTargetRect(rect);
-    } else {
-      setTargetRect(null);
-    }
-  }, [isOpen, currentStep.targetId]);
-
-  // When step changes, scroll target into view and measure
+  // Route synchronization: whenever step changes, open the respective page
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !currentStep) return;
+    if (currentStep.route && pathname !== currentStep.route) {
+      router.push(currentStep.route);
+    }
+  }, [isOpen, currentStepIndex, currentStep?.route, pathname, router]);
 
+  // Measure target element rect with automatic retry for DOM settle after navigation
+  const updateRect = useCallback(() => {
+    if (!isOpen || !currentStep) return;
     const targetElement = document.getElementById(currentStep.targetId);
     if (targetElement) {
       const rect = targetElement.getBoundingClientRect();
-      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
-
-      if (!isVisible && currentStep.targetId !== 'tour-zas-area') {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (rect.width > 0 && rect.height > 0) {
+        setTargetRect(rect);
       }
-
-      setTargetRect(targetElement.getBoundingClientRect());
-
-      const timer = setTimeout(() => {
-        setTargetRect(targetElement.getBoundingClientRect());
-      }, 200);
-
-      return () => clearTimeout(timer);
     } else {
       setTargetRect(null);
     }
-  }, [isOpen, currentStepIndex, currentStep.targetId]);
+  }, [isOpen, currentStep]);
+
+  // Repeated measurement attempts when step or route changes
+  useEffect(() => {
+    if (!isOpen || !currentStep) return;
+
+    updateRect();
+    const t1 = setTimeout(updateRect, 100);
+    const t2 = setTimeout(updateRect, 250);
+    const t3 = setTimeout(updateRect, 500);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isOpen, currentStepIndex, currentStep?.targetId, pathname, updateRect]);
 
   // Listen to window scroll & resize to dynamically keep spotlight aligned
   useEffect(() => {
@@ -170,10 +194,20 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
   };
 
   const handleFinish = () => {
+    if (pathname !== '/') {
+      router.push('/');
+    }
     onComplete();
   };
 
-  if (!isOpen || !mounted) return null;
+  const handleClose = () => {
+    if (pathname !== '/') {
+      router.push('/');
+    }
+    onClose();
+  };
+
+  if (!isOpen || !mounted || !currentStep) return null;
 
   // Geometry calculations with guaranteed horizontal centering on mobile
   const pad = 6;
@@ -349,7 +383,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="text-[11px] font-bold text-slate-400 hover:text-slate-700 px-2 py-0.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
           >
             <span>Skip</span>
@@ -387,11 +421,13 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
         <div className="pt-1.5 flex items-center justify-between gap-2 border-t border-slate-100">
           {/* Progress dots */}
           <div className="flex items-center gap-1.5">
-            {TOUR_STEPS.map((_, idx) => (
+            {TOUR_STEPS.map((step, idx) => (
               <button
                 key={idx}
                 type="button"
-                onClick={() => setCurrentStepIndex(idx)}
+                onClick={() => {
+                  setCurrentStepIndex(idx);
+                }}
                 className={`h-1.5 rounded-full transition-all cursor-pointer ${
                   currentStepIndex === idx
                     ? 'w-5 bg-emerald-600'
@@ -421,7 +457,11 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
               className="py-1.5 px-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider active:scale-95"
             >
               {currentStepIndex === TOUR_STEPS.length - 1 ? (
-                <span>Next: Demo Order 🚀</span>
+                isApproved ? (
+                  <span>Next: Demo Order 🚀</span>
+                ) : (
+                  <span>Finish Tour ✨</span>
+                )
               ) : (
                 <>
                   <span>Next</span>

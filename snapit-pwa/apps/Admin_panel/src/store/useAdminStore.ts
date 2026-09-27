@@ -61,7 +61,7 @@ interface AdminState {
   rejectRider: (riderId: string, reason?: string, adminIdentifier?: string) => Promise<boolean>;
   toggleRiderOnline: (riderId: string, isOnline: boolean) => Promise<boolean>;
   resetRiderBusy: (riderId: string) => Promise<boolean>;
-  deleteRider: (riderId: string) => Promise<boolean>;
+  deleteRider: (riderId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Product Actions
   createProduct: (data: Partial<AdminProduct>) => Promise<boolean>;
@@ -762,36 +762,50 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   deleteRider: async (riderId: string) => {
     try {
-      // 1. Try SECURITY DEFINER RPC — bypasses RLS and handles FK cleanup
+      // 1. Try SECURITY DEFINER RPC first if configured in Supabase
       const { error: rpcErr } = await supabase.rpc("admin_delete_rider", {
         p_rider_id: riderId,
       });
 
       if (rpcErr) {
-        // 2. RPC not available yet — fallback: manually nullify FK + direct delete
-        console.warn("RPC not found, using fallback:", rpcErr.message);
-
+        // Fallback: manually clean up orders and child session tables before deleting rider profile
+        // A. Unlink orders assigned to this rider so historical orders are preserved
         await supabase
           .from("orders")
           .update({ rider_id: null })
           .eq("rider_id", riderId);
 
+        // B. Attempt deleting child records (works if DELETE policy is enabled)
+        await supabase
+          .from("rider_shift_sessions")
+          .delete()
+          .eq("rider_id", riderId);
+
+        await supabase
+          .from("rider_device_sessions")
+          .delete()
+          .eq("rider_id", riderId);
+
+        // C. Delete the rider profile
         const { error: deleteErr } = await supabase
           .from("rider_profiles")
           .delete()
           .eq("id", riderId);
 
-        if (deleteErr) throw deleteErr;
+        if (deleteErr) {
+          console.error("Failed to delete rider profile:", deleteErr);
+          return { success: false, error: deleteErr.message };
+        }
       }
 
       set((state) => ({
         riders: state.riders.filter((r) => r.id !== riderId),
       }));
 
-      return true;
+      return { success: true };
     } catch (err: any) {
-      console.error("Failed to delete rider:", err.message || err);
-      return false;
+      console.error("Failed to delete rider:", err);
+      return { success: false, error: err.message || "Failed to delete rider" };
     }
   },
 

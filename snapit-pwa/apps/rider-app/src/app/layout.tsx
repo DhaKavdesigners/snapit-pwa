@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { RiderProvider } from "@/context/RiderContext";
 import { ServiceWorkerRegister } from "@/components/common/ServiceWorkerRegister";
+import { GlobalTourContainer } from "@/components/dashboard/GlobalTourContainer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -58,7 +59,10 @@ export default function RootLayout({
       </head>
       <body className="antialiased font-sans bg-white text-on-surface" style={{ backgroundColor: "#ffffff" }}>
         <ServiceWorkerRegister />
-        <RiderProvider>{children}</RiderProvider>
+        <RiderProvider>
+          {children}
+          <GlobalTourContainer />
+        </RiderProvider>
       </body>
     </html>
   );

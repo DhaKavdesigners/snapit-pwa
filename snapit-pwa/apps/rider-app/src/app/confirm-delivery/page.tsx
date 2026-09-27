@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatOrderNumber } from '@/utils/orderUtils';
-import { RiderDemoController } from '@/components/dashboard/RiderDemoController';
 
 export default function ConfirmDeliveryPage() {
   const { activeOrder, completeDeliveryWithOtp, isDemoMode, completeInteractiveDemo } = useRider();
@@ -308,9 +307,6 @@ export default function ConfirmDeliveryPage() {
             onDone={handleFinishSuccess}
           />
         )}
-
-        {/* Demo Guidance Controller */}
-        <RiderDemoController />
       </div>
     </AppShell>
   );

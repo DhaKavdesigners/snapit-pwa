@@ -167,14 +167,14 @@ export const FleetView: React.FC = () => {
     const label = rider?.name || rider?.Rider_ID || riderId;
     if (
       window.confirm(
-        `Permanently delete "${label}" from the database?\n\nThis cannot be undone. The rider's application and all KYC data will be removed.`
+        `Permanently delete "${label}" from the database?\n\nThis cannot be undone. The rider's application, KYC files, and session history will be removed.`
       )
     ) {
-      const success = await deleteRider(riderId);
-      if (success) {
+      const res = await deleteRider(riderId);
+      if (res.success) {
         showToast(`Rider "${label}" permanently deleted.`);
       } else {
-        alert("Delete failed — the database may have blocked this action. Check Supabase RLS policies.");
+        alert(`Delete failed: ${res.error || "Foreign key constraint or permission error."}\n\nPlease run the ON DELETE CASCADE migration in Supabase SQL Editor.`);
       }
     }
   };

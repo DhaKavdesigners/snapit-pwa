@@ -12,8 +12,6 @@ import { SessionCompleteCard } from '@/components/dashboard/SessionCompleteCard'
 import { BreakOrderPreviewCard } from '@/components/delivery/BreakOrderPreviewCard';
 import { FeaturePromoBanner } from '@/components/dashboard/FeaturePromoBanner';
 import { ApprovedRiderWelcomeModal } from '@/components/dashboard/ApprovedRiderWelcomeModal';
-import { RiderGuidedTour } from '@/components/dashboard/RiderGuidedTour';
-import { RiderDemoController } from '@/components/dashboard/RiderDemoController';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -54,6 +52,7 @@ export default function DashboardPage() {
     dismissBreakOrderPreview,
     updateRiderProfile,
     startInteractiveDemo,
+    startTour,
   } = useRider();
   const router = useRouter();
 
@@ -62,7 +61,6 @@ export default function DashboardPage() {
   const [isEndEarlyModalOpen, setIsEndEarlyModalOpen] = useState(false);
   const [showFirstLoginInstructions, setShowFirstLoginInstructions] = useState(false);
   const [showManualGuideModal, setShowManualGuideModal] = useState(false);
-  const [isTourOpen, setIsTourOpen] = useState(false);
 
   // Track previous verified state to detect live admin approval transitions instantly
   const prevIsVerifiedRef = useRef<boolean | null>(null);
@@ -442,7 +440,7 @@ export default function DashboardPage() {
                 <FeaturePromoBanner
                   onOpenStartRiding={openStartRiding}
                   onOpenZoneModal={() => setIsZoneModalOpen(true)}
-                  onStartTour={() => setIsTourOpen(true)}
+                  onStartTour={startTour}
                 />
 
                 <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 flex flex-col items-center text-center space-y-3.5">
@@ -515,26 +513,9 @@ export default function DashboardPage() {
           onStartTour={() => {
             setShowFirstLoginInstructions(false);
             setShowManualGuideModal(false);
-            setIsTourOpen(true);
+            startTour();
           }}
         />
-
-        {/* Interactive Guided Spotlight Tour */}
-        <RiderGuidedTour
-          isOpen={isTourOpen}
-          onClose={() => {
-            setIsTourOpen(false);
-            handleCompleteFirstLoginInstructions();
-          }}
-          onComplete={() => {
-            setIsTourOpen(false);
-            handleCompleteFirstLoginInstructions();
-            startInteractiveDemo();
-          }}
-        />
-
-        {/* Interactive Delivery Demo Order Step Controller */}
-        <RiderDemoController />
       </div>
     </AppShell>
   );
