@@ -280,6 +280,13 @@ interface RiderContextType {
   remainingBreakAllowanceMs: number;
   breakOrderPreview: Order | null;
   dismissBreakOrderPreview: () => void;
+  // Interactive Onboarding Demo Flow
+  isDemoMode: boolean;
+  demoStep: 'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'completed';
+  startInteractiveDemo: () => void;
+  setDemoStep: (step: 'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'completed') => void;
+  advanceDemoStep: () => void;
+  completeInteractiveDemo: () => void;
 }
 
 // ─── Default Data ─────────────────────────────────────────────────────────────
@@ -503,8 +510,38 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     }, 5000);
   }, []);
 
+  // ─── Interactive Onboarding Demo Flow State ─────────────────────────────────
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+  const [demoStep, setDemoStep] = useState<
+    'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'completed'
+  >('idle');
 
-  // ─── LocalStorage hydration ────────────────────────────────────────────────
+  const startInteractiveDemo = useCallback(() => {
+    setIsDemoMode(true);
+    setDemoStep('zone_check');
+  }, []);
+
+  const advanceDemoStep = useCallback(() => {
+    setDemoStep((prev) => {
+      switch (prev) {
+        case 'zone_check': return 'go_online';
+        case 'go_online': return 'accept_order';
+        case 'accept_order': return 'navigate_store';
+        case 'navigate_store': return 'wait_packaging';
+        case 'wait_packaging': return 'handover_ready';
+        case 'handover_ready': return 'navigate_customer';
+        case 'navigate_customer': return 'confirm_delivery';
+        case 'confirm_delivery': return 'completed';
+        default: return 'idle';
+      }
+    });
+  }, []);
+
+  const completeInteractiveDemo = useCallback(() => {
+    setIsDemoMode(false);
+    setDemoStep('idle');
+  }, []);
+
 
   useEffect(() => {
     try {
@@ -914,8 +951,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       )
       .subscribe();
 
-    // 3. Continuous 2.5s Polling (Guarantees instant sync even without WebSocket replication)
-    const pollTimer = setInterval(fetchLiveProfile, 2500);
+    // 3. Periodic Profile Fallback Polling (WebSocket realtime is primary; this eliminates main-thread lag)
+    const pollTimer = setInterval(fetchLiveProfile, 20000);
 
     // 4. Instant sync on window focus (When user switches back from Supabase tab)
     const handleFocus = () => {
@@ -1014,7 +1051,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     };
 
     checkSessionExpiry();
-    const interval = setInterval(checkSessionExpiry, 3000);
+    const interval = setInterval(checkSessionExpiry, 15000);
     return () => clearInterval(interval);
   }, [activeSession, rider.phone]);
 
@@ -1157,7 +1194,19 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       selectedZone.id,
       targetZoneName
     );
-    setSlots(generated);
+    setSlots((prev) => {
+      if (prev.length === generated.length) {
+        let changed = false;
+        for (let i = 0; i < prev.length; i++) {
+          if (prev[i].id !== generated[i].id || prev[i].status !== generated[i].status) {
+            changed = true;
+            break;
+          }
+        }
+        if (!changed) return prev;
+      }
+      return generated;
+    });
 
     const now = getNow();
     const earlyWindow = adminConfig.slot.earlyOnlineWindowMinutes * 60000;
@@ -1169,7 +1218,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         now >= s.startTimestamp - earlyWindow &&
         now < s.endTimestamp
     ) || null;
-    setActiveSlot(active);
+    setActiveSlot((prev) => (prev?.id === active?.id ? prev : active));
 
     // Upcoming slot: next booked slot that hasn't started early window yet
     const upcoming = generated.find(
@@ -1177,7 +1226,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         currentBooked.includes(s.id) &&
         now < s.startTimestamp - earlyWindow
     ) || null;
-    setUpcomingSlot(upcoming);
+    setUpcomingSlot((prev) => (prev?.id === upcoming?.id ? prev : upcoming));
   }, [bookedSlotIds, adminConfig.slot, zones, rider.selectedZoneId]);
 
   useEffect(() => {
@@ -1370,7 +1419,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       }
-    }, 2000); // live real-time check every 2 seconds
+    }, 30000); // live real-time check every 30 seconds
 
     return () => clearInterval(interval);
   }, [bookedSlotIds, adminConfig.slot, isOnline, activeOrder, zones, rider.selectedZoneId]);
@@ -1888,11 +1937,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
-    // Flow: Customer places order (PLACED/PENDING) -> Merchant accepts order (status becomes ACCEPTED/PREPARING/PACKING)
-    // Rider receives order acceptance notification when merchant accepts
+    // Order notification eligibility: customer places order (PLACED/PENDING) or merchant accepts/prepares (ACCEPTED/PREPARING/PACKING/READY)
     const isEligibleNotificationStatus = (statusStr?: string) => {
       const s = (statusStr || '').toUpperCase();
-      return s === 'ACCEPTED' || s === 'PREPARING' || s === 'PACKING' || s === 'READY' || s === 'READY_FOR_PICKUP';
+      return s === 'PLACED' || s === 'PENDING' || s === 'ACCEPTED' || s === 'PREPARING' || s === 'PACKING' || s === 'READY' || s === 'READY_FOR_PICKUP';
     };
 
     const setupLiveOrders = async () => {
@@ -1987,7 +2035,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             const newId = String(newOrder.id).trim();
             // Do not notify if rider already has an active order or already handled this order
             if (activeOrderRef.current || handledOrderIdsRef.current.has(newId) || soundEngine.isOrderHandled(newId)) return;
-            if (newOrder.rider_assignment === 'assigned' && newOrder.rider_id !== rider.phone && newOrder.rider_id !== rider.Rider_ID) return;
+            const newRiderClean = (newOrder.rider_id || '').replace(/[^0-9]/g, '').slice(-10);
+            const isAssignedToOther = newOrder.rider_assignment === 'assigned' &&
+              newOrder.rider_id &&
+              newOrder.rider_id !== rider.phone &&
+              newOrder.rider_id !== rider.Rider_ID &&
+              (!cleanPhone || newRiderClean !== cleanPhone);
+            if (isAssignedToOther) return;
 
             // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
             if (isEligibleNotificationStatus(newOrder.status)) {
@@ -2034,9 +2088,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedId) || soundEngine.isOrderHandled(updatedId)) {
               return;
             }
-            if (updatedOrder.rider_assignment === 'assigned' && updatedOrder.rider_id !== rider.phone && updatedOrder.rider_id !== rider.Rider_ID) {
-              return;
-            }
+            const updatedRiderClean = (updatedOrder.rider_id || '').replace(/[^0-9]/g, '').slice(-10);
+            const isAssignedToOther = updatedOrder.rider_assignment === 'assigned' &&
+              updatedOrder.rider_id &&
+              updatedOrder.rider_id !== rider.phone &&
+              updatedOrder.rider_id !== rider.Rider_ID &&
+              (!cleanPhone || updatedRiderClean !== cleanPhone);
+            if (isAssignedToOther) return;
 
             // Trigger notification when merchant accepts and order reaches PREPARING
             if (isEligibleNotificationStatus(updatedOrder.status)) {
@@ -2173,6 +2231,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
     assignRiderToOrder(orderId, cleanPhone);
     setIncomingOrder(null);
+    if (isDemoMode) {
+      setDemoStep('navigate_store');
+    }
   };
 
   const declineIncomingOrder = () => {
@@ -2277,6 +2338,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       type: 'system',
       read: false,
     });
+
+    if (isDemoMode) {
+      setDemoStep('navigate_customer');
+    }
   };
 
   const markOrderPickedUp = () => {
@@ -2303,6 +2368,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         navStage: 'at_customer',
       });
       updateDbOrderStatus(activeOrder.id, 'RIDER_AT_LOC');
+      if (isDemoMode) {
+        setDemoStep('confirm_delivery');
+      }
     }
   };
 
@@ -2363,6 +2431,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setAlerts((prev) => [newAlert, ...prev]);
     setActiveOrder(null);
     try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+    if (isDemoMode) {
+      setDemoStep('completed');
+    }
 
     // Idempotently increment flexible session order count
     const nextOrdersCount = (activeSession?.orders_completed || 0) + 1;
@@ -2514,6 +2585,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         type: 'system',
         read: false,
       });
+    }
+
+    if (isDemoMode && confirmed) {
+      setDemoStep('handover_ready');
     }
   };
 
@@ -2950,6 +3025,13 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         remainingBreakAllowanceMs,
         breakOrderPreview,
         dismissBreakOrderPreview,
+        // Interactive Onboarding Demo Flow
+        isDemoMode,
+        demoStep,
+        startInteractiveDemo,
+        setDemoStep,
+        advanceDemoStep,
+        completeInteractiveDemo,
       }}
     >
       {children}

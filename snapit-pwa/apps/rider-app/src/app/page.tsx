@@ -16,6 +16,7 @@ import { RiderInstructionViewer } from '@/components/common/RiderInstructionView
 import { ApprovedRiderWelcomeModal } from '@/components/dashboard/ApprovedRiderWelcomeModal';
 import { RiderGuidedTour } from '@/components/dashboard/RiderGuidedTour';
 import { MomoVisualGuideModal } from '@/components/dashboard/MomoVisualGuideModal';
+import { RiderDemoController } from '@/components/dashboard/RiderDemoController';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -55,6 +56,7 @@ export default function DashboardPage() {
     breakOrderPreview,
     dismissBreakOrderPreview,
     updateRiderProfile,
+    startInteractiveDemo,
   } = useRider();
   const router = useRouter();
 
@@ -526,7 +528,7 @@ export default function DashboardPage() {
           onComplete={() => {
             setIsTourOpen(false);
             handleCompleteFirstLoginInstructions();
-            openStartRiding();
+            startInteractiveDemo();
           }}
         />
 
@@ -540,6 +542,8 @@ export default function DashboardPage() {
           }}
         />
 
+        {/* Interactive Delivery Demo Order Step Controller */}
+        <RiderDemoController />
       </div>
     </AppShell>
   );
