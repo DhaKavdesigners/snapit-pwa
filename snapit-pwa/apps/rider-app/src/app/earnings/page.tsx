@@ -7,6 +7,7 @@ import { TodayEarningsSummary } from '@/components/earnings/TodayEarningsSummary
 import { WeeklyEarningsChart } from '@/components/earnings/WeeklyEarningsChart';
 import { PayoutHistorySection } from '@/components/earnings/PayoutHistorySection';
 import { useRider } from '@/context/RiderContext';
+import { RiderDemoController } from '@/components/dashboard/RiderDemoController';
 import {
   getNextSundayDate,
   getRealWeeklyEarnings,
@@ -15,7 +16,7 @@ import {
 } from '@/services/earningsData';
 
 export default function EarningsPage() {
-  const { rider, earnings } = useRider();
+  const { rider, earnings, isDemoMode, demoCreditedAmount } = useRider();
 
   const handleScrollToHistory = () => {
     const el = document.getElementById('payout-history');
@@ -25,7 +26,7 @@ export default function EarningsPage() {
   };
 
   // Real synchronized values from logged-in rider profile
-  const isPending = rider.isVerified === false || rider.verificationStatus === 'PENDING';
+  const isPending = (rider.isVerified === false || rider.verificationStatus === 'PENDING') && !isDemoMode && demoCreditedAmount === 0;
   const realBalance = isPending ? 0 : (rider.walletBalance || 0);
   const realTodayEarnings = isPending ? 0 : (earnings.today || 0);
   const realWeekEarnings = isPending ? 0 : (earnings.thisWeek || 0);
@@ -59,14 +60,16 @@ export default function EarningsPage() {
           <p className="text-xs text-slate-500 mt-0.5">Track your delivery income & payouts</p>
         </div>
 
-        {/* ── 1. MINNIT WALLET CARD ── */}
-        <SnapitWalletSection
-          wallet={walletData}
-          onOpenPayoutHistory={handleScrollToHistory}
-        />
+        {/* ── 1. MINNIT WALLET CARD & TODAY'S EARNINGS (Spotlight Target for Demo) ── */}
+        <div id="tour-today-earnings" className="flex flex-col gap-3.5">
+          <SnapitWalletSection
+            wallet={walletData}
+            onOpenPayoutHistory={handleScrollToHistory}
+          />
 
-        {/* ── 2. SUMMARY IN A SINGLE ROW: TODAY, THIS WEEK, THIS MONTH ── */}
-        <TodayEarningsSummary stats={earningsSummaryStats} />
+          {/* ── 2. SUMMARY IN A SINGLE ROW: TODAY, THIS WEEK, THIS MONTH ── */}
+          <TodayEarningsSummary stats={earningsSummaryStats} />
+        </div>
 
         {/* ── 3. WEEKLY EARNINGS BAR GRAPH ── */}
         <WeeklyEarningsChart data={weeklyData} />
@@ -76,6 +79,9 @@ export default function EarningsPage() {
           monthOptions={MONTH_OPTIONS}
           monthlyPayouts={MONTHLY_PAYOUTS}
         />
+
+        {/* Interactive Delivery Demo Order Step Controller */}
+        <RiderDemoController />
       </div>
     </AppShell>
   );

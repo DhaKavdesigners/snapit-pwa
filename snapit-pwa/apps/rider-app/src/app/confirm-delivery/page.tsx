@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatOrderNumber } from '@/utils/orderUtils';
+import { RiderDemoController } from '@/components/dashboard/RiderDemoController';
 
 export default function ConfirmDeliveryPage() {
   const { activeOrder, completeDeliveryWithOtp, isDemoMode, completeInteractiveDemo } = useRider();
@@ -83,9 +84,10 @@ export default function ConfirmDeliveryPage() {
   const handleFinishSuccess = () => {
     setIsSuccess(false);
     if (isDemoMode) {
-      completeInteractiveDemo();
+      router.push('/earnings');
+    } else {
+      router.push('/');
     }
-    router.push('/');
   };
 
   return (
@@ -258,7 +260,7 @@ export default function ConfirmDeliveryPage() {
           </div>
 
           {/* Heading and Instructions Card */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-soft border border-slate-200/80 text-center space-y-3">
+          <div id="delivery-pin-section" className="bg-white rounded-3xl p-4 sm:p-5 shadow-soft border border-slate-200/80 text-center space-y-3">
             <div>
               <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center mx-auto mb-2 shadow-2xs">
                 <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
@@ -307,6 +309,8 @@ export default function ConfirmDeliveryPage() {
           />
         )}
 
+        {/* Demo Guidance Controller */}
+        <RiderDemoController />
       </div>
     </AppShell>
   );

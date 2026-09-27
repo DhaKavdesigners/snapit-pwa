@@ -282,9 +282,10 @@ interface RiderContextType {
   dismissBreakOrderPreview: () => void;
   // Interactive Onboarding Demo Flow
   isDemoMode: boolean;
-  demoStep: 'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'completed';
+  demoStep: 'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'earnings_reflection' | 'completed';
+  demoCreditedAmount: number;
   startInteractiveDemo: () => void;
-  setDemoStep: (step: 'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'completed') => void;
+  setDemoStep: (step: 'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'earnings_reflection' | 'completed') => void;
   advanceDemoStep: () => void;
   completeInteractiveDemo: () => void;
 }
@@ -513,8 +514,9 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   // ─── Interactive Onboarding Demo Flow State ─────────────────────────────────
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [demoStep, setDemoStep] = useState<
-    'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'completed'
+    'idle' | 'zone_check' | 'go_online' | 'accept_order' | 'navigate_store' | 'wait_packaging' | 'handover_ready' | 'navigate_customer' | 'confirm_delivery' | 'earnings_reflection' | 'completed'
   >('idle');
+  const [demoCreditedAmount, setDemoCreditedAmount] = useState<number>(0);
 
   const startInteractiveDemo = useCallback(() => {
     setIsDemoMode(true);
@@ -531,7 +533,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         case 'wait_packaging': return 'handover_ready';
         case 'handover_ready': return 'navigate_customer';
         case 'navigate_customer': return 'confirm_delivery';
-        case 'confirm_delivery': return 'completed';
+        case 'confirm_delivery': return 'earnings_reflection';
+        case 'earnings_reflection': return 'completed';
         default: return 'idle';
       }
     });
@@ -540,7 +543,34 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const completeInteractiveDemo = useCallback(() => {
     setIsDemoMode(false);
     setDemoStep('idle');
-  }, []);
+    setActiveOrder((prev) => (prev && String(prev.id).startsWith('req-') ? null : prev));
+    setIncomingOrder((prev) => (prev && String(prev.id).startsWith('req-') ? null : prev));
+    setIsOnline(false);
+
+    if (demoCreditedAmount > 0) {
+      setRider((prev) => ({
+        ...prev,
+        walletBalance: Math.max(0, (prev.walletBalance || 0) - demoCreditedAmount),
+        totalDeliveries: Math.max(0, (prev.totalDeliveries || 0) - 1),
+      }));
+      setEarnings((prev) => ({
+        ...prev,
+        today: Math.max(0, (prev.today || 0) - demoCreditedAmount),
+        todayDeliveries: Math.max(0, (prev.todayDeliveries || 0) - 1),
+        thisWeek: Math.max(0, (prev.thisWeek || 0) - demoCreditedAmount),
+        thisMonth: Math.max(0, (prev.thisMonth || 0) - demoCreditedAmount),
+        baseFare: Math.max(0, (prev.baseFare || 0) - demoCreditedAmount),
+      }));
+      setOrdersHistory((prev) => prev.filter((o) => !String(o.id).startsWith('req-')));
+      setAlerts((prev) => prev.filter((a) => a.type !== 'payout'));
+      setDemoCreditedAmount(0);
+      try {
+        localStorage.removeItem('snapit_active_order_v2');
+        localStorage.removeItem('snapit_incoming_order_v2');
+        localStorage.removeItem('snapit_online_status_v2');
+      } catch {}
+    }
+  }, [demoCreditedAmount]);
 
 
   useEffect(() => {
@@ -2432,7 +2462,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setActiveOrder(null);
     try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
     if (isDemoMode) {
-      setDemoStep('completed');
+      setDemoCreditedAmount(orderEarnings);
+      setDemoStep('earnings_reflection');
     }
 
     // Idempotently increment flexible session order count
@@ -3028,6 +3059,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         // Interactive Onboarding Demo Flow
         isDemoMode,
         demoStep,
+        demoCreditedAmount,
         startInteractiveDemo,
         setDemoStep,
         advanceDemoStep,

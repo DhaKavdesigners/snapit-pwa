@@ -83,6 +83,7 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
 
   return (
     <div
+      id="tour-active-delivery"
       className={`bg-white text-slate-900 rounded-[28px] p-5 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.08)] border border-slate-200/90 relative overflow-hidden space-y-4 animate-fade-in ${
         isPickupStage ? 'ring-1 ring-emerald-500/20' : 'ring-1 ring-blue-500/20'
       }`}
@@ -202,6 +203,7 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
 
             {canNavShop ? (
               <button
+                id="navigate-to-store-btn"
                 type="button"
                 onClick={() =>
                   openGoogleMapsNavigation(
@@ -218,6 +220,7 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
               </button>
             ) : (
               <button
+                id="navigate-to-store-btn"
                 type="button"
                 disabled
                 className="col-span-2 py-3.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200"
@@ -228,7 +231,7 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
           </div>
 
           {/* Progression Slider or Live Packing Status */}
-          <div className="pt-1">
+          <div id="store-handover-section" className="pt-1">
             {isPreparing ? (
               <div className="w-full py-3.5 bg-amber-50/90 border border-amber-200 text-amber-900 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-2xs">
                 <Clock className="w-4 h-4 text-amber-600 animate-spin" />
@@ -339,7 +342,7 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
           </div>
 
           {/* Progression Slider Action */}
-          <div className="pt-1">
+          <div id="customer-slide-section" className="pt-1">
             {isOutForDelivery ? (
               <SlideButton
                 label="SLIDE: ARRIVED AT LOCATION"

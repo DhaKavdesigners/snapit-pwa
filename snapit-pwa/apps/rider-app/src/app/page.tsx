@@ -11,11 +11,8 @@ import { EndSessionEarlyModal } from '@/components/dashboard/EndSessionEarlyModa
 import { SessionCompleteCard } from '@/components/dashboard/SessionCompleteCard';
 import { BreakOrderPreviewCard } from '@/components/delivery/BreakOrderPreviewCard';
 import { FeaturePromoBanner } from '@/components/dashboard/FeaturePromoBanner';
-import { RiderInstructionSlider } from '@/components/dashboard/RiderInstructionSlider';
-import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
 import { ApprovedRiderWelcomeModal } from '@/components/dashboard/ApprovedRiderWelcomeModal';
 import { RiderGuidedTour } from '@/components/dashboard/RiderGuidedTour';
-import { MomoVisualGuideModal } from '@/components/dashboard/MomoVisualGuideModal';
 import { RiderDemoController } from '@/components/dashboard/RiderDemoController';
 import { useRider } from '@/context/RiderContext';
 import Link from 'next/link';
@@ -66,7 +63,6 @@ export default function DashboardPage() {
   const [showFirstLoginInstructions, setShowFirstLoginInstructions] = useState(false);
   const [showManualGuideModal, setShowManualGuideModal] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
-  const [isMomoVisualGuideOpen, setIsMomoVisualGuideOpen] = useState(false);
 
   // Track previous verified state to detect live admin approval transitions instantly
   const prevIsVerifiedRef = useRef<boolean | null>(null);
@@ -292,17 +288,15 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
-            {/* ── 2. Interactive Rider Instructions Slider (In Main Cockpit Space) ── */}
-            <RiderInstructionSlider
-              onOpenFullGuide={() => setIsMomoVisualGuideOpen(true)}
-            />
           </>
         ) : (
           <>
             {/* ─── SCENARIO A: INCOMING ORDER ALERT ─── */}
             {incomingOrder && !activeOrder && (
-              <div className="bg-white text-slate-900 rounded-[28px] p-5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.12)] border border-slate-200/90 relative overflow-hidden animate-slide-up space-y-4 ring-2 ring-emerald-500/20">
+              <div
+                id="tour-incoming-order"
+                className="bg-white text-slate-900 rounded-[28px] p-5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.12)] border border-slate-200/90 relative overflow-hidden animate-slide-up space-y-4 ring-2 ring-emerald-500/20"
+              >
                 {/* Top Timer Bar */}
                 <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 overflow-hidden">
                   <div
@@ -321,7 +315,10 @@ export default function DashboardPage() {
                     New Delivery Offer • #{formatOrderNumber(incomingOrder.orderNumber)} • {countdown}s
                   </span>
 
-                  <div className="flex items-baseline gap-1.5 bg-emerald-50 border border-emerald-200/90 px-3 py-1 rounded-xl shadow-2xs">
+                  <div
+                    id="tour-order-payout"
+                    className="flex items-baseline gap-1.5 bg-emerald-50 border border-emerald-200/90 px-3 py-1 rounded-xl shadow-2xs"
+                  >
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
                       Payout
                     </span>
@@ -333,7 +330,10 @@ export default function DashboardPage() {
 
                 {/* Restaurant Hero Title & Trip Specs */}
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                  <h3
+                    id="tour-order-restaurant"
+                    className="text-2xl font-black text-slate-900 tracking-tight leading-tight"
+                  >
                     {incomingOrder.restaurantName}
                   </h3>
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-1.5">
@@ -392,6 +392,7 @@ export default function DashboardPage() {
                   </button>
 
                   <button
+                    id="accept-order-btn"
                     type="button"
                     onClick={acceptIncomingOrder}
                     className="col-span-2 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/25 border border-emerald-500 ring-2 ring-emerald-400/30 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer tracking-wider"
@@ -529,16 +530,6 @@ export default function DashboardPage() {
             setIsTourOpen(false);
             handleCompleteFirstLoginInstructions();
             startInteractiveDemo();
-          }}
-        />
-
-        {/* Momo's 10-Step Visual Guide Modal */}
-        <MomoVisualGuideModal
-          isOpen={isMomoVisualGuideOpen}
-          onClose={() => setIsMomoVisualGuideOpen(false)}
-          onStartInteractiveTour={() => {
-            setIsMomoVisualGuideOpen(false);
-            setIsTourOpen(true);
           }}
         />
 
