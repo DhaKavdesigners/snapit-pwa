@@ -164,7 +164,26 @@ export const CheckoutView: React.FC = () => {
     setIsSubmitting(true);
     orderPlacedRef.current = true;
     
-    const storeId = cartItemsWithDetails[0]?.product?.storeId || 'g1';
+    // Store resolution & normalization to guarantee matching foreign key in stores table
+    const rawStoreId = cartItemsWithDetails[0]?.product?.storeId || 'g1';
+    const storeAliasMap: Record<string, string> = {
+      s1: 'g1',
+      s2: 'g1',
+      s3: 'g1',
+      s4: 'd1',
+      g1: 'g1',
+      d1: 'd1',
+      f1: 'f1',
+      f2: 'f2',
+      f3: 'f3',
+      f4: 'f4',
+    };
+    const storeId = storeAliasMap[rawStoreId] || (rawStoreId.startsWith('f') ? 'f1' : 'g1');
+
+    // Customer phone normalization to 10 digits
+    const rawCustomerPhone = userProfile?.phone || finalRecipientPhone || '8217649688';
+    const cleanCustomerId = rawCustomerPhone.replace(/\D/g, '').slice(-10) || '8217649688';
+    const cleanRecipientPhone = finalRecipientPhone.replace(/\D/g, '').slice(-10) || cleanCustomerId;
 
     // ── Geocode or resolve delivery coordinates ──
     const resolvedCoords = pinnedCoords
@@ -196,56 +215,82 @@ export const CheckoutView: React.FC = () => {
       price_paise: item.product?.price || 0,
     }));
 
+    const { pinNumber } = generateDeliveryPin(displayId);
+    const feeRupees = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feeRupees;
+
+    // 1. Ensure customer profile exists in Supabase profiles table (guarantees fk_orders_customer foreign key)
     try {
-      const basePayload: any = {
-        id: displayId,
-        customer_id: userProfile?.phone || 'guest_user',
-        store_id: storeId,
-        status: 'PLACED',
-        items: itemsJson,
-        estimated_total: total,
-        delivery_address: activeAddressObject,
-        payment_method: paymentMethodType,
-        payment_status: paymentStatus,
-        payment_id: txnId || null,
-        recipient_name: finalRecipientName,
-        recipient_phone: finalRecipientPhone,
-      };
+      await supabase.from('profiles').upsert({
+        id: cleanCustomerId,
+        name: finalRecipientName || userProfile?.name || 'Customer',
+        phone: cleanCustomerId,
+        address_line1: displayAddressLine || 'KGF Main Road',
+        pincode: displayPin || '563122',
+        landmark: displayLandmark || '',
+        updated_at: new Date().toISOString(),
+      });
+    } catch (profileErr) {
+      console.warn("Profiles pre-sync note:", profileErr);
+    }
 
-      const { pinNumber } = generateDeliveryPin(displayId);
-      const feeRupees = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feeRupees;
+    // 2. Build precise payload matching live Supabase orders columns
+    const orderPayload: any = {
+      id: displayId,
+      customer_id: cleanCustomerId,
+      store_id: storeId,
+      status: 'PLACED',
+      items: itemsJson,
+      estimated_total: total,
+      delivery_address: activeAddressObject,
+      payment_method: paymentMethodType,
+      payment_status: paymentStatus,
+      recipient_name: finalRecipientName || 'Customer',
+      recipient_phone: cleanRecipientPhone,
+      delivery_pin: pinNumber,
+      delivery_fee: feeRupees,
+      razorpay_payment_id: txnId || null,
+      razorpay_order_id: null,
+    };
 
-      // 1. Insert with direct lat & lng columns + delivery_pin and delivery_fee
+    try {
       const { data: insertedOrder, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          ...basePayload,
-          lat: resolvedCoords.lat,
-          lng: resolvedCoords.lng,
-          delivery_pin: pinNumber,
-          delivery_fee: feeRupees,
-        })
+        .insert(orderPayload)
         .select();
 
       if (orderError) {
-        console.warn("Direct lat/lng or extended columns not present in Supabase table yet, falling back to base payload:", orderError.message);
+        console.warn("Order insert standard error, attempting safe fallback:", orderError.message);
+        // Fallback with minimal required columns
+        const minimalPayload = {
+          id: displayId,
+          customer_id: cleanCustomerId,
+          store_id: storeId,
+          status: 'PLACED',
+          items: itemsJson,
+          estimated_total: total,
+          delivery_address: activeAddressObject,
+          payment_method: paymentMethodType,
+          payment_status: paymentStatus,
+          recipient_name: finalRecipientName || 'Customer',
+          recipient_phone: cleanRecipientPhone,
+        };
         const { data: fallbackOrder, error: fallbackError } = await supabase
           .from('orders')
-          .insert(basePayload)
+          .insert(minimalPayload)
           .select();
 
         if (fallbackError) {
-          console.error("Supabase Order Base Insert Error:", fallbackError);
+          console.error("Supabase Order Placement Fatal Error:", fallbackError);
         } else {
-          console.info("Order successfully placed in Supabase (base columns):", fallbackOrder);
+          console.info("Order successfully placed in Supabase (fallback):", fallbackOrder);
         }
       } else {
-        console.info("Order successfully placed in Supabase with lat/lng:", insertedOrder);
+        console.info("Order successfully placed in Supabase:", insertedOrder);
       }
     } catch (err) {
       console.error("Order sync exception:", err);
     } finally {
-      // 2. Persist last order details for the celebratory success screen
+      // 3. Persist last order details for the celebratory success screen
       const isFoodOrder = cartItemsWithDetails.some(i => (i.product?.storeId || '').startsWith('f'));
       saveLastOrder({
         orderId: displayId,
@@ -284,7 +329,7 @@ export const CheckoutView: React.FC = () => {
     if (scriptLoaded && (window as any).Razorpay) {
       const options = {
         key: razorpayKey,
-        amount: Math.round(total * 100), // paise
+        amount: Math.round(total), // total is already in paise
         currency: 'INR',
         name: 'Minnit - 10 Min Delivery',
         description: `Order ${displayId}`,
