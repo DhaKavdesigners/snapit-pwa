@@ -69,26 +69,34 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isHydrated || !rider.isAuthenticated) return;
 
-    const isPending = rider.isVerified === false || rider.verificationStatus === 'PENDING';
+    const isPending =
+      rider.isVerified === false ||
+      String(rider.verificationStatus || '').toUpperCase() === 'PENDING';
 
     if (isPending) {
       prevIsVerifiedRef.current = false;
       return;
     }
 
+    const isApproved =
+      rider.isVerified === true ||
+      String(rider.verificationStatus || '').toUpperCase() === 'APPROVED';
+
+    if (!isApproved) return;
+
     const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
 
     // 1. Live transition from unverified to verified while user has the app open!
-    if (prevIsVerifiedRef.current === false && rider.isVerified === true) {
+    if (prevIsVerifiedRef.current === false) {
       setShowFirstLoginInstructions(true);
     } 
-    // 2. Fresh app visit as verified rider: check if welcome celebration was already seen
-    else if (prevIsVerifiedRef.current === null && rider.isVerified === true) {
-      const isCompleted =
-        Boolean(rider.rider_instructions_completed) ||
-        (typeof window !== 'undefined' && localStorage.getItem(`minnit_approval_welcome_seen_${riderKey}`) === 'true');
+    // 2. Fresh app visit as verified rider: check if interactive demo was already completed
+    else if (prevIsVerifiedRef.current === null) {
+      const isDemoCompleted =
+        typeof window !== 'undefined' &&
+        localStorage.getItem(`minnit_demo_completed_${riderKey}`) === 'true';
 
-      if (!isCompleted) {
+      if (!isDemoCompleted) {
         setShowFirstLoginInstructions(true);
       }
     }
@@ -525,7 +533,8 @@ export default function DashboardPage() {
           isOpen={showFirstLoginInstructions || showManualGuideModal}
           onClose={handleCompleteFirstLoginInstructions}
           onStartTour={() => {
-            handleCompleteFirstLoginInstructions();
+            setShowFirstLoginInstructions(false);
+            setShowManualGuideModal(false);
             router.push('/');
             startInteractiveDemo();
           }}

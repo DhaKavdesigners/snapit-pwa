@@ -1,6 +1,7 @@
 import React from "react";
-import { RefreshCw, Radio, Bell, ShieldCheck } from "lucide-react";
+import { RefreshCw, Radio, ShieldCheck, Menu } from "lucide-react";
 import { useAdminStore } from "../../store/useAdminStore";
+import { PushNotificationToggle } from "../common/PushNotificationToggle";
 
 interface TopHeaderProps {
   title: string;
@@ -11,12 +12,17 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle }) => {
   const { isRealtimeConnected, lastSyncTime, fetchInitialData, isLoading } = useAdminStore();
 
   return (
-    <header className="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
-      <div>
-        <h1 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-          <span>{title}</span>
-        </h1>
-        {subtitle && <p className="text-xs text-slate-500 font-medium">{subtitle}</p>}
+    <header className="h-14 md:h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+      <div className="flex items-center gap-2 md:gap-0">
+        <button className="md:hidden p-1.5 -ml-1.5 text-slate-600 hover:bg-slate-100 rounded-lg">
+          <Menu className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2 truncate max-w-[140px] sm:max-w-none">
+            <span>{title}</span>
+          </h1>
+          {subtitle && <p className="text-xs text-slate-500 font-medium hidden sm:block">{subtitle}</p>}
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -31,6 +37,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle }) => {
           <Radio className={`w-3 h-3 ${isRealtimeConnected ? "animate-pulse text-emerald-600" : "text-amber-600"}`} />
           <span>{isRealtimeConnected ? "LIVE SYNC" : "CONNECTING..."}</span>
         </div>
+
+        {/* Push Notification Toggle */}
+        <PushNotificationToggle />
 
         {/* Refresh button */}
         <button
@@ -62,3 +71,4 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle }) => {
     </header>
   );
 };
+

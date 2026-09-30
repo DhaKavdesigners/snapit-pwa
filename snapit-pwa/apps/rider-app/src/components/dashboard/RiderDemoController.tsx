@@ -425,7 +425,11 @@ export const RiderDemoController: React.FC = () => {
       {/* ── 2. Glowing Animated Spotlight Target Ring ── */}
       {rect && (
         <div
-          className="fixed pointer-events-none rounded-2xl transition-all duration-300 ease-out z-[99991]"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleStepAction();
+          }}
+          className="fixed pointer-events-auto cursor-pointer rounded-2xl transition-all duration-300 ease-out z-[99991]"
           style={{
             top: `${Math.max(0, rect.top - pad)}px`,
             left: `${Math.max(0, rect.left - pad)}px`,
@@ -434,6 +438,7 @@ export const RiderDemoController: React.FC = () => {
             border: '2px solid #10b981',
             boxShadow: '0 0 20px rgba(16, 185, 129, 0.65), inset 0 0 10px rgba(16, 185, 129, 0.2)',
           }}
+          title="Tap to proceed"
         >
           <span className="absolute -inset-1 rounded-2xl border-2 border-emerald-400/60 animate-ping opacity-50 pointer-events-none" />
         </div>

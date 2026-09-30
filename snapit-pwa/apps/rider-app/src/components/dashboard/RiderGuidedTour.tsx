@@ -47,7 +47,7 @@ const TOUR_STEPS: TourStep[] = [
     icon: Sparkles,
     iconColor: 'bg-emerald-500 text-white',
     placement: 'bottom',
-    heroImg: '/images/momo/characters/momo_welcome.png',
+    heroImg: '/images/rider_instructions/hi_momo.jpeg',
     route: '/',
     isIntroSlide: true,
   },
@@ -278,12 +278,14 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
         {/* Glowing aura */}
         <div className="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-emerald-500/30 via-teal-400/20 to-amber-400/15 blur-3xl pointer-events-none animate-pulse" />
 
-        {/* Momo full-body image above card */}
-        <img
-          src="/images/momo/characters/momo_welcome.png"
-          alt="Momo"
-          className="absolute bottom-[340px] left-1/2 -translate-x-1/2 w-52 object-contain drop-shadow-2xl select-none pointer-events-none z-[99993]"
-        />
+        {/* Momo Mascot circular portrait with radiant glowing aura */}
+        <div className="absolute bottom-[330px] left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-emerald-400 shadow-[0_0_35px_rgba(16,185,129,0.55)] z-[99993] bg-slate-950 flex items-center justify-center ring-4 ring-emerald-500/25 animate-scale-up">
+          <img
+            src="/images/rider_instructions/hi_momo.jpeg"
+            alt="Momo"
+            className="w-full h-full object-cover select-none pointer-events-none"
+          />
+        </div>
 
         {/* Welcome card */}
         <div

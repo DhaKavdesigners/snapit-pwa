@@ -524,7 +524,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [demoCreditedAmount, setDemoCreditedAmount] = useState<number>(0);
 
   const startInteractiveDemo = useCallback(() => {
-    const isApproved = rider.isVerified === true && rider.verificationStatus === 'APPROVED';
+    const isApproved =
+      rider.isVerified === true ||
+      String(rider.verificationStatus || '').toUpperCase() === 'APPROVED';
+
     if (!isApproved) {
       console.log('Demo order skipped: Rider is not approved yet.');
       return;
@@ -542,8 +545,16 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
 
   const startTour = useCallback(() => {
-    setIsTourOpen(true);
-  }, []);
+    const isApproved =
+      rider.isVerified === true ||
+      String(rider.verificationStatus || '').toUpperCase() === 'APPROVED';
+
+    if (isApproved) {
+      startInteractiveDemo();
+    } else {
+      setIsTourOpen(true);
+    }
+  }, [rider.isVerified, rider.verificationStatus, startInteractiveDemo]);
 
   const closeTour = useCallback(() => {
     setIsTourOpen(false);
@@ -553,13 +564,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setIsTourOpen(false);
     const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
     try {
-      localStorage.setItem(`minnit_first_login_instructions_${riderKey}`, 'true');
-      localStorage.setItem(`minnit_rider_instructions_completed_${riderKey}`, 'true');
-      localStorage.setItem(`minnit_approval_welcome_seen_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_unapproved_tour_seen_${riderKey}`, 'true');
     } catch {}
-    setRider((prev) => ({ ...prev, rider_instructions_completed: true }));
-    // NOTE: Approved riders start the interactive demo directly from ApprovedRiderWelcomeModal.
-    // This function only handles the unapproved-rider navigation tour completion.
+    // NOTE: Do not set rider_instructions_completed or approval_welcome_seen here.
+    // Those are reserved for the approved rider demo flow.
   }, [rider]);
 
   const advanceDemoStep = useCallback(() => {
@@ -586,11 +594,21 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setIncomingOrder((prev) => (prev && String(prev.id).startsWith('req-') ? null : prev));
     setIsOnline(false);
 
+    const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
+    try {
+      localStorage.setItem(`minnit_demo_completed_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_first_login_instructions_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_rider_instructions_completed_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_approval_welcome_seen_${riderKey}`, 'true');
+    } catch {}
+    setRider((prev) => ({ ...prev, rider_instructions_completed: true }));
+
     if (demoCreditedAmount > 0) {
       setRider((prev) => ({
         ...prev,
         walletBalance: Math.max(0, (prev.walletBalance || 0) - demoCreditedAmount),
         totalDeliveries: Math.max(0, (prev.totalDeliveries || 0) - 1),
+        rider_instructions_completed: true,
       }));
       setEarnings((prev) => ({
         ...prev,
@@ -609,7 +627,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('snapit_online_status_v2');
       } catch {}
     }
-  }, [demoCreditedAmount]);
+  }, [demoCreditedAmount, rider]);
 
 
   useEffect(() => {

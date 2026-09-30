@@ -30,6 +30,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
     riderBreak,
     activeSession,
     openStartRiding,
+    isDemoMode,
+    demoStep,
+    setDemoStep,
+    triggerMockOrder,
   } = useRider();
 
   const [showOfflineModal, setShowOfflineModal] = useState(false);
@@ -64,6 +68,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
 
   // Handle online toggle click
   const handleToggleClick = () => {
+    if (isDemoMode && demoStep === 'go_online') {
+      if (!isOnline) toggleOnline();
+      setDemoStep('accept_order');
+      setTimeout(() => {
+        triggerMockOrder();
+      }, 500);
+      return;
+    }
+
     if (isPendingVerification) {
       alert('Online access is locked while verification is pending. Minnit Admin will verify your documents shortly.');
       return;

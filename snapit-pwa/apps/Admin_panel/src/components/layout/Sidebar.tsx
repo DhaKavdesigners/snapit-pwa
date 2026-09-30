@@ -109,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   ];
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800/80 flex flex-col justify-between shrink-0 select-none">
+    <aside className="hidden md:flex w-64 bg-slate-950 border-r border-slate-800/80 flex-col justify-between shrink-0 select-none">
       {/* Brand Header */}
       <div>
         <div className="h-16 px-5 border-b border-slate-800/80 flex items-center gap-3">

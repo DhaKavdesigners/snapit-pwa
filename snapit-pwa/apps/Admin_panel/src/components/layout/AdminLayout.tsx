@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Sidebar, AdminTab } from "./Sidebar";
 import { TopHeader } from "./TopHeader";
+import { BottomNav } from "./BottomNav";
 import { DashboardView } from "../../views/DashboardView";
 import { OrdersControlView } from "../../views/OrdersControlView";
 import { MerchantsView } from "../../views/MerchantsView";
@@ -10,10 +11,19 @@ import { ZonesView } from "../../views/ZonesView";
 import { CatalogView } from "../../views/CatalogView";
 import { CustomersView } from "../../views/CustomersView";
 import { SettingsView } from "../../views/SettingsView";
+import { useAdminStore } from "../../store/useAdminStore";
 
 export const AdminLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [selectedStoreForSettlement, setSelectedStoreForSettlement] = useState<string>("ALL");
+
+  const { orders, riders } = useAdminStore();
+  const activeOrdersCount = orders.filter(
+    (o) => !["DELIVERED", "CANCELLED", "REJECTED"].includes(o.status)
+  ).length;
+  const pendingRidersCount = riders.filter(
+    (r) => r.verification_status === "PENDING" || (r.is_verified === false && !r.verification_status)
+  ).length;
 
   const titles: Record<AdminTab, { title: string; subtitle: string }> = {
     dashboard: {
@@ -63,7 +73,7 @@ export const AdminLayout: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopHeader title={titles[activeTab].title} subtitle={titles[activeTab].subtitle} />
 
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 pb-20 md:pb-6 bg-slate-50">
           {activeTab === "dashboard" && <DashboardView setActiveTab={setActiveTab} />}
           {activeTab === "orders" && <OrdersControlView />}
           {activeTab === "merchants" && (
@@ -84,6 +94,13 @@ export const AdminLayout: React.FC = () => {
           {activeTab === "settings" && <SettingsView />}
         </main>
       </div>
+
+      <BottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        activeOrdersCount={activeOrdersCount}
+        pendingRidersCount={pendingRidersCount}
+      />
     </div>
   );
 };
