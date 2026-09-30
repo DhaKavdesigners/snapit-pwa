@@ -1,0 +1,489 @@
+# SnapIt - Order Status and Delivery Flow
+
+PURPOSE
+-------
+Each status represents a real-world event and clearly identifies who is responsible
+for triggering that status.
+
+The main idea of the new flow is to add:
+
+    OUT_OF_SHOP
+
+between:
+
+    READY_FOR_PICKUP
+            and
+    OUT_FOR_DELIVERY
+
+This separates two different events:
+
+    Merchant: "I have handed the order to the rider."
+    Rider:    "I confirm that I received the order."
+
+Only after both confirmations should the order become OUT_FOR_DELIVERY.
+
+
+1. COMPLETE ORDER FLOW
+----------------------
+
+    CUSTOMER PLACES ORDER
+            |
+            v
+         PLACED
+            |
+            | Merchant: Accept & Pack
+            v
+        PREPARING
+            |
+            | Rider is assigned
+            v
+    Merchant prepares order
+            |
+            | Merchant: Mark Packed & Ready
+            v
+    READY_FOR_PICKUP
+            |
+            | Rider is notified
+            v
+    Rider goes to the shop
+            |
+            | Merchant: Hand Over to Delivery Rider
+            v
+        OUT_OF_SHOP
+            |
+            | Rider: Confirm Order Received
+            v
+    OUT_FOR_DELIVERY
+            |
+            | Rider: Mark as Delivered
+            v
+        DELIVERED
+
+
+2. PLACED
+---------
+
+Meaning:
+    The customer has successfully placed the order.
+
+What happens:
+    - Customer submits the order.
+    - System creates the order.
+    - Merchant receives the new order.
+    - Order waits for the merchant to accept it.
+    - Rider is not required at this stage.
+
+Merchant can see:
+    - Order ID
+    - Items ordered
+    - Quantity
+    - Customer details
+    - Delivery address
+    - Order amount
+    - Special instructions
+
+Merchant action:
+    ACCEPT & PACK
+
+Transition:
+    PLACED -> PREPARING
+
+
+3. PREPARING
+------------
+
+Meaning:
+    The merchant has accepted the order and has started preparing it.
+
+What happens:
+    - Merchant starts preparing the order.
+    - System starts rider assignment.
+    - A suitable rider is assigned.
+    - Rider receives the shop/location information.
+    - Rider can travel towards the shop.
+
+Important:
+    The rider does not need to enter the shop immediately.
+    The rider can wait outside while the order is being prepared.
+
+Merchant responsibility:
+    Prepare and pack the complete order.
+
+Rider responsibility:
+    Travel towards the shop and wait until the order is ready.
+
+Transition:
+    PREPARING -> READY_FOR_PICKUP
+
+
+4. READY_FOR_PICKUP
+-------------------
+
+Meaning:
+    The order is completely prepared, packed, and ready to be collected
+    by the assigned rider.
+
+What happens:
+    - Merchant has finished preparing the order.
+    - Merchant marks the order as ready.
+    - Assigned rider receives a notification.
+    - Rider can now enter the shop and collect the order.
+
+Merchant action:
+    MARK PACKED & READY
+
+Example rider notification:
+
+    Order Ready for Pickup
+    Order #1234 is ready for pickup at the store.
+
+Transition:
+    READY_FOR_PICKUP -> OUT_OF_SHOP
+
+This transition happens when the merchant physically hands the order to
+the rider and confirms the handover.
+
+
+5. OUT_OF_SHOP
+--------------
+
+Meaning:
+    The merchant has confirmed that the order has been physically handed
+    over to the rider.
+
+Important:
+    OUT_OF_SHOP does NOT mean that the rider has already confirmed receipt.
+
+At this point:
+
+    Merchant:
+        "I have handed over the order."
+
+    Rider:
+        Still needs to confirm:
+        "I received the order."
+
+Merchant action:
+    HAND OVER TO DELIVERY RIDER
+
+After the merchant clicks the action:
+
+    READY_FOR_PICKUP -> OUT_OF_SHOP
+
+Rider notification:
+
+    Order Handed Over
+    The merchant has handed over this order to you.
+    Please confirm that you have received the order.
+
+    [ CONFIRM ORDER RECEIVED ]
+
+
+6. RIDER CONFIRMS ORDER RECEIVED
+--------------------------------
+
+The rider checks that the order has been physically received.
+
+Rider action:
+    CONFIRM ORDER RECEIVED
+
+Only after the rider confirms should the order move forward.
+
+Transition:
+    OUT_OF_SHOP -> OUT_FOR_DELIVERY
+
+This transition is triggered by the rider.
+
+
+7. OUT_FOR_DELIVERY
+-------------------
+
+Meaning:
+    The rider has confirmed that they have the order and is now responsible
+    for delivering it to the customer.
+
+At this point:
+    - Rider has possession of the order.
+    - Delivery process has officially started.
+    - Customer can be informed that the order is out for delivery.
+
+Rider should be able to see:
+    - Customer name
+    - Customer phone/contact option
+    - Delivery address
+    - Navigation
+    - Order details
+    - Delivery instructions
+
+Rider action:
+    MARK AS DELIVERED
+
+Transition:
+    OUT_FOR_DELIVERY -> DELIVERED
+
+
+8. DELIVERED
+------------
+
+Meaning:
+    The rider has successfully delivered the order to the customer.
+
+What happens:
+    - Customer receives the order.
+    - Rider's delivery task is completed.
+    - Order is no longer an active delivery.
+    - Merchant can see that the order was delivered.
+    - Post-delivery processes can be triggered.
+
+This is the final delivery status.
+
+
+9. COMPLETE STATE MACHINE
+-------------------------
+
+    +---------+
+    | PLACED  |
+    +----+----+
+         |
+         | Merchant: Accept & Pack
+         v
+    +------------+
+    | PREPARING  |
+    +-----+------+
+          |
+          | Merchant: Mark Packed & Ready
+          v
+    +------------------+
+    | READY_FOR_PICKUP |
+    +--------+---------+
+             |
+             | Merchant: Hand Over to Delivery Rider
+             v
+    +--------------+
+    | OUT_OF_SHOP  |
+    +------+-------+
+           |
+           | Rider: Confirm Order Received
+           v
+    +------------------+
+    | OUT_FOR_DELIVERY |
+    +--------+---------+
+             |
+             | Rider: Mark as Delivered
+             v
+    +-----------+
+    | DELIVERED |
+    +-----------+
+
+
+10. STATUS AND RESPONSIBILITY
+-----------------------------
+
+Use the following as the final responsibility mapping:
+
+    STATUS              MEANING                                  TRIGGERED BY
+    ---------------------------------------------------------------------------
+    PLACED              Customer placed the order                Customer/System
+    PREPARING           Merchant accepted and is preparing       Merchant
+    READY_FOR_PICKUP    Order is fully packed and ready          Merchant
+    OUT_OF_SHOP         Merchant handed order to rider            Merchant
+    OUT_FOR_DELIVERY    Rider confirmed receiving the order       Rider
+    DELIVERED           Rider delivered the order                Rider
+    ---------------------------------------------------------------------------
+
+
+11. RESPONSIBILITY BY USER
+--------------------------
+
+CUSTOMER
+--------
+    Place Order
+        |
+        v
+    PLACED
+
+
+MERCHANT
+--------
+    Accept & Pack
+        |
+        v
+    PREPARING
+
+    Mark Packed & Ready
+        |
+        v
+    READY_FOR_PICKUP
+
+    Hand Over to Delivery Rider
+        |
+        v
+    OUT_OF_SHOP
+
+
+RIDER
+-----
+    Confirm Order Received
+        |
+        v
+    OUT_FOR_DELIVERY
+
+    Mark as Delivered
+        |
+        v
+    DELIVERED
+
+
+12. WHY OUT_OF_SHOP IS NEEDED
+-----------------------------
+
+Without OUT_OF_SHOP, the system could incorrectly assume:
+
+    Merchant:
+        "I handed over the order."
+                |
+                v
+        "Rider has the order."
+
+These are actually two separate confirmations.
+
+The new flow makes them explicit:
+
+    MERCHANT
+    "I handed over the order."
+            |
+            v
+       OUT_OF_SHOP
+            |
+            v
+    RIDER
+    "I confirm that I received the order."
+            |
+            v
+    OUT_FOR_DELIVERY
+
+
+13. IMPORTANT BUSINESS RULE
+---------------------------
+
+The system must NOT automatically change:
+
+    OUT_OF_SHOP -> OUT_FOR_DELIVERY
+
+just because the merchant has handed over the order.
+
+The rider must explicitly confirm receipt.
+
+Therefore:
+
+    OUT_OF_SHOP
+         |
+         v
+    Rider receives confirmation request
+         |
+         +----------------------+
+         |                      |
+         | Confirmed             | Not confirmed
+         v                      v
+    OUT_FOR_DELIVERY        Remains OUT_OF_SHOP
+
+
+14. EDGE CASE - RIDER DOES NOT CONFIRM
+--------------------------------------
+
+If the rider does not confirm the order:
+
+    Current status remains:
+        OUT_OF_SHOP
+
+The system should NOT automatically assume that the rider has received
+the order.
+
+A timeout or escalation mechanism can be added later.
+
+Example:
+
+    OUT_OF_SHOP
+         |
+         v
+    Rider does not confirm
+         |
+         v
+    System waits / alerts
+         |
+         v
+    Possible escalation to support or operations
+
+
+15. FINAL RECOMMENDED FLOW
+--------------------------
+
+    PLACED
+       |
+       v
+    PREPARING
+       |
+       v
+    READY_FOR_PICKUP
+       |
+       v
+    OUT_OF_SHOP
+       |
+       v
+    OUT_FOR_DELIVERY
+       |
+       v
+    DELIVERED
+
+
+KEY HANDOVER RULE
+-----------------
+
+    READY_FOR_PICKUP
+            |
+            | Merchant hands order to rider
+            v
+       OUT_OF_SHOP
+            |
+            | Rider confirms receipt
+            v
+     OUT_FOR_DELIVERY
+
+
+FINAL DEFINITIONS
+-----------------
+
+    OUT_OF_SHOP
+        = Merchant has confirmed the order was handed to the rider.
+
+    OUT_FOR_DELIVERY
+        = Rider has confirmed receipt and has possession of the order.
+
+Therefore the complete responsibility chain is:
+
+    CUSTOMER
+       |
+       v
+    MERCHANT
+       |
+       v
+    RIDER
+       |
+       v
+    CUSTOMER
+
+
+FINAL STATUS SEQUENCE
+---------------------
+
+    PLACED
+      ->
+    PREPARING
+      ->
+    READY_FOR_PICKUP
+      ->
+    OUT_OF_SHOP
+      ->
+    OUT_FOR_DELIVERY
+      ->
+    DELIVERED

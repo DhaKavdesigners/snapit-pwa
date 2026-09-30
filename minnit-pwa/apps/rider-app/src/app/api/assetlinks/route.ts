@@ -1,0 +1,25 @@
+import { NextResponse } from 'next/server';
+
+const assetlinks = [
+  {
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+      namespace: 'android_app',
+      package_name: 'app.vercel.snapit_rider.twa',
+      sha256_cert_fingerprints: [
+        'BD:C2:E0:DA:1D:71:CC:EC:49:17:F3:9A:32:76:C0:48:02:C6:FE:90:7B:BF:AD:16:8A:3A:89:77:75:AF:E7:D1',
+      ],
+    },
+  },
+];
+
+export async function GET() {
+  return new NextResponse(JSON.stringify(assetlinks, null, 2), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  });
+}

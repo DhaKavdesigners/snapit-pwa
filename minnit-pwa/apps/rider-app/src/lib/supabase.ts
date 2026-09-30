@@ -1,0 +1,121 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://satzvkmpatnbxpeiecvg.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_Dj9NK5v5Dn1LiNhhg9BKsA_5QN5rtXp';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+});
+
+export interface DbOrder {
+  id: string;
+  customer_id?: string;
+  store_id?: string;
+  rider_id?: string | null;
+  status: string;
+  items: Array<{ name: string; quantity: number; price?: number }>;
+  estimated_total: number;
+  delivery_address: any;
+  recipient_name: string;
+  recipient_phone: string;
+  cooking_instructions?: string;
+  payment_method?: string;
+  payment_status?: string;
+  shopkeeper_handover_confirmed?: boolean;
+  rider_pickup_confirmed?: boolean;
+  rider_assignment?: string;
+  delivery_pin?: string | number;
+  delivery_fee?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DbStore {
+  id: string;
+  name: string;
+  address?: string;
+  store_address?: string;
+  store_location?: string;
+  lat?: number;
+  lng?: number;
+  phone?: string;
+}
+
+export interface DbRiderProfile {
+  id: string;
+  user_id?: string;
+  Rider_ID?: string;
+  name: string;
+  phone: string;
+  mpin?: string;
+  dob?: string;
+  alt_phone?: string;
+  email?: string;
+  address?: string;
+  avatar_url?: string;
+  selfie_url?: string;
+  aadhaar_number?: string;
+  pan_number?: string;
+  dl_number?: string;
+  upi_id?: string;
+  vehicle_type?: string;
+  vehicle_number?: string;
+  selected_zone_id?: string;
+  selected_zone_name?: string;
+  is_verified?: boolean;
+  verification_step?: number;
+  verification_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verified_at?: string | null;
+  verified_by?: string | null;
+  rejection_reason?: string | null;
+  is_online?: boolean;
+  wallet_balance?: number;
+  rating?: number;
+  total_deliveries?: number;
+  acceptance_rate?: number;
+  // Work Sessions & Availability Preferences
+  session_started_at?: string | null;
+  session_ends_at?: string | null;
+  session_duration_mins?: number | null;
+  available_for_order?: boolean;
+  current_session_id?: string | null;
+  active_session_token?: string | null;
+  riding_preferences?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DbRiderDeviceSession {
+  id: string;
+  rider_id: string;
+  rider_code?: string;
+  session_token: string;
+  device_info?: string;
+  is_active: boolean;
+  created_at: string;
+  last_active_at: string;
+  invalidated_at?: string | null;
+}
+
+export interface DbShiftSession {
+  id: string;
+  rider_id: string;
+  zone_id: string;
+  zone_name: string;
+  started_at: string;
+  committed_until: string;
+  ended_at?: string | null;
+  planned_duration_mins: number;
+  actual_duration_mins?: number | null;
+  status: 'ACTIVE' | 'COMPLETED' | 'ENDED_EARLY';
+  ended_early: boolean;
+  orders_completed: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+
