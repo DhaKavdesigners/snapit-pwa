@@ -1,4 +1,6 @@
-minnit-pwa/
+# minnit-pwa source is tracked — only exclude build artifacts and deps
+minnit-pwa/**/node_modules/
+minnit-pwa/**/dist/
 node_modules/
 .DS_Store
 *.log
