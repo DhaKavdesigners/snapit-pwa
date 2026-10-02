@@ -53,6 +53,7 @@ interface OrderState {
   setTrackerOpen: (open: boolean, orderId?: string) => void;
   fetchOrders: (phone?: string) => Promise<void>;
   initLiveSubscription: (phone?: string) => () => void;
+  clearOrders: () => void;
 }
 
 const DEFAULT_STORES_MAP: Record<string, string> = {
@@ -85,12 +86,30 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     });
   },
 
+  clearOrders: () => {
+    set({
+      orders: [],
+      selectedOrderId: null,
+      isTrackerOpen: false,
+    });
+  },
+
   fetchOrders: async (phoneParam) => {
+    if (!phoneParam || !phoneParam.trim()) {
+      set({ orders: [], selectedOrderId: null, isTrackerOpen: false });
+      return;
+    }
+
+    const cleanPhone = phoneParam.trim().replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      set({ orders: [], selectedOrderId: null, isTrackerOpen: false });
+      return;
+    }
+
     try {
-      const rawPhone = phoneParam || '8217649688';
-      const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
       const withPlus91 = `+91${cleanPhone}`;
       const with91 = `91${cleanPhone}`;
+      const rawPhone = phoneParam.trim();
       
       const [storesRes, ordersRes] = await Promise.all([
         supabase.from('stores').select('id, name'),
@@ -112,16 +131,12 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       let rawOrders: any[] = [];
       if (ordersRes.data && ordersRes.data.length > 0) {
         rawOrders = ordersRes.data;
-      } else {
-        // Fallback: if no phone-matched orders, query latest active orders to ensure live preview always reflects
-        const { data: latestOrders } = await supabase
-          .from('orders')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(5);
-        if (latestOrders && latestOrders.length > 0) {
-          rawOrders = latestOrders;
-        }
+      }
+
+      // If no orders match this specific customer, clear orders completely
+      if (rawOrders.length === 0) {
+        set({ orders: [], selectedOrderId: null, isTrackerOpen: false });
+        return;
       }
 
       // Fetch Real Rider Profiles for any assigned rider_id
@@ -178,11 +193,21 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   initLiveSubscription: (phoneParam) => {
-    const rawPhone = phoneParam || '8217649688';
-    get().fetchOrders(rawPhone);
+    if (!phoneParam || !phoneParam.trim()) {
+      set({ orders: [], selectedOrderId: null, isTrackerOpen: false });
+      return () => {};
+    }
+
+    const cleanPhone = phoneParam.trim().replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      set({ orders: [], selectedOrderId: null, isTrackerOpen: false });
+      return () => {};
+    }
+
+    get().fetchOrders(cleanPhone);
 
     const channel = supabase
-      .channel('live-orders-global-tracker')
+      .channel(`live-orders-${cleanPhone}`)
       .on(
         'postgres_changes',
         {
@@ -190,15 +215,24 @@ export const useOrderStore = create<OrderState>((set, get) => ({
           schema: 'public',
           table: 'orders',
         },
-        () => {
-          get().fetchOrders(rawPhone);
+        (payload) => {
+          const newRec = payload.new as any;
+          if (newRec) {
+            const customerId = (newRec.customer_id || '').replace(/\D/g, '').slice(-10);
+            const recipientPhone = (newRec.recipient_phone || '').replace(/\D/g, '').slice(-10);
+            if (customerId === cleanPhone || recipientPhone === cleanPhone) {
+              get().fetchOrders(cleanPhone);
+            }
+          } else {
+            get().fetchOrders(cleanPhone);
+          }
         }
       )
       .subscribe();
 
     const interval = setInterval(() => {
-      get().fetchOrders(rawPhone);
-    }, 2500);
+      get().fetchOrders(cleanPhone);
+    }, 4000);
 
     return () => {
       supabase.removeChannel(channel);

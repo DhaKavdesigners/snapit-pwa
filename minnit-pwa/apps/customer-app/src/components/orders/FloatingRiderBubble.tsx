@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOrderStore, getActiveOrders } from '../../store/orderStore';
+import { useAuthStore } from '../../store/authStore';
 import riderIconImg from '../../assets/rider_icon.jpg';
 
 export const FloatingRiderBubble: React.FC = () => {
+  const { isLoggedIn, userProfile } = useAuthStore();
   const { orders, storesMap, setTrackerOpen, isTrackerOpen } = useOrderStore();
   const activeOrders = getActiveOrders(orders);
 
   // Snapping side state: 'right' | 'left'
   const [snapSide, setSnapSide] = useState<'right' | 'left'>('right');
 
-  // If no active orders or full tracker modal is open, don't show the floating bubble
-  if (activeOrders.length === 0 || isTrackerOpen) return null;
+  // If user is not logged in, or no active orders, or full tracker modal is open, don't show the floating bubble
+  if (!isLoggedIn || !userProfile?.phone || activeOrders.length === 0 || isTrackerOpen) return null;
 
   const topOrder = activeOrders[0];
   const storeName = storesMap[topOrder.store_id] || 'Minnit Store';
