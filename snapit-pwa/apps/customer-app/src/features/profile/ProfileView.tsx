@@ -348,14 +348,25 @@ export const ProfileView: React.FC = () => {
 
   const fetchOrdersAndStores = async () => {
     try {
-      const phone = userProfile?.phone || formData.phone || '8217649688';
+      if (!isLoggedIn || !userProfile?.phone) {
+        setOrders([]);
+        return;
+      }
+      const rawPhone = userProfile.phone;
+      const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+      if (!cleanPhone || cleanPhone.length < 10) {
+        setOrders([]);
+        return;
+      }
+      const withPlus91 = `+91${cleanPhone}`;
+      const with91 = `91${cleanPhone}`;
       
       const [storesRes, ordersRes] = await Promise.all([
         supabase.from('stores').select('id, name'),
         supabase
           .from('orders')
           .select('*')
-          .or(`customer_id.eq.${phone},recipient_phone.eq.${phone}`)
+          .or(`customer_id.eq.${cleanPhone},customer_id.eq.${withPlus91},customer_id.eq.${with91},customer_id.eq.${rawPhone},recipient_phone.eq.${cleanPhone},recipient_phone.eq.${withPlus91}`)
           .order('created_at', { ascending: false })
       ]);
 
@@ -369,6 +380,8 @@ export const ProfileView: React.FC = () => {
 
       if (ordersRes.data) {
         setOrders(ordersRes.data);
+      } else {
+        setOrders([]);
       }
     } catch (err) {
       console.warn("Failed to load customer orders:", err);
@@ -376,11 +389,16 @@ export const ProfileView: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!isLoggedIn || !userProfile?.phone) {
+      setOrders([]);
+      return;
+    }
+
     fetchOrdersAndStores();
 
-    const phone = userProfile?.phone || formData.phone || '8217649688';
+    const cleanPhone = userProfile.phone.replace(/\D/g, '').slice(-10);
     const channel = supabase
-      .channel(`customer-orders-live-${phone}`)
+      .channel(`customer-orders-live-${cleanPhone}`)
       .on(
         'postgres_changes',
         {
@@ -394,12 +412,12 @@ export const ProfileView: React.FC = () => {
       )
       .subscribe();
 
-    const interval = setInterval(fetchOrdersAndStores, 3500);
+    const interval = setInterval(fetchOrdersAndStores, 4000);
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [userProfile?.phone, formData.phone]);
+  }, [isLoggedIn, userProfile?.phone]);
 
   // Automatically open "My Orders" if navigated from "Track Order" button
   useEffect(() => {
@@ -1867,10 +1885,10 @@ export const ProfileView: React.FC = () => {
                     <div className="pt-1.5 border-t border-gray-200/60 text-[11px]">
                       <span className="text-gray-400 font-bold block text-[9.5px] uppercase tracking-wider">Delivered To</span>
                       <p className="text-gray-700 font-medium leading-snug">
-                        {billModalOrder.recipient_name || userProfile?.name || formData.name || 'Customer'} • +91 {String(billModalOrder.recipient_phone || billModalOrder.customer_id || formData.phone || '8217649688').replace(/\D/g, '').slice(-10)}
+                        {billModalOrder.recipient_name || userProfile?.name || 'Customer'}{billModalOrder.recipient_phone || billModalOrder.customer_id ? ` • +91 ${String(billModalOrder.recipient_phone || billModalOrder.customer_id).replace(/\D/g, '').slice(-10)}` : ''}
                       </p>
                       <p className="text-gray-500 text-[10.5px] mt-0.5">
-                        📍 {billModalOrder.delivery_address?.line1 || billModalOrder.delivery_address?.addressLine1 || formData.addressLine1 || '#450, Maariyaman temple street'}, {billModalOrder.delivery_address?.line2 || billModalOrder.delivery_address?.addressLine2 || formData.addressLine2 || 'Bowrilalpet, KGF'} (PIN: {billModalOrder.delivery_address?.pincode || formData.pincode || '563122'})
+                        📍 {billModalOrder.delivery_address?.line1 || billModalOrder.delivery_address?.addressLine1 || userProfile?.addressLine1 || 'Delivery Address'}{billModalOrder.delivery_address?.line2 || billModalOrder.delivery_address?.addressLine2 || userProfile?.addressLine2 ? `, ${billModalOrder.delivery_address?.line2 || billModalOrder.delivery_address?.addressLine2 || userProfile?.addressLine2}` : ''}{billModalOrder.delivery_address?.pincode || userProfile?.pincode ? ` (PIN: ${billModalOrder.delivery_address?.pincode || userProfile?.pincode})` : ''}
                       </p>
                     </div>
                   </div>

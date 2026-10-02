@@ -7,6 +7,7 @@ import {
   ChefHat, HelpCircle, ArrowRight, CheckCircle2, ShieldCheck, Box, MessageSquare, Star
 } from 'lucide-react';
 import { useOrderStore, LiveOrder, getActiveOrders } from '../../store/orderStore';
+import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import { supabase } from '../../lib/supabase';
 
@@ -30,15 +31,16 @@ interface StepDetail {
 
 export const LiveOrderTrackerModal: React.FC = () => {
   const navigate = useNavigate();
+  const { isLoggedIn, userProfile } = useAuthStore();
   const { isTrackerOpen, setTrackerOpen, orders, storesMap, selectedOrderId } = useOrderStore();
   const [rating, setRating] = useState<number>(5);
 
   const activeOrders = getActiveOrders(orders);
   
-  // Find order to display: selectedOrderId, or first active order, or latest order
-  const currentOrder: LiveOrder | undefined = selectedOrderId
-    ? orders.find(o => o.id === selectedOrderId)
-    : activeOrders[0] || orders[0];
+  // Find order to display: selectedOrderId, or first active order, or latest order (only if logged in)
+  const currentOrder: LiveOrder | undefined = (isLoggedIn && userProfile?.phone)
+    ? (selectedOrderId ? orders.find(o => o.id === selectedOrderId) : activeOrders[0] || orders[0])
+    : undefined;
 
   const status = currentOrder?.status || 'PLACED';
 
@@ -113,7 +115,7 @@ export const LiveOrderTrackerModal: React.FC = () => {
     }
   }, [status, isTrackerOpen]);
 
-  if (!isTrackerOpen || !currentOrder) return null;
+  if (!isLoggedIn || !userProfile?.phone || !isTrackerOpen || !currentOrder) return null;
 
   const storeName = storesMap[currentOrder.store_id] || 'Minnit Partner Store';
 
