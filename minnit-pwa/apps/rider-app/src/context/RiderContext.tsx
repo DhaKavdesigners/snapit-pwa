@@ -2973,6 +2973,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         bank_account_holder: data.bankAccountHolder,
         bank_account_no: data.bankAccountNo,
         bank_ifsc: data.bankIfsc,
+        bank_passbook_doc_url: data.bankPassbookDocUrl,
         avatar_url: data.avatarUrl || data.selfieCapturedUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
         selfie_url: data.selfieCapturedUrl,
       });

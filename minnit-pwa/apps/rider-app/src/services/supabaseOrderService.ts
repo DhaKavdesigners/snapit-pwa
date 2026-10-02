@@ -393,6 +393,7 @@ export async function registerRiderInDb(riderData: {
   bank_account_holder?: string;
   bank_account_no?: string;
   bank_ifsc?: string;
+  bank_passbook_doc_url?: string;
   avatar_url?: string;
   selfie_url?: string;
 }): Promise<{ profile?: DbRiderProfile; riderId?: string; error?: string }> {
@@ -422,6 +423,7 @@ export async function registerRiderInDb(riderData: {
       bank_account_holder: riderData.bank_account_holder || null,
       bank_account_no: riderData.bank_account_no || null,
       bank_ifsc: riderData.bank_ifsc || null,
+      bank_passbook_doc_url: riderData.bank_passbook_doc_url || null,
       avatar_url: riderData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       selfie_url: riderData.selfie_url || null,
       wallet_balance: 0,
@@ -452,6 +454,8 @@ export async function registerRiderInDb(riderData: {
         'bank_account_holder',
         'bank_account_no',
         'bank_ifsc',
+        'bank_passbook_doc_url',
+        'passbook_doc_url',
       ];
       let needsRetry = false;
       for (const col of optionalCols) {

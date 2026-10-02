@@ -19,6 +19,7 @@ import {
   UserCheck,
   Calendar,
   MapPin,
+  Landmark,
 } from "lucide-react";
 import { useAdminStore } from "../store/useAdminStore";
 import { AdminRider } from "../types/admin";
@@ -381,9 +382,13 @@ export const FleetView: React.FC = () => {
           {filteredRiders.map((rider) => {
             const hasSelfie = Boolean(rider.selfie_url || rider.avatar_url);
             const hasAadhaar = Boolean(rider.aadhaar_number || rider.aadhaar_doc_url);
-            const hasPan = Boolean(rider.pan_number || rider.pan_doc_url);
+            const isBankRider = rider.payout_mode === "BANK" || (rider.upi_id && rider.upi_id.startsWith("bank:")) || Boolean(rider.bank_account_no);
+            const riderPassbook = rider.bank_passbook_doc_url || rider.passbook_doc_url;
+            const hasPayout = isBankRider
+              ? Boolean(rider.bank_account_no || (rider.upi_id && rider.upi_id.startsWith("bank:")) || riderPassbook)
+              : Boolean(rider.upi_id);
             const hasDl = Boolean(rider.dl_number || rider.dl_doc_url);
-            const docsCount = [hasSelfie, hasAadhaar, hasPan, hasDl].filter(Boolean).length;
+            const docsCount = [hasSelfie, hasAadhaar, hasPayout, hasDl].filter(Boolean).length;
 
             return (
               <div
@@ -763,153 +768,247 @@ export const FleetView: React.FC = () => {
               </div>
             </div>
 
-            {/* 2-Column Specs: Personal & Vehicle Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Personal Details */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
-                <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-200">
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Personal Details</span>
-                </h4>
+            {/* 2-Column Specs: Personal & Vehicle Details + KYC Documents */}
+            {(() => {
+              const isReviewBank = Boolean(
+                reviewRider.payout_mode === "BANK" ||
+                (reviewRider.upi_id && reviewRider.upi_id.startsWith("bank:")) ||
+                reviewRider.bank_account_no
+              );
 
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Date of Birth (DOB):</span>
-                    <span className="font-semibold text-slate-900 font-mono">{reviewRider.dob || "Not provided"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Alternate Contact:</span>
-                    <span className="font-semibold text-slate-900 font-mono">{reviewRider.alt_phone || "None"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Registered Address:</span>
-                    <span className="font-semibold text-slate-900 text-right max-w-[200px] leading-tight">
-                      {reviewRider.address || "Not provided"}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              const reviewBankAccNo =
+                reviewRider.bank_account_no ||
+                (reviewRider.upi_id && reviewRider.upi_id.startsWith("bank:")
+                  ? reviewRider.upi_id.replace("bank:", "").trim()
+                  : "");
 
-              {/* Vehicle & Payout Details */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
-                <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-200">
-                  <Bike className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Vehicle & Financials</span>
-                </h4>
+              const reviewPassbookUrl =
+                reviewRider.bank_passbook_doc_url || reviewRider.passbook_doc_url;
 
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Vehicle Type:</span>
-                    <span className="font-semibold text-slate-900">{reviewRider.vehicle_type || "Motorcycle"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Vehicle Number:</span>
-                    <span className="font-bold text-emerald-600 font-mono">{reviewRider.vehicle_number || "KA-08"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Payout UPI ID:</span>
-                    <span className="font-mono font-bold text-slate-900">{reviewRider.upi_id || `${reviewRider.phone}@upi`}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              return (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Personal Details */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                      <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Personal Details</span>
+                      </h4>
 
-            {/* ── KYC IDENTITY DOCUMENTS ── */}
-            <div className="space-y-3">
-              <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <FileCheck className="w-4 h-4 text-emerald-600" />
-                <span>Submitted KYC Documents</span>
-              </h4>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Date of Birth (DOB):</span>
+                          <span className="font-semibold text-slate-900 font-mono">{reviewRider.dob || "Not provided"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Alternate Contact:</span>
+                          <span className="font-semibold text-slate-900 font-mono">{reviewRider.alt_phone || "None"}</span>
+                        </div>
+                        {reviewRider.pan_number && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">PAN Number:</span>
+                            <span className="font-semibold text-slate-900 font-mono">{reviewRider.pan_number}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Registered Address:</span>
+                          <span className="font-semibold text-slate-900 text-right max-w-[200px] leading-tight">
+                            {reviewRider.address || "Not provided"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* 1. Aadhaar Card */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-[11px]">Aadhaar Card</span>
-                    {reviewRider.aadhaar_number ? (
-                      <span className="text-[10px] text-emerald-600 font-bold">Entered</span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400">Missing</span>
-                    )}
-                  </div>
+                    {/* Vehicle & Financials */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                      <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                        <Bike className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Vehicle & Financials</span>
+                      </h4>
 
-                  <p className="font-mono text-xs text-slate-800 font-bold">
-                    {reviewRider.aadhaar_number || "•••• •••• ••••"}
-                  </p>
-
-                  {reviewRider.aadhaar_doc_url ? (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewDoc({ title: `${reviewRider.name} - Aadhaar Card`, url: resolveDocUrl(reviewRider.aadhaar_doc_url) })}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline pt-1 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      <span>View Attached Scan</span>
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-slate-400 block pt-1">No file attached</span>
-                  )}
-                </div>
-
-                {/* 2. PAN Card */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-[11px]">PAN Card</span>
-                    {reviewRider.pan_number ? (
-                      <span className="text-[10px] text-emerald-600 font-bold">Entered</span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400">Missing</span>
-                    )}
-                  </div>
-
-                  <p className="font-mono text-xs text-slate-800 font-bold">
-                    {reviewRider.pan_number || "••••••••••"}
-                  </p>
-
-                  {reviewRider.pan_doc_url ? (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewDoc({ title: `${reviewRider.name} - PAN Card`, url: resolveDocUrl(reviewRider.pan_doc_url) })}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline pt-1 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      <span>View Attached Scan</span>
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-slate-400 block pt-1">No file attached</span>
-                  )}
-                </div>
-
-                {/* 3. Driving License */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-[11px]">Driving License (DL)</span>
-                    {reviewRider.dl_number ? (
-                      <span className="text-[10px] text-emerald-600 font-bold">Entered</span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400">Missing</span>
-                    )}
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Vehicle Type:</span>
+                          <span className="font-semibold text-slate-900">{reviewRider.vehicle_type || "Motorcycle"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Vehicle Number:</span>
+                          <span className="font-bold text-emerald-600 font-mono">{reviewRider.vehicle_number || "KA-08"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Payout Settlement:</span>
+                          <span className="font-bold text-slate-900">
+                            {isReviewBank ? "Bank Account Transfer" : "Instant UPI"}
+                          </span>
+                        </div>
+                        {isReviewBank ? (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Account Number:</span>
+                              <span className="font-mono font-bold text-slate-900">{reviewBankAccNo || "Not provided"}</span>
+                            </div>
+                            {reviewRider.bank_ifsc && (
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">Bank IFSC:</span>
+                                <span className="font-mono font-bold text-slate-700">{reviewRider.bank_ifsc}</span>
+                              </div>
+                            )}
+                            {reviewRider.bank_account_holder && (
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">Account Holder:</span>
+                                <span className="font-semibold text-slate-800">{reviewRider.bank_account_holder}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Payout UPI ID:</span>
+                            <span className="font-mono font-bold text-slate-900">{reviewRider.upi_id || `${reviewRider.phone}@upi`}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <p className="font-mono text-xs text-slate-800 font-bold">
-                    {reviewRider.dl_number || "••••••••••••••"}
-                  </p>
+                  {/* ── KYC IDENTITY DOCUMENTS ── */}
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileCheck className="w-4 h-4 text-emerald-600" />
+                      <span>Submitted KYC & Payout Documents</span>
+                    </h4>
 
-                  {reviewRider.dl_doc_url ? (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewDoc({ title: `${reviewRider.name} - Driving License (DL)`, url: resolveDocUrl(reviewRider.dl_doc_url) })}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline pt-1 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      <span>View Attached Scan</span>
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-slate-400 block pt-1">No file attached</span>
-                  )}
-                </div>
-              </div>
-            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* 1. Aadhaar Card */}
+                      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 text-[11px]">Aadhaar Card</span>
+                          {reviewRider.aadhaar_number ? (
+                            <span className="text-[10px] text-emerald-600 font-bold">Entered</span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">Missing</span>
+                          )}
+                        </div>
+
+                        <p className="font-mono text-xs text-slate-800 font-bold">
+                          {reviewRider.aadhaar_number || "•••• •••• ••••"}
+                        </p>
+
+                        {reviewRider.aadhaar_doc_url ? (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewDoc({ title: `${reviewRider.name} - Aadhaar Card`, url: resolveDocUrl(reviewRider.aadhaar_doc_url) })}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline pt-1 cursor-pointer"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>View Attached Scan</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 block pt-1">No file attached</span>
+                        )}
+                      </div>
+
+                      {/* 2. Bank Details & Passbook (if Bank) OR UPI ID (if UPI) */}
+                      {isReviewBank ? (
+                        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
+                              <Landmark className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Bank Passbook</span>
+                            </span>
+                            {reviewBankAccNo ? (
+                              <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                Bank Mode
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Missing</span>
+                            )}
+                          </div>
+
+                          <div className="space-y-0.5 text-slate-800">
+                            {reviewRider.bank_account_holder && (
+                              <p className="text-[10px] text-slate-500 truncate">
+                                Name: <span className="font-bold text-slate-900">{reviewRider.bank_account_holder}</span>
+                              </p>
+                            )}
+                            <p className="font-mono text-xs text-slate-900 font-bold tracking-tight">
+                              A/C: {reviewBankAccNo || "••••••••••••"}
+                            </p>
+                            {reviewRider.bank_ifsc && (
+                              <p className="font-mono text-[10px] text-slate-600 font-semibold">
+                                IFSC: {reviewRider.bank_ifsc}
+                              </p>
+                            )}
+                          </div>
+
+                          {reviewPassbookUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewDoc({ title: `${reviewRider.name} - Bank Passbook / Cheque`, url: resolveDocUrl(reviewPassbookUrl) })}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline pt-1 cursor-pointer"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>View Attached Passbook</span>
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 block pt-1">No passbook scan attached</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900 text-[11px]">Payout UPI ID</span>
+                            {reviewRider.upi_id ? (
+                              <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                UPI Mode
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Missing</span>
+                            )}
+                          </div>
+
+                          <p className="font-mono text-xs text-slate-900 font-bold break-all">
+                            {reviewRider.upi_id || `${reviewRider.phone}@upi`}
+                          </p>
+
+                          <p className="text-[10px] text-slate-500 pt-1 leading-tight">
+                            Direct instant daily earnings settlement via UPI.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 3. Driving License */}
+                      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 text-[11px]">Driving License (DL)</span>
+                          {reviewRider.dl_number ? (
+                            <span className="text-[10px] text-emerald-600 font-bold">Entered</span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">Missing</span>
+                          )}
+                        </div>
+
+                        <p className="font-mono text-xs text-slate-800 font-bold">
+                          {reviewRider.dl_number || "••••••••••••••"}
+                        </p>
+
+                        {reviewRider.dl_doc_url ? (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewDoc({ title: `${reviewRider.name} - Driving License (DL)`, url: resolveDocUrl(reviewRider.dl_doc_url) })}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline pt-1 cursor-pointer"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>View Attached Scan</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 block pt-1">No file attached</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Modal Action Buttons */}
             <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">

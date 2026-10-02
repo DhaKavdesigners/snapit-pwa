@@ -114,6 +114,12 @@ export interface AdminRider {
   dl_number?: string;
   dl_doc_url?: string;
   upi_id?: string;
+  payout_mode?: 'UPI' | 'BANK';
+  bank_account_holder?: string;
+  bank_account_no?: string;
+  bank_ifsc?: string;
+  bank_passbook_doc_url?: string;
+  passbook_doc_url?: string;
   is_verified?: boolean;
   verification_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
   verified_at?: string | null;
