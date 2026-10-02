@@ -24,6 +24,7 @@ import { RiderInstructionViewer } from '@/components/common/RiderInstructionView
 export default function ProfilePage() {
   const { rider, updateRiderProfile, logout } = useRider();
   const [showInstructions, setShowInstructions] = useState(false);
+  const isVerified = rider.isVerified === true && String(rider.verificationStatus || '').toUpperCase() === 'APPROVED';
 
   // Auto-open instructions if navigated via ?instructions=true
   React.useEffect(() => {
@@ -102,12 +103,20 @@ export default function ProfilePage() {
             </p>
             <p className="text-xs font-mono font-semibold text-secondary mt-0.5">{rider.selectedZone || 'Robertsonpet'}</p>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                Verified Partner
-              </span>
-              {(rider.Rider_ID || rider.riderId) && (
-                <span className="inline-block bg-slate-100 text-slate-800 text-[10px] font-mono font-black px-2 py-0.5 rounded-full border border-slate-200">
-                  ID: {rider.Rider_ID || rider.riderId}
+              {isVerified ? (
+                <>
+                  <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                    Verified Partner
+                  </span>
+                  {(rider.Rider_ID || rider.riderId) && (
+                    <span className="inline-block bg-slate-100 text-slate-800 text-[10px] font-mono font-black px-2 py-0.5 rounded-full border border-slate-200">
+                      ID: {rider.Rider_ID || rider.riderId}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="inline-block bg-amber-50 text-amber-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-200/90 shadow-2xs">
+                  Verification Pending
                 </span>
               )}
             </div>
@@ -138,7 +147,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">Minnit Rider ID</span>
               <span className="font-mono font-bold text-emerald-700 flex items-center gap-1.5">
-                <span>{rider.Rider_ID || rider.riderId || 'Assigned'}</span>
+                <span>{isVerified ? (rider.Rider_ID || rider.riderId || '') : ''}</span>
                 <Lock className="w-3 h-3 text-slate-400" />
               </span>
             </div>

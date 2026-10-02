@@ -629,6 +629,20 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   approveRider: async (riderId: string, adminIdentifier: string = "Master Admin") => {
     try {
+      const currentRider = get().riders.find((r) => r.id === riderId);
+      let assignedRiderId = currentRider?.Rider_ID;
+
+      if (!assignedRiderId) {
+        let maxNum = 0;
+        get().riders.forEach((r) => {
+          if (r.Rider_ID && r.Rider_ID.toUpperCase().startsWith("MM")) {
+            const num = parseInt(r.Rider_ID.slice(2), 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        });
+        assignedRiderId = `MM${String(maxNum + 1).padStart(4, "0")}`;
+      }
+
       const updates: any = {
         verification_status: "APPROVED",
         is_verified: true,
@@ -637,6 +651,10 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         verified_by: adminIdentifier,
         rejection_reason: null,
       };
+
+      if (assignedRiderId) {
+        updates.Rider_ID = assignedRiderId;
+      }
 
       // 1. Try atomic RPC function first
       try {

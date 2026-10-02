@@ -480,20 +480,8 @@ export async function registerRiderInDb(riderData: {
       return { error: error.message };
     }
 
-    // Retrieve database-generated Rider_ID (e.g. MM0001)
-    let generatedRiderId = data?.Rider_ID;
-    if (!generatedRiderId) {
-      // Re-query in case trigger executed on separate step
-      const { data: refetch } = await supabase
-        .from('rider_profiles')
-        .select('*')
-        .eq('phone', cleanPhone)
-        .maybeSingle();
-      if (refetch?.Rider_ID) {
-        generatedRiderId = refetch.Rider_ID;
-        data = refetch;
-      }
-    }
+    // Only assign Rider_ID if rider is officially verified; leave blank while pending
+    const generatedRiderId = data?.is_verified ? data?.Rider_ID : undefined;
 
     return {
       profile: data as DbRiderProfile,

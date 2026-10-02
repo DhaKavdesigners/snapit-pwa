@@ -590,12 +590,12 @@ export default function OnboardingPage() {
     });
     setIsSubmittingReg(false);
 
-    if (!result.success || !result.riderId) {
+    if (!result.success) {
       setRegError(result.error || 'Failed to save rider profile in Supabase. Please try again.');
       return;
     }
 
-    setRegisteredRiderId(result.riderId);
+    setRegisteredRiderId(result.riderId || '');
     setRegisteredPhone(cleanPhone1);
     setStep('reg_waiting');
   };
@@ -1689,6 +1689,8 @@ export default function OnboardingPage() {
                     verificationStatus: 'PENDING',
                     walletBalance: 0,
                     totalDeliveries: 0,
+                    riderId: '',
+                    Rider_ID: '',
                   });
                   startTour();
                   router.push('/');

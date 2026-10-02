@@ -271,40 +271,40 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
   // ── INTRO SLIDE — Full-Screen Centered Momo Welcome Card ─────────────────────
   if (isIntroSlide) {
     return createPortal(
-      <div className="fixed inset-0 z-[99990] flex items-end justify-center pb-10 select-none animate-fade-in">
+      <div className="fixed inset-0 z-[99990] flex items-center justify-center p-4 select-none animate-fade-in">
         {/* Dark overlay */}
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={handleClose} />
 
         {/* Glowing aura */}
         <div className="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-emerald-500/30 via-teal-400/20 to-amber-400/15 blur-3xl pointer-events-none animate-pulse" />
 
-        {/* Momo Mascot circular portrait with radiant glowing aura */}
-        <div className="absolute bottom-[330px] left-1/2 -translate-x-1/2 w-48 h-48 rounded-full overflow-hidden border-4 border-emerald-400 shadow-[0_0_35px_rgba(16,185,129,0.55)] z-[99993] bg-slate-950 flex items-center justify-center ring-4 ring-emerald-500/25 animate-scale-up">
-          <img
-            src="/images/rider_instructions/hi_momo.jpeg"
-            alt="Momo"
-            className="w-full h-full object-cover select-none pointer-events-none"
-          />
-        </div>
-
-        {/* Welcome card */}
+        {/* Modal Structure: Centered Flex Column */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className="relative z-[99995] bg-white w-full max-w-sm mx-4 rounded-[32px] overflow-hidden shadow-[0_25px_60px_-12px_rgba(0,0,0,0.55)] border border-emerald-200/60 ring-4 ring-emerald-500/10 animate-scale-up"
+          className="relative z-[99995] w-full max-w-sm flex flex-col items-center animate-scale-up"
         >
-          {/* Top accent ribbon */}
-          <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 py-2.5 px-4 text-center relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:10px_10px]" />
-            <span className="text-white font-black text-xs uppercase tracking-[0.15em] relative z-10">
-              🏍️ Minnit Rider Tour
-            </span>
+          {/* Momo Mascot circular portrait cleanly placed above card */}
+          <div className="relative -mb-16 z-30 w-36 h-36 rounded-full overflow-hidden border-4 border-emerald-400 shadow-[0_10px_35px_rgba(16,185,129,0.5)] bg-slate-950 flex items-center justify-center ring-4 ring-emerald-500/30">
+            <img
+              src="/images/rider_instructions/hi_momo.jpeg"
+              alt="Momo"
+              className="w-full h-full object-cover select-none pointer-events-none"
+            />
           </div>
 
-          <div className="px-5 pt-4 pb-5 space-y-3">
+          {/* Welcome Card */}
+          <div className="bg-white w-full rounded-[32px] pt-20 px-5 pb-5 overflow-hidden shadow-[0_25px_60px_-12px_rgba(0,0,0,0.55)] border border-emerald-200/60 ring-4 ring-emerald-500/10 space-y-3">
+            {/* Pill Header */}
+            <div className="text-center">
+              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
+                <span>🏍️ Minnit Rider Tour</span>
+              </span>
+            </div>
+
             {/* Speech bubble */}
-            <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl px-4 py-3 text-center">
-              <p className="text-sm font-black text-emerald-900 leading-snug">
-                Hi! I'm Momo — your Minnit riding assistant! 👋
+            <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl px-4 py-3 text-center">
+              <p className="text-sm font-black text-emerald-950 leading-snug">
+                Hi! I&apos;m Momo — your Minnit riding assistant! 👋
               </p>
               <p className="text-[11px] text-emerald-700 mt-1 font-medium leading-relaxed">
                 {currentStep.description}
@@ -324,7 +324,7 @@ export const RiderGuidedTour: React.FC<RiderGuidedTourProps> = ({
             </div>
 
             {/* CTA buttons */}
-            <div className="space-y-2">
+            <div className="space-y-2 pt-1">
               <button
                 type="button"
                 onClick={handleNext}
