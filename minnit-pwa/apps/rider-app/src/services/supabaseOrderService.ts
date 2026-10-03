@@ -481,8 +481,8 @@ export async function registerRiderInDb(riderData: {
       return { error: error.message };
     }
 
-    // Only assign Rider_ID if rider is officially verified; leave blank while pending
-    const generatedRiderId = data?.is_verified ? data?.Rider_ID : undefined;
+    // Only assign Minnit Rider ID if rider is officially verified; leave blank while pending
+    const generatedRiderId = data?.is_verified ? (data?.minnit_id || data?.Rider_ID) : undefined;
 
     return {
       profile: data as DbRiderProfile,
@@ -501,8 +501,8 @@ export interface LoginRiderResult {
 }
 
 /**
- * Login a rider using Minnit Rider ID (case-insensitive) and 4-Digit MPIN.
- * Normalizes Rider ID (e.g. mm0001, Mm0001 -> MM0001).
+ * Login a rider using Minnit Rider ID (MR-XXXXXX or MM0001) or phone and 4-Digit MPIN.
+ * Normalizes Rider ID (e.g. mr-834904 -> MR-834904).
  * Never exposes or logs the MPIN.
  * Strictly verifies server-side approval status.
  */
@@ -523,11 +523,11 @@ export async function loginRiderWithRiderId(
     const normalizedId = rawInput.toUpperCase();
     const cleanPhone = rawInput.replace(/[^0-9+]/g, '');
 
-    // 1. Primary lookup by Rider_ID (case-insensitive)
+    // 1. Primary lookup by minnit_id or Rider_ID (case-insensitive)
     let { data, error } = await supabase
       .from('rider_profiles')
       .select('*')
-      .ilike('Rider_ID', normalizedId)
+      .or(`minnit_id.ilike.${normalizedId},Rider_ID.ilike.${normalizedId}`)
       .maybeSingle();
 
     // 2. Fallback: lookup by phone number (for legacy riders without MM format)

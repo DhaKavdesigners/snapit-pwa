@@ -97,6 +97,8 @@ export interface StoreSettlementRecord {
 export interface AdminRider {
   id: string;
   Rider_ID?: string;
+  minnit_id?: string;
+  home_hub?: string;
   name: string;
   phone: string;
   alt_phone?: string;

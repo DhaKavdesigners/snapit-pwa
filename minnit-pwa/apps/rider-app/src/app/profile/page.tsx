@@ -108,9 +108,9 @@ export default function ProfilePage() {
                   <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
                     Verified Partner
                   </span>
-                  {(rider.Rider_ID || rider.riderId) && (
+                  {(rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId) && (
                     <span className="inline-block bg-slate-100 text-slate-800 text-[10px] font-mono font-black px-2 py-0.5 rounded-full border border-slate-200">
-                      ID: {rider.Rider_ID || rider.riderId}
+                      ID: {rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId}
                     </span>
                   )}
                 </>
@@ -147,7 +147,16 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">Minnit Rider ID</span>
               <span className="font-mono font-bold text-emerald-700 flex items-center gap-1.5">
-                <span>{isVerified ? (rider.Rider_ID || rider.riderId || '') : ''}</span>
+                <span>{isVerified ? (rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId || '') : ''}</span>
+                <Lock className="w-3 h-3 text-slate-400" />
+              </span>
+            </div>
+
+            {/* Home Hub (Locked) */}
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-secondary font-medium">Home Hub</span>
+              <span className="font-mono font-bold text-slate-700 flex items-center gap-1.5">
+                <span>{rider.home_hub || rider.homeHub || 'KGF'}</span>
                 <Lock className="w-3 h-3 text-slate-400" />
               </span>
             </div>

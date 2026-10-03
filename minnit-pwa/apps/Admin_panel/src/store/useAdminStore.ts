@@ -647,6 +647,15 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         assignedRiderId = `MM${String(maxNum + 1).padStart(4, "0")}`;
       }
 
+      // Generate scrambled Minnit ID (MR-XXXXXX) if not already assigned
+      let assignedMinnitId = currentRider?.minnit_id;
+      if (!assignedMinnitId) {
+        const approvedCount = get().riders.filter((r) => r.is_verified || r.minnit_id).length;
+        const seq = approvedCount + 1;
+        const code = 100001 + ((seq * 573901 + 161803) % 900000);
+        assignedMinnitId = `MR-${code}`;
+      }
+
       const updates: any = {
         verification_status: "APPROVED",
         is_verified: true,
@@ -654,19 +663,27 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         verified_at: new Date().toISOString(),
         verified_by: adminIdentifier,
         rejection_reason: null,
+        home_hub: currentRider?.home_hub || "KGF",
       };
 
       if (assignedRiderId) {
         updates.Rider_ID = assignedRiderId;
       }
+      if (assignedMinnitId) {
+        updates.minnit_id = assignedMinnitId;
+      }
 
       // 1. Try atomic RPC function first
       try {
-        const { error: rpcErr } = await supabase.rpc("admin_approve_rider", {
+        const { data: rpcData, error: rpcErr } = await supabase.rpc("admin_approve_rider", {
           p_rider_id: riderId,
           p_admin_identifier: adminIdentifier,
         });
         if (!rpcErr) {
+          const rpcMinnitId = (rpcData as any)?.minnit_id;
+          if (rpcMinnitId) {
+            updates.minnit_id = rpcMinnitId;
+          }
           set((state) => ({
             riders: state.riders.map((r) => (r.id === riderId ? { ...r, ...updates } : r)),
           }));
@@ -685,13 +702,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         const isColumnMissing =
           error.code === "PGRST204" ||
           error.code === "42703" ||
+          error.message?.includes("minnit_id") ||
+          error.message?.includes("home_hub") ||
           error.message?.includes("verification_status") ||
           error.message?.includes("verified_at");
 
         if (isColumnMissing) {
+          const fallbackUpdates: any = { is_verified: true, verification_step: 4 };
+          if (assignedRiderId) fallbackUpdates.Rider_ID = assignedRiderId;
           const { error: fallbackErr } = await supabase
             .from("rider_profiles")
-            .update({ is_verified: true, verification_step: 4 })
+            .update(fallbackUpdates)
             .eq("id", riderId);
           if (fallbackErr) throw fallbackErr;
         } else {

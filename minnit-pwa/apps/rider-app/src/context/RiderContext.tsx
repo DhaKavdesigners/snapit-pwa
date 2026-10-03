@@ -339,6 +339,10 @@ const defaultRider: RiderProfile = {
   isAuthenticated: false,
   riderId: '',
   Rider_ID: '',
+  minnit_id: '',
+  minnitId: '',
+  home_hub: 'KGF',
+  homeHub: 'KGF',
   active_session_token: null,
 };
 
@@ -936,6 +940,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
             const hasChanged =
               prev.isVerified !== isApproved ||
               prev.verificationStatus !== (isApproved ? 'APPROVED' : 'PENDING') ||
+              (!prev.minnit_id && dbProfile.minnit_id) ||
               (!prev.Rider_ID && dbProfile.Rider_ID) ||
               prev.name !== (dbProfile.name || prev.name) ||
               prev.selectedZone !== (dbProfile.selected_zone_name || prev.selectedZone) ||
@@ -954,8 +959,12 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
               ...prev,
               name: dbProfile.name || prev.name,
               phone: dbProfile.phone || prev.phone,
+              minnit_id: dbProfile.minnit_id || prev.minnit_id,
+              minnitId: dbProfile.minnit_id || prev.minnitId,
+              home_hub: dbProfile.home_hub || prev.home_hub || 'KGF',
+              homeHub: dbProfile.home_hub || prev.homeHub || 'KGF',
               Rider_ID: dbProfile.Rider_ID || prev.Rider_ID,
-              riderId: dbProfile.Rider_ID || prev.riderId,
+              riderId: dbProfile.minnit_id || dbProfile.Rider_ID || prev.riderId,
               isVerified: isApproved,
               verificationStep: isApproved ? 4 : (dbProfile.verification_step || 3),
               verificationStatus: isApproved ? 'APPROVED' : 'PENDING',
@@ -1013,8 +1022,12 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
                 ...prev,
                 name: payload.new.name || prev.name,
                 phone: payload.new.phone || prev.phone,
+                minnit_id: payload.new.minnit_id || prev.minnit_id,
+                minnitId: payload.new.minnit_id || prev.minnitId,
+                home_hub: payload.new.home_hub || prev.home_hub || 'KGF',
+                homeHub: payload.new.home_hub || prev.homeHub || 'KGF',
                 Rider_ID: payload.new.Rider_ID || prev.Rider_ID,
-                riderId: payload.new.Rider_ID || prev.riderId,
+                riderId: payload.new.minnit_id || payload.new.Rider_ID || prev.riderId,
                 isVerified: isApproved,
                 verificationStep: isApproved ? 4 : (payload.new.verification_step || 3),
                 verificationStatus: isApproved ? 'APPROVED' : 'PENDING',
@@ -2699,6 +2712,12 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         isVerified: true,
         verificationStep: 4,
         verificationStatus: 'APPROVED' as const,
+        minnit_id: prev.minnit_id || prev.minnitId || 'MR-834904',
+        minnitId: prev.minnit_id || prev.minnitId || 'MR-834904',
+        home_hub: prev.home_hub || 'KGF',
+        homeHub: prev.homeHub || 'KGF',
+        Rider_ID: prev.Rider_ID || 'MM0001',
+        riderId: prev.minnit_id || prev.minnitId || prev.Rider_ID || 'MR-834904',
       };
       try {
         localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updated));
@@ -2768,7 +2787,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const p = result.profile;
-      const returnedRiderId = p.Rider_ID || undefined;
+      const returnedRiderId = p.minnit_id || p.Rider_ID || undefined;
 
       // Activate session atomically in Supabase (invalidating any previous session)
       const sessionResult = await activateDeviceSession(p.id, returnedRiderId);
@@ -2811,7 +2830,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         mpin: p.mpin,
         isAuthenticated: true,
         riderId: returnedRiderId,
-        Rider_ID: returnedRiderId,
+        Rider_ID: p.Rider_ID || returnedRiderId,
+        minnit_id: p.minnit_id || '',
+        minnitId: p.minnit_id || '',
+        home_hub: p.home_hub || 'KGF',
+        homeHub: p.home_hub || 'KGF',
         active_session_token: sessionResult.sessionToken,
       };
 

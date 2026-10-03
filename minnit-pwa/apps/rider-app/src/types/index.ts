@@ -154,6 +154,10 @@ export interface RiderProfile {
   // Rider ID & Identity
   riderId?: string;
   Rider_ID?: string;
+  minnit_id?: string;
+  minnitId?: string;
+  home_hub?: string;
+  homeHub?: string;
 
   // Sessions & Availability Preferences
   session_started_at?: string | null;

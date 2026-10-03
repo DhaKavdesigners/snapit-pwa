@@ -132,7 +132,14 @@ export const ApprovedRiderWelcomeModal: React.FC<ApprovedRiderWelcomeModalProps>
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
               <span className="text-[11px] font-bold text-slate-500">Minnit Partner ID</span>
               <span className="text-xs font-mono font-black text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                {rider.Rider_ID || rider.riderId || 'MM0001'}
+                {rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId || 'MR-XXXXXX'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-500">Origin / Home Hub</span>
+              <span className="font-bold text-slate-900 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                {rider.home_hub || rider.homeHub || 'KGF'}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">

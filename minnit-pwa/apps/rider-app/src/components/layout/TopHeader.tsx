@@ -151,9 +151,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
             </Link>
 
             <div className="min-w-0">
-              <h2 className="text-sm font-black text-slate-900 leading-tight truncate">
-                {getGreeting()}, {firstName} 👋
-              </h2>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h2 className="text-sm font-black text-slate-900 leading-tight truncate">
+                  {getGreeting()}, {firstName} 👋
+                </h2>
+                {!isPendingVerification && (rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId) && (
+                  <span className="shrink-0 bg-slate-100 text-slate-700 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-slate-200">
+                    {rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId}
+                  </span>
+                )}
+              </div>
               <Link
                 id="tour-zone-pill"
                 href="/availability"

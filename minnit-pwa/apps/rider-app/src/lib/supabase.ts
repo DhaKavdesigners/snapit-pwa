@@ -55,6 +55,8 @@ export interface DbRiderProfile {
   id: string;
   user_id?: string;
   Rider_ID?: string;
+  minnit_id?: string;
+  home_hub?: string;
   name: string;
   phone: string;
   mpin?: string;

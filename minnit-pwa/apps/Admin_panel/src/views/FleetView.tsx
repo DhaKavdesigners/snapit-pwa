@@ -110,6 +110,7 @@ export const FleetView: React.FC = () => {
       r.name.toLowerCase().includes(query) ||
       r.phone.includes(query) ||
       r.id.toLowerCase().includes(query) ||
+      (r.minnit_id && r.minnit_id.toLowerCase().includes(query)) ||
       (r.Rider_ID && r.Rider_ID.toLowerCase().includes(query)) ||
       (r.selected_zone_name && r.selected_zone_name.toLowerCase().includes(query));
 
@@ -546,9 +547,9 @@ export const FleetView: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-xs text-slate-500 font-mono">{rider.phone}</span>
-                          {rider.Rider_ID && (
+                          {(rider.minnit_id || rider.Rider_ID) && (
                             <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-300">
-                              {rider.Rider_ID}
+                              {rider.minnit_id || rider.Rider_ID}
                             </span>
                           )}
                         </div>
