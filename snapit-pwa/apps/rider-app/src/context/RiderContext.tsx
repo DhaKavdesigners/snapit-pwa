@@ -2338,21 +2338,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     const orderId = String(incomingOrder.id).trim();
     markOrderHandledLocally(orderId);
     soundEngine.stopIncomingOrderBuzzer();
+    // Record rejection operational record for acceptance metrics without polluting delivery history
     recordOrderAcceptance(orderId, 'declined');
-    const declinedOrder: Order = {
-      ...incomingOrder,
-      status: 'cancelled',
-      timestamp: 'Declined just now',
-    };
-    setCancelledOrders((prev) => {
-      const updated = [declinedOrder, ...prev];
-      try {
-        localStorage.setItem('snapit_cancelled_orders_v2', JSON.stringify(updated));
-      } catch (e) {}
-      return updated;
-    });
     setIncomingOrder(null);
   };
+
 
   const recordOrderAcceptance = (
     orderId: string,
