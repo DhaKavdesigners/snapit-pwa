@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { calculateDeliveryFee, generateDeliveryPin } from '../../../../../common_logic/deliveryLogic';
+import { generateUserId } from '../../../../../common_logic/idGenerator';
 import { LocationPickerModal } from '../../components/checkout/LocationPickerModal';
 
 // ── KGF Known Address Coordinates ───────────────────────────────────────────
@@ -467,10 +468,18 @@ export const CheckoutView: React.FC = () => {
               <h3 className="font-black text-sm text-gray-900 truncate">
                 {userProfile?.name || 'Vishva D'}
               </h3>
-              <p className="text-xs text-gray-600 font-medium flex items-center gap-1.5 mt-0.5">
-                <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
-                <span>Primary Phone: <strong className="text-gray-900 font-mono">+91 {userProfile?.phone || ''}</strong></span>
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono text-[11px] font-black tracking-wide">
+                  ID: {userProfile?.minnit_id || (() => {
+                    const phone = (userProfile?.phone || '').replace(/\D/g, '').slice(-10);
+                    if (phone === '8217649688') return generateUserId(1);
+                    if (phone === '7406187288') return generateUserId(2);
+                    const num = phone ? parseInt(phone.slice(-4), 10) || 1 : 1;
+                    return generateUserId(num);
+                  })()}
+                </span>
+                <span className="text-xs text-gray-500 font-mono">+91 {userProfile?.phone || ''}</span>
+              </div>
             </div>
           </div>
         </section>

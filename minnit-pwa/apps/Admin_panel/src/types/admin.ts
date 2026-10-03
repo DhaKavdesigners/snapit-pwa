@@ -48,6 +48,8 @@ export interface AdminOrder {
 
 export interface AdminStore {
   id: string;
+  minnit_id?: string;
+  hub?: string;
   name: string;
   category: "FOOD" | "GROCERY" | "DAIRY" | "food" | "grocery" | "dairy" | string;
   logo_url?: string;

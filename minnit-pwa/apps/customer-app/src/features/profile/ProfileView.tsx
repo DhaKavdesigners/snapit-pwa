@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../../components/ui/Button';
 import { 
   Package, MapPin, LogOut, CheckCircle2, X, User, ShoppingBag, 
@@ -16,6 +16,7 @@ import { useBabyToastStore } from '../../store/babyToastStore';
 import { useAllProducts } from '../../api/queries';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/currency';
+import { generateUserId } from '../../../../../common_logic/idGenerator';
 
 // ─── Tiny Web Audio sound engine ─────────────────────────────────────────────
 type SoundType = 'success' | 'tap' | 'modal-pop' | 'sms-ping' | 'error';
@@ -106,7 +107,7 @@ const playSound = (type: SoundType) => {
 type RegistrationStep = 'form' | 'success' | 'dashboard';
 
 export const ProfileView: React.FC = () => {
-  const { register, logout, isLoggedIn, userProfile } = useAuthStore();
+  const { register, logout, isLoggedIn, userProfile, setMinnitId } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -120,6 +121,7 @@ export const ProfileView: React.FC = () => {
     isLoggedIn ? 'dashboard' : 'form'
   );
   const [formData, setFormData] = useState({
+    minnit_id: userProfile?.minnit_id || '',
     name: userProfile?.name || '',
     phone: userProfile?.phone || '',
     confirmPhone: userProfile?.phone || '',
@@ -128,6 +130,34 @@ export const ProfileView: React.FC = () => {
     landmark: userProfile?.landmark || '',
     pincode: userProfile?.pincode || ''
   });
+
+  // Calculate Customer Minnit ID (MU-XXXXXX) using bijective scrambler
+  const displayMinnitId = useMemo(() => {
+    if (userProfile?.minnit_id) return userProfile.minnit_id;
+    if (formData.minnit_id) return formData.minnit_id;
+    const phoneDigits = (userProfile?.phone || formData.phone || '').replace(/\D/g, '').slice(-10);
+    if (phoneDigits === '8217649688') return generateUserId(1); // MU-154630
+    if (phoneDigits === '7406187288') return generateUserId(2); // MU-837431
+    const num = phoneDigits ? parseInt(phoneDigits.slice(-4), 10) || 1 : 1;
+    return generateUserId(num);
+  }, [userProfile?.minnit_id, userProfile?.phone, formData.minnit_id, formData.phone]);
+
+  // Sync minnit_id from Supabase on mount/login
+  useEffect(() => {
+    if (!isLoggedIn || !userProfile?.phone) return;
+    const cleanPhone = userProfile.phone.replace(/\D/g, '').slice(-10);
+    supabase
+      .from('profiles')
+      .select('minnit_id')
+      .eq('id', cleanPhone)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.minnit_id) {
+          setMinnitId(data.minnit_id);
+          setFormData((prev) => ({ ...prev, minnit_id: data.minnit_id }));
+        }
+      });
+  }, [isLoggedIn, userProfile?.phone, setMinnitId]);
 
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [generatedOtp, setGeneratedOtp] = useState('679527');
@@ -1126,7 +1156,10 @@ export const ProfileView: React.FC = () => {
         sublabel: 'Chat on WhatsApp',
         bg: 'bg-green-50',
         iconColor: 'text-green-600',
-        action: () => window.open('https://wa.me/918217649688?text=Hi%20Minnit,%20I%20need%20help%20with%20my%20account', '_blank'),
+        action: () => {
+          const msg = `Hi Minnit, I need help with my account (Customer Minnit ID: ${displayMinnitId})`;
+          window.open(`https://wa.me/918217649688?text=${encodeURIComponent(msg)}`, '_blank');
+        },
         isLive: false,
       },
       {
@@ -1156,7 +1189,11 @@ export const ProfileView: React.FC = () => {
             <div className="flex-1 min-w-0">
               <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-0.5">Welcome back</p>
               <h2 className="font-black text-xl text-white truncate leading-tight">{formData.name || 'User'}</h2>
-              <p className="text-white/60 text-xs font-mono tracking-wider">+91 {formData.phone}</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="bg-white/20 backdrop-blur-md text-white border border-white/25 px-2.5 py-0.5 rounded-lg text-xs font-mono font-black tracking-wider shadow-xs">
+                  ID: {displayMinnitId}
+                </span>
+              </div>
             </div>
             {/* Dynamic trust badge */}
             {isTrusted ? (
@@ -1493,7 +1530,10 @@ export const ProfileView: React.FC = () => {
                                   <span>View Bill</span>
                                 </button>
                                 <button
-                                  onClick={() => window.open(`https://wa.me/918217649688?text=Hi%20Minnit,%20need%20help%20with%20order%20${order.id}`, '_blank')}
+                                  onClick={() => {
+                                    const helpMsg = `Hi Minnit, need help with order ${order.id} (Customer ID: ${displayMinnitId})`;
+                                    window.open(`https://wa.me/918217649688?text=${encodeURIComponent(helpMsg)}`, '_blank');
+                                  }}
                                   className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-3.5 py-1.5 rounded-xl hover:bg-gray-200 transition-colors"
                                 >
                                   Need Help?

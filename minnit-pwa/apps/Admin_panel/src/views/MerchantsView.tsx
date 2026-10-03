@@ -30,6 +30,7 @@ import {
 import { useAdminStore } from "../store/useAdminStore";
 import { AdminStore, AdminMerchant, AdminProduct } from "../types/admin";
 import { Modal } from "../components/common/Modal";
+import { generateMerchantId } from "../lib/idGenerator";
 
 interface MerchantsViewProps {
   onNavigateToSettlements?: (storeId?: string) => void;
@@ -82,6 +83,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
   // Store + Merchant Form State
   const [storeForm, setStoreForm] = useState({
     id: "",
+    minnit_id: "",
+    hub: "KGF",
     name: "",
     category: "FOOD",
     logo_url: "",
@@ -152,6 +155,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
         !q ||
         s.name.toLowerCase().includes(q) ||
         s.id.toLowerCase().includes(q) ||
+        (s.minnit_id && s.minnit_id.toLowerCase().includes(q)) ||
         (s.phone && s.phone.includes(q)) ||
         (linkedMerchant?.uid && linkedMerchant.uid.toLowerCase().includes(q)) ||
         (linkedMerchant?.name && linkedMerchant.name.toLowerCase().includes(q)) ||
@@ -182,9 +186,13 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
   ).length;
 
   const handleOpenAddStore = () => {
-    const autoId = `f${stores.length + 1}`;
+    const nextSeq = stores.length + 1;
+    const autoId = `s${nextSeq}`;
+    const generatedMinnitId = generateMerchantId(nextSeq, "KGF");
     setStoreForm({
       id: autoId,
+      minnit_id: generatedMinnitId,
+      hub: "KGF",
       name: "",
       category: "FOOD",
       logo_url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&auto=format&fit=crop&q=80",
@@ -210,6 +218,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
     if (editStoreModal) {
       // Update Store
       await updateStore(editStoreModal.id, {
+        minnit_id: storeForm.minnit_id.trim() || undefined,
+        hub: storeForm.hub.trim().toUpperCase() || "KGF",
         name: storeForm.name.trim(),
         category: storeForm.category.toUpperCase(),
         logo_url: storeForm.logo_url.trim(),
@@ -244,6 +254,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
       await createStoreWithMerchant(
         {
           id: storeForm.id.trim() || `store_${Date.now()}`,
+          minnit_id: storeForm.minnit_id.trim() || undefined,
+          hub: storeForm.hub.trim().toUpperCase() || "KGF",
           name: storeForm.name.trim(),
           category: storeForm.category.toUpperCase(),
           logo_url: storeForm.logo_url.trim(),
@@ -270,6 +282,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
     const linkedMerchant = merchants.find((m) => m.store_id === store.id);
     setStoreForm({
       id: store.id,
+      minnit_id: store.minnit_id || "",
+      hub: store.hub || "KGF",
       name: store.name,
       category: store.category?.toUpperCase() || "FOOD",
       logo_url: store.logo_url || "",
@@ -324,7 +338,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
   const handleDeleteStore = async (store: AdminStore) => {
     if (
       window.confirm(
-        `Are you sure you want to completely remove "${store.name}" (${store.id})?\n\nThis will remove the store, its merchant login account, and all associated catalog products.`
+        `Are you sure you want to completely remove "${store.name}" (${store.minnit_id || store.id})?\n\nThis will remove the store, its merchant login account, and all associated catalog products.`
       )
     ) {
       await deleteStore(store.id);
@@ -619,8 +633,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                           {store.name}
                         </h3>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-emerald-800 border border-slate-200">
-                            {store.id}
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                            {store.minnit_id || store.id}
                           </span>
                           <span
                             className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${getCategoryBadgeClass(
@@ -902,8 +916,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                               {store.name}
                             </span>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-emerald-800 border border-slate-200">
-                                {store.id}
+                              <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-300">
+                                {store.minnit_id || store.id}
                               </span>
                               <span
                                 className={`text-[8px] font-bold uppercase px-1.5 py-0.2 rounded-full border ${getCategoryBadgeClass(
@@ -1099,8 +1113,8 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
               <span>1. Store Profile</span>
             </h4>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 mb-1">Store Name *</label>
                 <input
                   type="text"
@@ -1113,19 +1127,20 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Store ID *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Minnit Store ID <span className="text-[10px] text-emerald-600 font-bold">(Auto)</span>
+                </label>
                 <input
                   type="text"
-                  required
-                  value={storeForm.id}
-                  onChange={(e) => setStoreForm({ ...storeForm, id: e.target.value })}
-                  placeholder="e.g. f5, g2"
-                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 font-mono"
+                  value={storeForm.minnit_id}
+                  onChange={(e) => setStoreForm({ ...storeForm, minnit_id: e.target.value })}
+                  placeholder="MM-KGF-XXXXXX"
+                  className="w-full px-3.5 py-2 bg-emerald-50/60 border border-emerald-300 rounded-xl text-xs font-mono font-bold text-emerald-800 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Category *</label>
                 <select
@@ -1137,6 +1152,24 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                   <option value="GROCERY">GROCERY (Daily Essentials, Mart)</option>
                   <option value="DAIRY">DAIRY (Milk, Paneer, Butter)</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Hub (City) *</label>
+                <input
+                  type="text"
+                  value={storeForm.hub}
+                  onChange={(e) => {
+                    const h = e.target.value.toUpperCase();
+                    setStoreForm((prev) => ({
+                      ...prev,
+                      hub: h,
+                      minnit_id: generateMerchantId(stores.length + 1, h || "KGF"),
+                    }));
+                  }}
+                  placeholder="KGF"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
               </div>
 
               <div>
@@ -1291,18 +1324,31 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
               <span>Store Information</span>
             </h4>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Store Name *</label>
-              <input
-                type="text"
-                required
-                value={storeForm.name}
-                onChange={(e) => setStoreForm({ ...storeForm, name: e.target.value })}
-                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Store Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={storeForm.name}
+                  onChange={(e) => setStoreForm({ ...storeForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Minnit Store ID</label>
+                <input
+                  type="text"
+                  value={storeForm.minnit_id || storeForm.id}
+                  onChange={(e) => setStoreForm({ ...storeForm, minnit_id: e.target.value })}
+                  placeholder="MM-KGF-XXXXXX"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-emerald-800 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Category *</label>
                 <select
@@ -1314,6 +1360,17 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
                   <option value="GROCERY">GROCERY (Daily Essentials, Mart)</option>
                   <option value="DAIRY">DAIRY (Milk, Paneer, Butter)</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Hub (City) *</label>
+                <input
+                  type="text"
+                  value={storeForm.hub}
+                  onChange={(e) => setStoreForm({ ...storeForm, hub: e.target.value.toUpperCase() })}
+                  placeholder="KGF"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
               </div>
 
               <div>

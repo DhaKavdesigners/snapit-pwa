@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 
 interface UserProfile {
+  minnit_id?: string;
   name: string;
   phone: string;
   addressLine1: string;
@@ -25,6 +26,7 @@ interface AuthState {
   sessionRevokedMessage?: string | null;
   login: (landmark: string) => void;
   register: (profile: Omit<UserProfile, 'phoneVerified' | 'deliveryVerified' | 'completedOrdersCount' | 'maxCodLimit'>) => Promise<void>;
+  setMinnitId: (minnitId: string) => void;
   /** Called by Rider Dashboard when delivery PIN is accepted */
   confirmDelivery: () => void;
   revokeCurrentSession: (reason?: string) => void;
@@ -69,7 +71,7 @@ export const useAuthStore = create<AuthState>()(
 
         // ⚡ 1. Save registered customer profile directly into Supabase database with updated_at timestamp!
         try {
-          const { error } = await supabase.from('profiles').upsert({
+          const { data: upsertData, error } = await supabase.from('profiles').upsert({
             id: cleanPhone,
             name: profile.name.trim(),
             phone: cleanPhone,
@@ -79,7 +81,13 @@ export const useAuthStore = create<AuthState>()(
             pincode: profile.pincode.trim(),
             delivery_verified: false,
             updated_at: newSessionTimestamp,
-          });
+          }).select('minnit_id').maybeSingle();
+
+          if (upsertData?.minnit_id) {
+            set((state) => ({
+              userProfile: state.userProfile ? { ...state.userProfile, minnit_id: upsertData.minnit_id } : null
+            }));
+          }
 
           if (error) {
             console.warn('Supabase profiles sync note:', error.message);
@@ -112,6 +120,13 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (err) {
           console.warn('Error dispatching session broadcast:', err);
+        }
+      },
+
+      setMinnitId: (minnitId) => {
+        const prev = get().userProfile;
+        if (prev) {
+          set({ userProfile: { ...prev, minnit_id: minnitId } });
         }
       },
 

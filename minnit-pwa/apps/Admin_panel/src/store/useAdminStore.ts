@@ -364,6 +364,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
       const { error } = await supabase.from("stores").insert({
         id,
+        minnit_id: data.minnit_id || null,
+        hub: data.hub || "KGF",
         name: data.name,
         category: category,
         logo_url: data.logo_url || "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300",
@@ -396,6 +398,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       // 1. Create Store in stores table
       const { error: storeError } = await supabase.from("stores").insert({
         id: storeId,
+        minnit_id: storeData.minnit_id || null,
+        hub: storeData.hub || "KGF",
         name: storeData.name,
         category: category,
         logo_url: storeData.logo_url || "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=300",

@@ -774,7 +774,9 @@ export const LiveOrderTrackerModal: React.FC = () => {
             <div className="pt-2 flex gap-2">
               <button
                 onClick={() => {
-                  window.open(`https://wa.me/918217649688?text=Hi%20Minnit,%20need%20help%20with%20live%20order%20${currentOrder.id}`, '_blank');
+                  const custIdText = userProfile?.minnit_id ? ` (Customer ID: ${userProfile.minnit_id})` : '';
+                  const helpUrl = `https://wa.me/918217649688?text=${encodeURIComponent(`Hi Minnit, need help with live order ${currentOrder.id}${custIdText}`)}`;
+                  window.open(helpUrl, '_blank');
                 }}
                 className="w-full py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black text-xs rounded-2xl border border-emerald-200 transition-colors flex items-center justify-center gap-1.5 active:scale-95"
               >
