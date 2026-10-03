@@ -69,9 +69,9 @@ export const useAuthStore = create<AuthState>()(
           sessionRevokedMessage: null,
         });
 
-        // ⚡ 1. Save registered customer profile directly into Supabase database with updated_at timestamp!
+        // ⚡ 1. Save registered customer profile directly into Supabase database with session_id!
         try {
-          const { data: upsertData, error } = await supabase.from('profiles').upsert({
+          const profilePayload: any = {
             id: cleanPhone,
             name: profile.name.trim(),
             phone: cleanPhone,
@@ -81,15 +81,35 @@ export const useAuthStore = create<AuthState>()(
             pincode: profile.pincode.trim(),
             delivery_verified: false,
             updated_at: newSessionTimestamp,
-          }).select('minnit_id').maybeSingle();
+            session_id: newSessionId,
+          };
 
-          if (upsertData?.minnit_id) {
+          const { data: upsertData, error } = await supabase
+            .from('profiles')
+            .upsert(profilePayload)
+            .select('minnit_id')
+            .maybeSingle();
+
+          if (error && error.message?.includes('session_id')) {
+            // Column session_id not migrated yet, retry without it
+            delete profilePayload.session_id;
+            const { data: retryData } = await supabase
+              .from('profiles')
+              .upsert(profilePayload)
+              .select('minnit_id')
+              .maybeSingle();
+            if (retryData?.minnit_id) {
+              set((state) => ({
+                userProfile: state.userProfile ? { ...state.userProfile, minnit_id: retryData.minnit_id } : null
+              }));
+            }
+          } else if (upsertData?.minnit_id) {
             set((state) => ({
               userProfile: state.userProfile ? { ...state.userProfile, minnit_id: upsertData.minnit_id } : null
             }));
           }
 
-          if (error) {
+          if (error && !error.message?.includes('session_id')) {
             console.warn('Supabase profiles sync note:', error.message);
           } else {
             console.info(`⚡ Customer profile for "${profile.name}" (${cleanPhone}) successfully saved with session ${newSessionId}!`);

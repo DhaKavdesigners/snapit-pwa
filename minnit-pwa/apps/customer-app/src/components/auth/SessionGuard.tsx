@@ -10,7 +10,6 @@ export const SessionGuard: React.FC = () => {
     isLoggedIn, 
     userProfile, 
     sessionId, 
-    sessionTimestamp, 
     sessionRevokedMessage, 
     revokeCurrentSession, 
     clearSessionRevokedMessage 
@@ -35,7 +34,7 @@ export const SessionGuard: React.FC = () => {
       })
       .subscribe();
 
-    // B. Postgres Database Changes (In case profile was updated on another device)
+    // B. Postgres Database Changes (In case profile was updated with a new session on another device)
     const dbChangesChannel = supabase
       .channel(`user-profile-sync-${phone}`)
       .on(
@@ -47,15 +46,11 @@ export const SessionGuard: React.FC = () => {
           filter: `id=eq.${phone}`,
         },
         (payload) => {
-          const newUpdatedAt = payload.new?.updated_at;
-          if (newUpdatedAt && sessionTimestamp) {
-            const serverMs = new Date(newUpdatedAt).getTime();
-            const localMs = new Date(sessionTimestamp).getTime();
-            // If server timestamp is noticeably newer (> 1500ms), another login occurred
-            if (serverMs - localMs > 1500) {
-              console.warn('🔒 Remote login detected via Postgres changes! Revoking local session.');
-              revokeCurrentSession('Your Minnit account was logged in on another device.');
-            }
+          const remoteSessionId = payload.new?.session_id;
+          // Only revoke if session_id is explicitly present and different from local sessionId
+          if (remoteSessionId && sessionId && remoteSessionId !== sessionId) {
+            console.warn('🔒 Remote login detected via Postgres changes! Revoking local session.');
+            revokeCurrentSession('Your Minnit account was logged in on another device.');
           }
         }
       )
@@ -66,17 +61,13 @@ export const SessionGuard: React.FC = () => {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('updated_at')
+          .select('session_id')
           .eq('id', phone)
-          .single();
+          .maybeSingle();
 
-        if (data?.updated_at && sessionTimestamp) {
-          const serverMs = new Date(data.updated_at).getTime();
-          const localMs = new Date(sessionTimestamp).getTime();
-          if (serverMs - localMs > 1500) {
-            console.warn('🔒 Remote login detected via heartbeat! Revoking local session.');
-            revokeCurrentSession('Your Minnit account was logged in on another device.');
-          }
+        if (data?.session_id && sessionId && data.session_id !== sessionId) {
+          console.warn('🔒 Remote login detected via heartbeat! Revoking local session.');
+          revokeCurrentSession('Your Minnit account was logged in on another device.');
         }
       } catch (err) {
         console.debug('Session check error:', err);
@@ -98,7 +89,7 @@ export const SessionGuard: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [isLoggedIn, phone, sessionId, sessionTimestamp, revokeCurrentSession]);
+  }, [isLoggedIn, phone, sessionId, revokeCurrentSession]);
 
   const handleDismissModal = () => {
     clearSessionRevokedMessage();

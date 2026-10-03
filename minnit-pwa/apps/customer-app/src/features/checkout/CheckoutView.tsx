@@ -74,7 +74,7 @@ type PayMethod = 'online' | 'upiDelivery';
 export const CheckoutView: React.FC = () => {
   const { items, clearCart, saveLastOrder } = useCartStore();
   const { data: allProducts = [...mockShoppingProducts, ...mockFoodProducts] } = useAllProducts();
-  const { isLoggedIn, userProfile } = useAuthStore();
+  const { isLoggedIn, userProfile, sessionId } = useAuthStore();
   const navigate = useNavigate();
 
   // ── AUTH GUARD: Unregistered users cannot checkout or place orders ──
@@ -221,15 +221,25 @@ export const CheckoutView: React.FC = () => {
 
     // 1. Ensure customer profile exists in Supabase profiles table (guarantees fk_orders_customer foreign key)
     try {
-      await supabase.from('profiles').upsert({
+      const profileSyncPayload: any = {
         id: cleanCustomerId,
         name: finalRecipientName || userProfile?.name || 'Customer',
         phone: cleanCustomerId,
         address_line1: displayAddressLine || 'KGF Main Road',
         pincode: displayPin || '563122',
         landmark: displayLandmark || '',
-        updated_at: new Date().toISOString(),
-      });
+      };
+      if (sessionId) {
+        profileSyncPayload.session_id = sessionId;
+      }
+      const { error: profileUpsertErr } = await supabase
+        .from('profiles')
+        .upsert(profileSyncPayload);
+
+      if (profileUpsertErr && profileUpsertErr.message?.includes('session_id')) {
+        delete profileSyncPayload.session_id;
+        await supabase.from('profiles').upsert(profileSyncPayload);
+      }
     } catch (profileErr) {
       console.warn("Profiles pre-sync note:", profileErr);
     }
