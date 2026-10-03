@@ -1,7 +1,8 @@
 import { supabase, DbOrder, DbStore, DbRiderProfile } from '@/lib/supabase';
-import { Order, RiderProfile } from '@/types';
+import { Order, RiderProfile, OrderHistoryItem, DateFilterOption, OrderHistoryCategory, TimelineStep, CancellationSource, PickupStatus, ReturnStatus } from '@/types';
 import { calculateDeliveryFee, generateDeliveryPin } from '../../../../common_logic/deliveryLogic';
 import { formatOrderNumber } from '@/utils/orderUtils';
+
 
 /** Map a Supabase DB order row to Rider App Order object */
 export function mapDbOrderToAppOrder(dbOrder: DbOrder, store?: DbStore): Order {
@@ -778,4 +779,514 @@ export async function fetchAllRiders(): Promise<DbRiderProfile[]> {
     return [];
   }
 }
+
+/**
+ * Format timestamp in Indian Standard Time (IST / Asia/Kolkata).
+ * Output example: "02 Oct • 7:42 PM"
+ */
+export function formatISTDateTime(isoString?: string | null): { dateStr: string; timeStr: string; fullStr: string } {
+  if (!isoString) return { dateStr: '', timeStr: '', fullStr: '' };
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return { dateStr: '', timeStr: '', fullStr: '' };
+
+    const dateStr = d.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+    });
+    const timeStr = d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return {
+      dateStr,
+      timeStr,
+      fullStr: `${dateStr} • ${timeStr}`,
+    };
+  } catch (e) {
+    return { dateStr: '', timeStr: '', fullStr: '' };
+  }
+}
+
+/**
+ * Calculate precise IST (UTC+05:30) date boundaries for historical order queries.
+ * Prevents UTC timezone drift across midnight boundaries.
+ */
+export function getISTDateBounds(
+  filter: DateFilterOption,
+  customRange?: { from: string; to: string }
+): { startUtc: string; endUtc: string } | null {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // +05:30 in ms
+  const nowMs = Date.now();
+  const nowIst = new Date(nowMs + IST_OFFSET_MS);
+
+  const istYear = nowIst.getUTCFullYear();
+  const istMonth = nowIst.getUTCMonth(); // 0-11
+  const istDate = nowIst.getUTCDate();
+  const istDay = nowIst.getUTCDay(); // 0 = Sun, 1 = Mon ...
+
+  const toUtcIso = (y: number, m: number, d: number, hour = 0, min = 0, sec = 0, ms = 0) => {
+    const utcEpoch = Date.UTC(y, m, d, hour, min, sec, ms) - IST_OFFSET_MS;
+    return new Date(utcEpoch).toISOString();
+  };
+
+  switch (filter) {
+    case 'today': {
+      return {
+        startUtc: toUtcIso(istYear, istMonth, istDate, 0, 0, 0, 0),
+        endUtc: toUtcIso(istYear, istMonth, istDate, 23, 59, 59, 999),
+      };
+    }
+    case 'yesterday': {
+      const yDate = new Date(Date.UTC(istYear, istMonth, istDate - 1));
+      const yY = yDate.getUTCFullYear();
+      const yM = yDate.getUTCMonth();
+      const yD = yDate.getUTCDate();
+      return {
+        startUtc: toUtcIso(yY, yM, yD, 0, 0, 0, 0),
+        endUtc: toUtcIso(yY, yM, yD, 23, 59, 59, 999),
+      };
+    }
+    case 'last_7_days': {
+      const pastDate = new Date(Date.UTC(istYear, istMonth, istDate - 6));
+      return {
+        startUtc: toUtcIso(pastDate.getUTCFullYear(), pastDate.getUTCMonth(), pastDate.getUTCDate(), 0, 0, 0, 0),
+        endUtc: toUtcIso(istYear, istMonth, istDate, 23, 59, 59, 999),
+      };
+    }
+    case 'this_week': {
+      // Monday to today in IST
+      const daysSinceMonday = istDay === 0 ? 6 : istDay - 1;
+      const monDate = new Date(Date.UTC(istYear, istMonth, istDate - daysSinceMonday));
+      return {
+        startUtc: toUtcIso(monDate.getUTCFullYear(), monDate.getUTCMonth(), monDate.getUTCDate(), 0, 0, 0, 0),
+        endUtc: toUtcIso(istYear, istMonth, istDate, 23, 59, 59, 999),
+      };
+    }
+    case 'last_week': {
+      const daysSinceMonday = istDay === 0 ? 6 : istDay - 1;
+      const lastMon = new Date(Date.UTC(istYear, istMonth, istDate - daysSinceMonday - 7));
+      const lastSun = new Date(Date.UTC(istYear, istMonth, istDate - daysSinceMonday - 1));
+      return {
+        startUtc: toUtcIso(lastMon.getUTCFullYear(), lastMon.getUTCMonth(), lastMon.getUTCDate(), 0, 0, 0, 0),
+        endUtc: toUtcIso(lastSun.getUTCFullYear(), lastSun.getUTCMonth(), lastSun.getUTCDate(), 23, 59, 59, 999),
+      };
+    }
+    case 'this_month': {
+      return {
+        startUtc: toUtcIso(istYear, istMonth, 1, 0, 0, 0, 0),
+        endUtc: toUtcIso(istYear, istMonth, istDate, 23, 59, 59, 999),
+      };
+    }
+    case 'last_month': {
+      const prevMonthLastDate = new Date(Date.UTC(istYear, istMonth, 0));
+      return {
+        startUtc: toUtcIso(prevMonthLastDate.getUTCFullYear(), prevMonthLastDate.getUTCMonth(), 1, 0, 0, 0, 0),
+        endUtc: toUtcIso(prevMonthLastDate.getUTCFullYear(), prevMonthLastDate.getUTCMonth(), prevMonthLastDate.getUTCDate(), 23, 59, 59, 999),
+      };
+    }
+    case 'custom': {
+      if (!customRange?.from || !customRange?.to) return null;
+      const [fromY, fromM, fromD] = customRange.from.split('-').map(Number);
+      const [toY, toM, toD] = customRange.to.split('-').map(Number);
+      if (!fromY || !fromM || !fromD || !toY || !toM || !toD) return null;
+
+      // Prevent future dates by capping 'to' date to today in IST
+      const maxToUtc = toUtcIso(istYear, istMonth, istDate, 23, 59, 59, 999);
+      let calculatedEnd = toUtcIso(toY, toM - 1, toD, 23, 59, 59, 999);
+      if (new Date(calculatedEnd).getTime() > new Date(maxToUtc).getTime()) {
+        calculatedEnd = maxToUtc;
+      }
+
+      return {
+        startUtc: toUtcIso(fromY, fromM - 1, fromD, 0, 0, 0, 0),
+        endUtc: calculatedEnd,
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+export interface FetchOrderHistoryOptions {
+  category: OrderHistoryCategory;
+  dateFilter?: DateFilterOption;
+  customRange?: { from: string; to: string };
+  searchQuery?: string;
+}
+
+/**
+ * Fetch rider's Order History for Completed or Cancelled deliveries.
+ * Queries Supabase orders scoped to authenticated rider.
+ * Performs accurate IST date boundaries and case-insensitive Order ID search.
+ */
+export async function fetchRiderOrderHistory(
+  riderPhoneOrId: string,
+  options: FetchOrderHistoryOptions
+): Promise<{ orders: OrderHistoryItem[]; error?: string }> {
+  try {
+    if (!riderPhoneOrId) {
+      return { orders: [] };
+    }
+
+    const cleanPhone = riderPhoneOrId.replace(/[^0-9]/g, '').slice(-10);
+    const stores = await fetchStores();
+
+    // 1. Try querying rider_order_assignments if table exists
+    try {
+      let query = supabase
+        .from('rider_order_assignments')
+        .select('*, order:orders(*)')
+        .or(`rider_id.eq.${cleanPhone},rider_id.eq.${riderPhoneOrId}`);
+
+      if (options.category === 'completed') {
+        query = query.eq('status', 'DELIVERED');
+      } else {
+        query = query.eq('status', 'CANCELLED');
+      }
+
+      const bounds = options.dateFilter ? getISTDateBounds(options.dateFilter, options.customRange) : null;
+      if (bounds) {
+        query = query.gte('created_at', bounds.startUtc).lte('created_at', bounds.endUtc);
+      }
+
+      const { data: assignments, error: assignError } = await query.order('created_at', { ascending: false });
+
+      if (!assignError && assignments && assignments.length > 0) {
+        const mapped = assignments.map((a: any) => {
+          const o = a.order || {};
+          const store = stores.find((s) => s.id === o.store_id);
+          const customerOrderId = o.id || a.order_id;
+          const displayOrderNum = formatOrderNumber(customerOrderId);
+          const distanceKm = Number(a.distance_km || o.distance_km || 2);
+          const pickupStatus: PickupStatus = a.pickup_confirmed || a.picked_up_at ? 'picked_up' : 'before_pickup';
+          const returnStatus: ReturnStatus = a.return_status || 'none';
+          const cancelledBy: CancellationSource = a.cancelled_by?.toLowerCase() || 'system';
+          const cancellationReason = a.cancellation_reason || 'Assignment ended';
+          const individualEarnings = Number(a.earning || o.delivery_fee) || calculateDeliveryFee({ distanceKm }).feeRupees;
+
+          const timeline: TimelineStep[] = [];
+          timeline.push({
+            title: 'Order Placed & Accepted',
+            time: formatISTDateTime(a.created_at || o.created_at).fullStr,
+            completed: true,
+          });
+
+          if (options.category === 'completed') {
+            timeline.push({
+              title: 'Picked Up from Store',
+              time: formatISTDateTime(a.picked_up_at || a.created_at).timeStr,
+              completed: true,
+            });
+            timeline.push({
+              title: 'Out for Delivery',
+              completed: true,
+            });
+            timeline.push({
+              title: 'Delivered Successfully',
+              time: formatISTDateTime(a.delivered_at || a.updated_at).fullStr,
+              completed: true,
+              current: true,
+              note: 'Verified with Customer PIN',
+            });
+          } else {
+            if (pickupStatus === 'picked_up') {
+              timeline.push({
+                title: 'Package Picked Up from Store',
+                time: formatISTDateTime(a.picked_up_at || a.created_at).timeStr,
+                completed: true,
+              });
+              timeline.push({
+                title: 'Delivery Ended / Cancelled',
+                time: formatISTDateTime(a.cancelled_at || a.updated_at).fullStr,
+                completed: true,
+                note: cancellationReason,
+              });
+              if (returnStatus === 'returned_to_shop') {
+                timeline.push({
+                  title: 'Returned to Store',
+                  time: formatISTDateTime(a.return_confirmed_at || a.updated_at).fullStr,
+                  completed: true,
+                  current: true,
+                  note: 'Store confirmed package return',
+                });
+              } else {
+                timeline.push({
+                  title: 'Return to Store Pending',
+                  completed: false,
+                  current: true,
+                  note: 'Pending return handover to store',
+                });
+              }
+            } else {
+              timeline.push({
+                title: 'Cancelled Before Pickup',
+                time: formatISTDateTime(a.cancelled_at || a.updated_at).fullStr,
+                completed: true,
+                current: true,
+                note: cancellationReason,
+              });
+            }
+          }
+
+          const item: OrderHistoryItem = {
+            id: customerOrderId,
+            orderNumber: displayOrderNum,
+            assignmentId: a.id,
+            category: options.category,
+            customerName: o.recipient_name || 'Customer',
+            customerPhone: o.recipient_phone || '',
+            restaurantName: store?.name || 'Store Partner',
+            restaurantAddress: store?.address || store?.store_address || 'Store Location',
+            deliveryAddress: typeof o.delivery_address === 'string' ? o.delivery_address : (o.delivery_address?.line1 || o.delivery_address?.address || 'Customer Location'),
+            distanceKm,
+            earnings: options.category === 'completed' ? individualEarnings : 0,
+            items: Array.isArray(o.items) ? o.items.map((it: any) => ({ name: it.name || 'Item', quantity: Number(it.quantity || 1), price: Number(it.price || 0) })) : [],
+            status: a.status,
+            dbStatus: o.status || a.status,
+            createdAt: a.created_at,
+            completedAt: a.delivered_at || a.updated_at,
+            cancelledAt: a.cancelled_at || a.updated_at,
+            cancelledBy,
+            cancellationReason,
+            pickupStatus,
+            returnStatus,
+            timeline,
+          };
+          return item;
+        });
+
+        // Apply search filter if query is present
+        let filtered = mapped;
+        if (options.searchQuery && options.searchQuery.trim()) {
+          const q = options.searchQuery.toLowerCase().replace(/^#/, '').trim();
+          filtered = mapped.filter((item: OrderHistoryItem) =>
+            item.id.toLowerCase().includes(q) ||
+            item.orderNumber.toLowerCase().includes(q) ||
+            item.restaurantName.toLowerCase().includes(q)
+          );
+        }
+
+        return { orders: filtered };
+      }
+    } catch (assignTableErr) {
+      // rider_order_assignments does not exist; proceed to fallback query on orders table
+    }
+
+    // 2. Standard Orders Table Query
+    let ordersQuery = supabase
+      .from('orders')
+      .select('*');
+
+    // Scoped strictly to authenticated rider (phone or ID)
+    if (cleanPhone) {
+      ordersQuery = ordersQuery.or(`rider_id.eq.${cleanPhone},rider_id.eq.${riderPhoneOrId}`);
+    } else {
+      ordersQuery = ordersQuery.eq('rider_id', riderPhoneOrId);
+    }
+
+    if (options.category === 'completed') {
+      ordersQuery = ordersQuery.eq('status', 'DELIVERED');
+    } else {
+      ordersQuery = ordersQuery.in('status', ['CANCELLED', 'REJECTED']);
+    }
+
+    // Filter by timestamp:
+    // Completed tab uses completion/delivery timestamp (updated_at)
+    // Cancelled tab uses cancellation timestamp (updated_at)
+    const bounds = options.dateFilter ? getISTDateBounds(options.dateFilter, options.customRange) : null;
+    if (bounds) {
+      ordersQuery = ordersQuery.gte('updated_at', bounds.startUtc).lte('updated_at', bounds.endUtc);
+    }
+
+    ordersQuery = ordersQuery.order('updated_at', { ascending: false });
+
+    const { data: dbOrders, error } = await ordersQuery;
+
+    if (error) {
+      console.warn('Error querying rider order history:', error);
+      return { orders: [], error: 'Unable to load orders. Please try again.' };
+    }
+
+    if (!dbOrders) {
+      return { orders: [] };
+    }
+
+    const mappedOrders: OrderHistoryItem[] = dbOrders.map((o: DbOrder) => {
+      const store = stores.find((s) => s.id === o.store_id);
+      const customerOrderId = o.id; // Exact customer order ID from Supabase
+      const displayOrderNum = formatOrderNumber(customerOrderId);
+
+      // Distance calculation
+      let distanceKm = Number((o as any).distance_km || 0);
+      if (!distanceKm) {
+        distanceKm = 2.4; // Safe fallback
+      }
+
+      const individualEarnings = Number(o.delivery_fee) || calculateDeliveryFee({ distanceKm }).feeRupees;
+
+      // Extract delivery address text
+      let deliveryAddressText = 'Customer Location';
+      if (typeof o.delivery_address === 'string') {
+        deliveryAddressText = o.delivery_address;
+      } else if (o.delivery_address && typeof o.delivery_address === 'object') {
+        deliveryAddressText = o.delivery_address.line1 || o.delivery_address.address || o.delivery_address.formatted || 'Customer Location';
+      }
+
+      // Cancellation details
+      const rawReason = (o as any).cancellation_reason || o.rejection_reason || '';
+      let cancellationReason = rawReason;
+      let cancelledBy: CancellationSource = 'system';
+
+      const lowerReason = rawReason.toLowerCase();
+      if (lowerReason.includes('customer')) {
+        cancelledBy = 'customer';
+        cancellationReason = rawReason || 'Customer cancelled';
+      } else if (lowerReason.includes('shop') || lowerReason.includes('merchant') || lowerReason.includes('store') || lowerReason.includes('item') || lowerReason.includes('stock')) {
+        cancelledBy = 'store';
+        cancellationReason = rawReason || 'Shop cancelled';
+      } else if (lowerReason.includes('rider') || lowerReason.includes('vehicle') || lowerReason.includes('breakdown') || lowerReason.includes('emergency')) {
+        cancelledBy = 'rider';
+        cancellationReason = rawReason || 'Rider unable to complete delivery';
+      } else if (lowerReason.includes('admin') || lowerReason.includes('support')) {
+        cancelledBy = 'admin';
+        cancellationReason = rawReason || 'Cancelled by support team';
+      } else if (lowerReason.includes('address') || lowerReason.includes('unreachable')) {
+        cancelledBy = 'customer';
+        cancellationReason = rawReason || 'Customer unreachable / Address issue';
+      } else {
+        cancellationReason = rawReason || 'Delivery cancelled';
+      }
+
+      const pickupConfirmed = Boolean(o.rider_pickup_confirmed || o.shopkeeper_handover_confirmed || (o.status || '').toUpperCase() === 'OUT_FOR_DELIVERY');
+      const pickupStatus: PickupStatus = pickupConfirmed ? 'picked_up' : 'before_pickup';
+
+      let returnStatus: ReturnStatus = 'none';
+      if (pickupStatus === 'picked_up') {
+        const rawReturn = String((o as any).return_status || '').toUpperCase();
+        if (rawReturn === 'RETURNED_TO_SHOP' || (o as any).return_confirmed_at) {
+          returnStatus = 'returned_to_shop';
+        } else {
+          returnStatus = 'return_pending';
+        }
+      }
+
+      // Formulate authentic Timeline
+      const timeline: TimelineStep[] = [];
+      timeline.push({
+        title: 'Order Placed & Accepted',
+        time: formatISTDateTime(o.created_at).fullStr,
+        completed: true,
+      });
+
+      if (options.category === 'completed') {
+        timeline.push({
+          title: 'Picked Up from Store',
+          time: formatISTDateTime(o.created_at).timeStr,
+          completed: true,
+        });
+        timeline.push({
+          title: 'Out for Delivery',
+          completed: true,
+        });
+        timeline.push({
+          title: 'Delivered Successfully',
+          time: formatISTDateTime(o.updated_at || o.created_at).fullStr,
+          completed: true,
+          current: true,
+          note: 'Handover verified with Customer PIN',
+        });
+      } else {
+        if (pickupStatus === 'picked_up') {
+          timeline.push({
+            title: 'Package Picked Up from Store',
+            time: formatISTDateTime(o.created_at).timeStr,
+            completed: true,
+          });
+          timeline.push({
+            title: 'Delivery Ended / Cancelled',
+            time: formatISTDateTime(o.updated_at || o.created_at).fullStr,
+            completed: true,
+            note: cancellationReason,
+          });
+          if (returnStatus === 'returned_to_shop') {
+            timeline.push({
+              title: 'Returned to Store',
+              time: formatISTDateTime((o as any).return_confirmed_at || o.updated_at).fullStr,
+              completed: true,
+              current: true,
+              note: 'Store confirmed package return',
+            });
+          } else {
+            timeline.push({
+              title: 'Return to Store Pending',
+              completed: false,
+              current: true,
+              note: 'Rider return to store pending merchant confirmation',
+            });
+          }
+        } else {
+          timeline.push({
+            title: 'Cancelled Before Pickup',
+            time: formatISTDateTime(o.updated_at || o.created_at).fullStr,
+            completed: true,
+            current: true,
+            note: cancellationReason,
+          });
+        }
+      }
+
+      const item: OrderHistoryItem = {
+        id: customerOrderId,
+        orderNumber: displayOrderNum,
+        category: options.category,
+        customerName: o.recipient_name || 'Customer',
+        customerPhone: o.recipient_phone || '',
+        restaurantName: store?.name || 'Store Partner',
+        restaurantAddress: store?.address || store?.store_address || 'Store Location',
+        deliveryAddress: deliveryAddressText,
+        distanceKm,
+        earnings: options.category === 'completed' ? individualEarnings : 0,
+        items: Array.isArray(o.items)
+          ? o.items.map((it: any) => ({
+              name: it.name || 'Item',
+              quantity: Number(it.quantity || 1),
+              price: Number(it.price || 0),
+            }))
+          : [],
+        status: o.status,
+        dbStatus: o.status,
+        createdAt: o.created_at,
+        completedAt: options.category === 'completed' ? (o.updated_at || o.created_at) : undefined,
+        cancelledAt: options.category === 'cancelled' ? (o.updated_at || o.created_at) : undefined,
+        cancelledBy,
+        cancellationReason,
+        pickupStatus,
+        returnStatus,
+        timeline,
+      };
+      return item;
+    });
+
+    // Apply Order ID search filter if present
+    let filtered = mappedOrders;
+    if (options.searchQuery && options.searchQuery.trim()) {
+      const q = options.searchQuery.toLowerCase().replace(/^#/, '').trim();
+      filtered = mappedOrders.filter((item: OrderHistoryItem) =>
+        item.id.toLowerCase().includes(q) ||
+        item.orderNumber.toLowerCase().includes(q) ||
+        item.restaurantName.toLowerCase().includes(q)
+      );
+    }
+
+    return { orders: filtered };
+  } catch (err: any) {
+    console.error('fetchRiderOrderHistory exception:', err);
+    return { orders: [], error: 'Unable to load orders. Please try again.' };
+  }
+}
+
 

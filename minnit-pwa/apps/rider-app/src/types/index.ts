@@ -443,3 +443,58 @@ export interface AlertNotification {
   actionLabel?: string;
   actionRoute?: string;
 }
+
+// ─── Order History Types ──────────────────────────────────────────────────────
+export type OrderHistoryCategory = 'completed' | 'cancelled';
+
+export type DateFilterOption =
+  | 'today'
+  | 'yesterday'
+  | 'last_7_days'
+  | 'this_week'
+  | 'last_week'
+  | 'this_month'
+  | 'last_month'
+  | 'custom';
+
+export type CancellationSource = 'customer' | 'store' | 'rider' | 'admin' | 'system';
+
+export type PickupStatus = 'before_pickup' | 'picked_up';
+
+export type ReturnStatus = 'none' | 'return_pending' | 'returned_to_shop';
+
+export interface TimelineStep {
+  title: string;
+  time?: string;
+  completed: boolean;
+  current?: boolean;
+  note?: string;
+}
+
+export interface OrderHistoryItem {
+  id: string;
+  orderNumber: string;
+  assignmentId?: string;
+  category: OrderHistoryCategory;
+  customerName: string;
+  customerPhone: string;
+  restaurantName: string;
+  restaurantAddress: string;
+  deliveryAddress: string;
+  distanceKm: number;
+  earnings: number;
+  items: OrderItem[];
+  status: string;
+  dbStatus: string;
+  createdAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  acceptedAt?: string;
+  pickedUpAt?: string;
+  cancelledBy?: CancellationSource;
+  cancellationReason?: string;
+  pickupStatus?: PickupStatus;
+  returnStatus?: ReturnStatus;
+  timeline: TimelineStep[];
+}
+

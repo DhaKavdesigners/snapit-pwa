@@ -30,9 +30,15 @@ export interface DbOrder {
   rider_assignment?: string;
   delivery_pin?: string | number;
   delivery_fee?: number;
+  rejection_reason?: string;
+  cancellation_reason?: string;
+  cancelled_by?: string;
+  return_status?: string;
+  return_confirmed_at?: string;
   created_at?: string;
   updated_at?: string;
 }
+
 
 export interface DbStore {
   id: string;
