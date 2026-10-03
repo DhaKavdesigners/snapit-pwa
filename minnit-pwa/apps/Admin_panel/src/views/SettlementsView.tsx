@@ -351,7 +351,7 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
               <option value="ALL">🏪 All Partner Stores ({stores.length})</option>
               {stores.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} ({s.id}) • {s.category || "FOOD"}
+                  {s.name} ({s.minnit_id || s.id}) • {s.category || "FOOD"}
                 </option>
               ))}
             </select>
@@ -452,7 +452,7 @@ export const SettlementsView: React.FC<SettlementsViewProps> = ({ initialStoreId
                         <h4 className="font-black text-sm text-slate-900 leading-tight">{store.name}</h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="font-mono text-[10px] text-slate-500 font-bold">
-                            {store.id}
+                            {store.minnit_id || store.id}
                           </span>
                           <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
                             {store.category || "FOOD"}

@@ -131,7 +131,7 @@ export const CatalogView: React.FC = () => {
             <option value="ALL">All Stores ({stores.length})</option>
             {stores.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} ({s.category})
+                {s.name} ({s.minnit_id || s.id}) • {s.category || "General"}
               </option>
             ))}
           </select>
@@ -314,7 +314,7 @@ export const CatalogView: React.FC = () => {
               >
                 {stores.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} ({s.category})
+                    {s.name} ({s.minnit_id || s.id}) • {s.category || "General"}
                   </option>
                 ))}
               </select>

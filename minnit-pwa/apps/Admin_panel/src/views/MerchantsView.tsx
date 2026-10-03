@@ -1574,7 +1574,7 @@ export const MerchantsView: React.FC<MerchantsViewProps> = ({ onNavigateToSettle
         isOpen={!!inventoryModal}
         onClose={() => setInventoryModal(null)}
         title={`${inventoryModal?.name} — Catalog & Live Inventory`}
-        subtitle="Manage live pricing in Rupees (₹), stock toggles, and add new catalog items"
+        subtitle={`Store ID: ${inventoryModal?.minnit_id || inventoryModal?.id} • Category: ${inventoryModal?.category || "General"} • Live pricing & stock control`}
         maxWidth="2xl"
       >
         <div className="space-y-4">
