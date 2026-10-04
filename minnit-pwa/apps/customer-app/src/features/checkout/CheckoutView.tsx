@@ -353,6 +353,24 @@ export const CheckoutView: React.FC = () => {
         theme: {
           color: '#059669',
         },
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: 'Pay using UPI / QR',
+                instruments: [
+                  {
+                    method: 'upi',
+                  },
+                ],
+              },
+            },
+            sequence: ['block.upi', 'block.default'],
+            preferences: {
+              show_default_blocks: true,
+            },
+          },
+        },
         handler: async function (response: any) {
           await executeOrderPlacement('RAZORPAY_ONLINE', 'PAID', displayId, response.razorpay_payment_id);
         },
