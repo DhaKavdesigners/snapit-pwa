@@ -284,6 +284,7 @@ export const CheckoutView: React.FC = () => {
           payment_status: paymentStatus,
           recipient_name: finalRecipientName || 'Customer',
           recipient_phone: cleanRecipientPhone,
+          razorpay_payment_id: txnId || null,
         };
         const { data: fallbackOrder, error: fallbackError } = await supabase
           .from('orders')
@@ -372,13 +373,18 @@ export const CheckoutView: React.FC = () => {
         });
         rzp.open();
         return;
-      } catch (err) {
-        console.warn("Razorpay standard modal error, completing with online verified status:", err);
+      } catch (err: any) {
+        console.error("Razorpay initiation error:", err);
+        alert(`Could not open Razorpay checkout: ${err?.message || 'Please check your API key or connection'}`);
+        setIsSubmitting(false);
+        orderPlacedRef.current = false;
+        return;
       }
+    } else {
+      alert("Unable to load Razorpay payment gateway. Please check your internet connection.");
+      setIsSubmitting(false);
+      orderPlacedRef.current = false;
     }
-
-    // Direct online fallback
-    await executeOrderPlacement('RAZORPAY_ONLINE', 'PAID', displayId);
   };
 
   // Option 2: Pay on Delivery (Rider QR)
