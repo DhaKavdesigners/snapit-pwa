@@ -335,7 +335,7 @@ export const CheckoutView: React.FC = () => {
     setIsPaymentChoiceModalOpen(false);
     setIsSubmitting(true);
     const displayId = `ORD-${Date.now().toString().slice(-6)}`;
-    const razorpayKey = (import.meta as any).env.VITE_RAZORPAY_KEY_ID || 'rzp_test_1DP5mmOlF5G5ag';
+    const razorpayKey = (import.meta as any).env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TjhzbNf5prbZ50';
 
     const scriptLoaded = await loadRazorpayScript();
     if (scriptLoaded && (window as any).Razorpay) {
