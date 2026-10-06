@@ -30,10 +30,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
     riderBreak,
     activeSession,
     openStartRiding,
-    isDemoMode,
-    demoStep,
-    setDemoStep,
-    triggerMockOrder,
   } = useRider();
 
   const [showOfflineModal, setShowOfflineModal] = useState(false);
@@ -68,15 +64,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
 
   // Handle online toggle click
   const handleToggleClick = () => {
-    if (isDemoMode && demoStep === 'go_online') {
-      if (!isOnline) toggleOnline();
-      setDemoStep('accept_order');
-      setTimeout(() => {
-        triggerMockOrder();
-      }, 500);
-      return;
-    }
-
     if (isPendingVerification) {
       alert('Online access is locked while verification is pending. Minnit Admin will verify your documents shortly.');
       return;
@@ -130,12 +117,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <Link href="/profile" className="relative group cursor-pointer active:scale-95 transition-transform shrink-0" title="View Profile">
               <div className="w-10 h-10 rounded-full relative overflow-hidden ring-2 ring-emerald-500/30 p-[1px] bg-white shadow-2xs transition-transform group-hover:scale-105">
                 <img
                   src={rider.selfieCapturedUrl || rider.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                  alt={rider.name}
+                  alt={rider.name || 'Rider'}
                   className="w-full h-full object-cover rounded-full"
                 />
                 <span
@@ -150,26 +137,33 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
               </div>
             </Link>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h2 className="text-sm font-black text-slate-900 leading-tight truncate">
-                  {getGreeting()}, {firstName} 👋
-                </h2>
+            <div className="min-w-0 flex flex-col justify-center">
+              {/* Row 1: Greeting */}
+              <h2 className="text-sm font-black text-slate-900 leading-tight truncate">
+                {getGreeting()}, {firstName} 👋
+              </h2>
+
+              {/* Row 2: Zone Pill + Rider Minnit ID Badge */}
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                <Link
+                  id="tour-zone-pill"
+                  href="/availability"
+                  className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer shrink-0 truncate max-w-[110px]"
+                >
+                  <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span className="truncate">{rider.selectedZone || 'Robertsonpet'}</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                </Link>
+
                 {!isPendingVerification && (rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId) && (
-                  <span className="shrink-0 bg-slate-100 text-slate-700 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-slate-200">
-                    {rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId}
-                  </span>
+                  <>
+                    <span className="text-slate-300 text-[10px] leading-none shrink-0">·</span>
+                    <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-mono font-black border border-slate-200/90 shadow-2xs leading-none">
+                      {rider.minnit_id || rider.minnitId || rider.Rider_ID || rider.riderId}
+                    </span>
+                  </>
                 )}
               </div>
-              <Link
-                id="tour-zone-pill"
-                href="/availability"
-                className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors mt-0.5 cursor-pointer truncate"
-              >
-                <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
-                <span className="truncate">{rider.selectedZone || 'Robertsonpet'}</span>
-                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
-              </Link>
             </div>
           </div>
         )}

@@ -193,7 +193,7 @@ export const OrdersControlView: React.FC = () => {
                         <Bike className="w-4 h-4 text-blue-600 shrink-0" />
                         <div className="truncate">
                           <p className="font-bold text-slate-900 truncate">
-                            {rider ? rider.name : "Unassigned"}
+                            {rider ? `${rider.name} (${rider.minnit_id || rider.Rider_ID || rider.id})` : "Unassigned"}
                           </p>
                           <p className="text-[10px] text-slate-500">
                             {rider ? `${rider.vehicle_type || "Bike"} • ${rider.phone}` : "No rider assigned"}
@@ -367,7 +367,7 @@ export const OrdersControlView: React.FC = () => {
                       }`}
                     />
                     <div>
-                      <p className="font-black text-xs text-slate-900">{r.name}</p>
+                      <p className="font-black text-xs text-slate-900">{r.name} ({r.minnit_id || r.Rider_ID || r.id})</p>
                       <p className="text-[10px] text-slate-500 font-mono">
                         {r.phone} • {r.vehicle_type || "Bike"} ({r.vehicle_number || "KA-08"})
                       </p>

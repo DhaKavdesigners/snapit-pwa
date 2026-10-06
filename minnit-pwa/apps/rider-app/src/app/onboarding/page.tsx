@@ -732,7 +732,7 @@ export default function OnboardingPage() {
                     type="text"
                     value={loginRiderId}
                     onChange={(e) => setLoginRiderId(e.target.value)}
-                    placeholder="e.g. MM0001"
+                    placeholder="e.g. 835705 or MR-835705"
                     autoCapitalize="characters"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono font-bold text-slate-900 outline-none focus:border-primary focus:bg-white shadow-inner uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
                   />

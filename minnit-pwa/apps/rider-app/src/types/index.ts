@@ -152,6 +152,7 @@ export interface RiderProfile {
   isAuthenticated?: boolean;
 
   // Rider ID & Identity
+  id?: string;
   riderId?: string;
   Rider_ID?: string;
   minnit_id?: string;

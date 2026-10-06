@@ -162,20 +162,12 @@ export const ApprovedRiderWelcomeModal: React.FC<ApprovedRiderWelcomeModalProps>
           <div className="w-full space-y-2 pt-1">
             <button
               type="button"
-              onClick={onStartTour}
+              onClick={onClose}
               className="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/30 border border-emerald-400/40 ring-4 ring-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider group"
             >
               <Zap className="w-4 h-4 text-amber-300 fill-amber-300 group-hover:scale-110 transition-transform" />
-              <span>START INTERACTIVE DEMO 🚀</span>
+              <span>EXPLORE COCKPIT 🚀</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full py-2.5 text-slate-400 hover:text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-            >
-              Explore Cockpit directly
             </button>
           </div>
         </div>

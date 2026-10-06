@@ -519,23 +519,50 @@ export async function loginRiderWithRiderId(
       return { error: 'Please enter your 4-digit MPIN.' };
     }
 
-    // Case-insensitive normalization
+    // Case-insensitive normalization & multi-format candidate generation
     const normalizedId = rawInput.toUpperCase();
-    const cleanPhone = rawInput.replace(/[^0-9+]/g, '');
+    const cleanDigits = rawInput.replace(/[^0-9]/g, '');
 
-    // 1. Primary lookup by minnit_id or Rider_ID (case-insensitive)
+    // Allow flexible input: 835705, MR-835705, MR835705, MM0001, 0001, phone, etc.
+    const candidates = new Set<string>();
+    candidates.add(normalizedId);
+
+    if (cleanDigits) {
+      candidates.add(`MR-${cleanDigits}`);
+      candidates.add(`MR${cleanDigits}`);
+      candidates.add(cleanDigits);
+      if (cleanDigits.length <= 4) {
+        candidates.add(`MM${cleanDigits.padStart(4, '0')}`);
+      }
+    }
+    if (normalizedId.startsWith('MR')) {
+      const nums = normalizedId.replace(/[^0-9]/g, '');
+      if (nums) {
+        candidates.add(`MR-${nums}`);
+        candidates.add(nums);
+      }
+    }
+
+    const orClauses: string[] = [];
+    candidates.forEach((c) => {
+      orClauses.push(`minnit_id.ilike.${c}`);
+      orClauses.push(`Rider_ID.ilike.${c}`);
+      orClauses.push(`id.ilike.${c}`);
+    });
+
+    // 1. Primary lookup by minnit_id, Rider_ID, or ID
     let { data, error } = await supabase
       .from('rider_profiles')
       .select('*')
-      .or(`minnit_id.ilike.${normalizedId},Rider_ID.ilike.${normalizedId}`)
+      .or(orClauses.join(','))
       .maybeSingle();
 
-    // 2. Fallback: lookup by phone number (for legacy riders without MM format)
-    if (!data && cleanPhone) {
+    // 2. Fallback: lookup by phone number (if 10+ digits provided)
+    if (!data && cleanDigits.length >= 10) {
       const phoneRes = await supabase
         .from('rider_profiles')
         .select('*')
-        .eq('phone', cleanPhone)
+        .eq('phone', cleanDigits.slice(-10))
         .maybeSingle();
       if (phoneRes.data) {
         data = phoneRes.data;

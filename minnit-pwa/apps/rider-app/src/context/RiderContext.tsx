@@ -528,37 +528,17 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   const [demoCreditedAmount, setDemoCreditedAmount] = useState<number>(0);
 
   const startInteractiveDemo = useCallback(() => {
-    const isApproved =
-      rider.isVerified === true ||
-      String(rider.verificationStatus || '').toUpperCase() === 'APPROVED';
-
-    if (!isApproved) {
-      console.log('Demo order skipped: Rider is not approved yet.');
-      return;
-    }
-    setIsStartRidingOpen(false);
+    // Rider order demo tour removed per user request
     setIsTourOpen(false);
-    setActiveOrder(null);
-    setIncomingOrder(null);
-    setIsOnline(false);
-    setIsDemoMode(true);
-    setDemoStep('zone_check');
-  }, [rider.isVerified, rider.verificationStatus]);
+    setIsDemoMode(false);
+  }, []);
 
   // ─── Live Guided App Tour Flow State ────────────────────────────────────────
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
 
   const startTour = useCallback(() => {
-    const isApproved =
-      rider.isVerified === true ||
-      String(rider.verificationStatus || '').toUpperCase() === 'APPROVED';
-
-    if (isApproved) {
-      startInteractiveDemo();
-    } else {
-      setIsTourOpen(true);
-    }
-  }, [rider.isVerified, rider.verificationStatus, startInteractiveDemo]);
+    setIsTourOpen(true);
+  }, []);
 
   const closeTour = useCallback(() => {
     setIsTourOpen(false);
@@ -647,6 +627,25 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         const parsedRider = JSON.parse(savedRider);
         setRider(parsedRider);
         isUnverified = parsedRider.isVerified === false || parsedRider.verificationStatus === 'PENDING';
+
+        // Asynchronously verify with Supabase DB if this profile actually exists
+        const chkPhone = (parsedRider.phone || '').replace(/[^0-9]/g, '').slice(-10);
+        const chkId = parsedRider.minnit_id || parsedRider.Rider_ID || parsedRider.id || '';
+        if (chkPhone || chkId) {
+          let chk = supabase.from('rider_profiles').select('id, phone');
+          if (chkPhone) {
+            chk = chk.eq('phone', chkPhone);
+          } else {
+            chk = chk.or(`id.eq.${chkId},minnit_id.eq.${chkId},Rider_ID.eq.${chkId}`);
+          }
+          chk.maybeSingle().then(({ data: liveRider, error: chkErr }) => {
+            if (!chkErr && !liveRider) {
+              console.warn('⚠️ [Rider Boot] Stale rider profile found in localStorage, but deleted from Supabase. Purging.');
+              logout();
+            }
+          });
+        }
+
         if (parsedRider.phone && savedToken) {
           validateDeviceSession(parsedRider.phone, savedToken).then((res) => {
             if (!res.isValid) {
@@ -983,6 +982,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
             return updated;
           });
+        } else if (!profileErr && !dbProfile) {
+          // Profile does not exist in Supabase DB (table cleared or rider deleted)
+          console.warn('⚠️ [Rider Profile Sync] Profile does not exist in Supabase DB. Clearing stale local state.');
+          logout();
+          return;
         }
       } catch (err) {
         // Silent catch
@@ -992,19 +996,39 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     // 1. Initial live check immediately
     fetchLiveProfile();
 
-    // 2. Realtime WebSocket subscription for instant admin approval reflection
+    // 2. Realtime WebSocket subscription for instant admin approval reflection and deletion
     const channel = supabase
       .channel(`rider-live-profile-watch-${cleanPhone || cleanRiderId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'rider_profiles',
-          filter: cleanPhone ? `phone=eq.${cleanPhone}` : `id=eq.${cleanRiderId}`,
         },
         (payload: any) => {
+          if (payload.eventType === 'DELETE') {
+            const delId = payload.old?.id;
+            const delPhone = payload.old?.phone;
+            if (
+              delId === cleanRiderId ||
+              delId === rider.riderId ||
+              delId === rider.Rider_ID ||
+              delId === rider.minnit_id ||
+              delPhone === cleanPhone ||
+              delPhone === rider.phone
+            ) {
+              console.warn('⚡ [Rider Realtime] Profile deleted from DB. Logging out.');
+              logout();
+              return;
+            }
+          }
           if (payload.new) {
+            const isTarget =
+              (cleanPhone && payload.new.phone === cleanPhone) ||
+              (cleanRiderId && (payload.new.id === cleanRiderId || payload.new.Rider_ID === cleanRiderId || payload.new.minnit_id === cleanRiderId));
+            if (!isTarget) return;
+
             console.log('⚡ [Rider Realtime] Profile update received from DB:', payload.new);
             const isApproved =
               payload.new.is_verified === true ||
@@ -2032,198 +2056,161 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     addAlert(createBreakEmergencyAlert(reason));
   };
 
-  // ─── Supabase Live Orders Listener ───────────────────────────────────────
+  // ─── Supabase Live Orders Listener & Active Poller ──────────────────────────
 
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+  // Order notification eligibility: customer places order (PLACED/PENDING) or merchant accepts/prepares (ACCEPTED/PREPARING/PACKING/READY)
+  const isEligibleNotificationStatus = (statusStr?: string) => {
+    const s = (statusStr || '').toUpperCase();
+    return s === 'PLACED' || s === 'PENDING' || s === 'ACCEPTED' || s === 'PREPARING' || s === 'PACKING' || s === 'READY' || s === 'READY_FOR_PICKUP';
+  };
 
-    // Order notification eligibility: customer places order (PLACED/PENDING) or merchant accepts/prepares (ACCEPTED/PREPARING/PACKING/READY)
-    const isEligibleNotificationStatus = (statusStr?: string) => {
-      const s = (statusStr || '').toUpperCase();
-      return s === 'PLACED' || s === 'PENDING' || s === 'ACCEPTED' || s === 'PREPARING' || s === 'PACKING' || s === 'READY' || s === 'READY_FOR_PICKUP';
-    };
+  const syncLiveOrders = useCallback(async () => {
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      setActiveOrder(null);
+      setIncomingOrder(null);
+      setOrdersHistory([]);
+      return;
+    }
 
-    const setupLiveOrders = async () => {
-      if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
-        setActiveOrder(null);
-        setIncomingOrder(null);
-        setOrdersHistory([]);
-        return;
-      }
+    try {
+      const dbStores = await fetchStores();
+      const dbOrders = await fetchLiveOrders();
+      const dbRiders = await fetchAllRiders();
+      recalculateDemandStatus(dbOrders, dbRiders);
 
-      try {
-        const dbStores = await fetchStores();
-        const dbOrders = await fetchLiveOrders();
-        const dbRiders = await fetchAllRiders();
-        recalculateDemandStatus(dbOrders, dbRiders);
+      const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10);
 
-        // 1. Sync Active Order with Live Database: Clear stale cache if order is not in DB
-        const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10);
-        setActiveOrder((currentActive) => {
-          if (!currentActive) {
-            // Check if any live order in DB is assigned specifically to this rider
-            const myAssignedOrder = dbOrders.find((o) => {
-              const oRider = (o.rider_id || '').replace(/[^0-9]/g, '').slice(-10);
-              const isMatch = Boolean(
-                (cleanPhone && oRider === cleanPhone) ||
-                (rider.Rider_ID && o.rider_id === rider.Rider_ID) ||
-                (rider.name && o.rider_id === rider.name)
-              );
-              return isMatch && !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase());
-            });
-            if (myAssignedOrder) {
-              const store = dbStores.find((s) => s.id === myAssignedOrder.store_id);
-              return mapDbOrderToAppOrder(myAssignedOrder, store);
-            }
-            return null;
+      // 1. Sync Active Order with Live Database: Clear stale cache if order is not in DB
+      setActiveOrder((currentActive) => {
+        if (!currentActive) {
+          // Check if any live order in DB is assigned specifically to this rider
+          const myAssignedOrder = dbOrders.find((o) => {
+            const oRider = (o.rider_id || '').replace(/[^0-9]/g, '').slice(-10);
+            const isMatch = Boolean(
+              (cleanPhone && oRider === cleanPhone) ||
+              (rider.Rider_ID && o.rider_id === rider.Rider_ID) ||
+              (rider.name && o.rider_id === rider.name)
+            );
+            return isMatch && !['DELIVERED', 'CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase());
+          });
+          if (myAssignedOrder) {
+            const store = dbStores.find((s) => s.id === myAssignedOrder.store_id);
+            return mapDbOrderToAppOrder(myAssignedOrder, store);
           }
+          return null;
+        }
 
-          // If we had a cached active order, check if it still exists in live DB orders
-          const liveMatching = dbOrders.find((o) => o.id === currentActive.id);
-          if (!liveMatching || ['DELIVERED', 'CANCELLED', 'REJECTED'].includes((liveMatching.status || '').toUpperCase())) {
-            try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
-            return null;
-          }
+        const liveMatching = dbOrders.find((o) => o.id === currentActive.id);
+        if (!liveMatching || ['DELIVERED', 'CANCELLED', 'REJECTED'].includes((liveMatching.status || '').toUpperCase())) {
+          try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
+          return null;
+        }
 
-          const store = dbStores.find((s) => s.id === liveMatching.store_id);
-          return mapDbOrderToAppOrder(liveMatching, store);
-        });
+        const store = dbStores.find((s) => s.id === liveMatching.store_id);
+        return mapDbOrderToAppOrder(liveMatching, store);
+      });
 
-        // 2. Sync Incoming Orders (unassigned orders waiting for rider)
-        if (dbOrders && dbOrders.length > 0 && !activeOrderRef.current) {
-          const eligible = dbOrders.find((o) =>
-            isEligibleNotificationStatus(o.status) &&
-            (!o.rider_id || o.rider_id === rider.phone || (cleanPhone && (o.rider_id || '').replace(/[^0-9]/g, '').slice(-10) === cleanPhone)) &&
-            o.rider_assignment !== 'assigned' &&
-            !handledOrderIdsRef.current.has(String(o.id).trim()) &&
-            !soundEngine.isOrderHandled(String(o.id).trim())
-          );
-          if (eligible) {
-            const store = dbStores.find((s) => s.id === eligible.store_id);
-            const mapped = mapDbOrderToAppOrder(eligible, store);
-            if (isBreakActiveRef.current) {
-              showBreakOrderPreview(mapped);
-            } else if (isOnlineRef.current) {
-              setIncomingOrder((prev) => prev || mapped);
-            }
-          } else {
-            setIncomingOrder(null);
+      // 2. Sync Incoming Orders (unassigned orders waiting for rider)
+      if (dbOrders && dbOrders.length > 0 && !activeOrderRef.current) {
+        const eligible = dbOrders.find((o) =>
+          isEligibleNotificationStatus(o.status) &&
+          (!o.rider_id || o.rider_id === rider.phone || (cleanPhone && (o.rider_id || '').replace(/[^0-9]/g, '').slice(-10) === cleanPhone)) &&
+          o.rider_assignment !== 'assigned' &&
+          !handledOrderIdsRef.current.has(String(o.id).trim()) &&
+          !soundEngine.isOrderHandled(String(o.id).trim())
+        );
+
+        if (eligible) {
+          const store = dbStores.find((s) => s.id === eligible.store_id);
+          const mapped = mapDbOrderToAppOrder(eligible, store);
+          if (isBreakActiveRef.current) {
+            showBreakOrderPreview(mapped);
+          } else if (isOnlineRef.current) {
+            setIncomingOrder((prev) => prev || mapped);
           }
         } else {
           setIncomingOrder(null);
         }
-
-        // 3. Sync live delivered statistics & history from Supabase
-        const stats = await fetchRiderDeliveredStats(rider.phone || rider.name);
-        setEarnings((prev) => ({
-          ...prev,
-          today: stats.todayEarnings,
-          todayDeliveries: stats.todayDeliveries,
-          thisWeek: stats.totalEarnings,
-          weekDeliveries: stats.totalDeliveries,
-          thisMonth: stats.totalEarnings,
-          monthDeliveries: stats.totalDeliveries,
-          baseFare: stats.todayEarnings,
-        }));
-        if (stats.orders.length > 0) {
-          setOrdersHistory(stats.orders);
-        }
-
-        unsubscribe = subscribeToOrders(
-          (newOrder) => {
-            if (rider.isVerified === false || rider.verificationStatus === 'PENDING') return;
-            const newId = String(newOrder.id).trim();
-            // Do not notify if rider already has an active order or already handled this order
-            if (activeOrderRef.current || handledOrderIdsRef.current.has(newId) || soundEngine.isOrderHandled(newId)) return;
-            const newRiderClean = (newOrder.rider_id || '').replace(/[^0-9]/g, '').slice(-10);
-            const isAssignedToOther = newOrder.rider_assignment === 'assigned' &&
-              newOrder.rider_id &&
-              newOrder.rider_id !== rider.phone &&
-              newOrder.rider_id !== rider.Rider_ID &&
-              (!cleanPhone || newRiderClean !== cleanPhone);
-            if (isAssignedToOther) return;
-
-            // Trigger incoming acceptance only if status is PREPARING (merchant accepted)
-            if (isEligibleNotificationStatus(newOrder.status)) {
-              const store = dbStores.find((s) => s.id === newOrder.store_id);
-              const mapped = mapDbOrderToAppOrder(newOrder, store);
-
-              // If rider is on break, show temporary 3s read-only gray preview
-              if (isBreakActiveRef.current) {
-                showBreakOrderPreview(mapped);
-                return;
-              }
-
-              if (!isOnlineRef.current) return;
-
-              setIncomingOrder(mapped);
-            }
-          },
-          (updatedOrder) => {
-            if (rider.isVerified === false || rider.verificationStatus === 'PENDING') return;
-            const updatedId = String(updatedOrder.id).trim();
-            const s = (updatedOrder.status || '').toUpperCase();
-
-            // If order completed or cancelled -> clear active order immediately
-            if (['DELIVERED', 'CANCELLED', 'REJECTED'].includes(s)) {
-              setActiveOrder((currentActive) => {
-                if (currentActive && String(currentActive.id).trim() === updatedId) {
-                  try { localStorage.removeItem('snapit_active_order_v2'); } catch (e) {}
-                  return null;
-                }
-                return currentActive;
-              });
-              return;
-            }
-
-            // Realtime Handover Sync for Active Order
-            setActiveOrder((currentActive) => {
-              if (!currentActive || String(currentActive.id).trim() !== updatedId) return currentActive;
-
-              const store = dbStores.find((s) => s.id === updatedOrder.store_id);
-              return mapDbOrderToAppOrder(updatedOrder, store);
-            });
-
-            // Do NOT re-trigger incoming order notification if already active or already handled
-            if (activeOrderRef.current || handledOrderIdsRef.current.has(updatedId) || soundEngine.isOrderHandled(updatedId)) {
-              return;
-            }
-            const updatedRiderClean = (updatedOrder.rider_id || '').replace(/[^0-9]/g, '').slice(-10);
-            const isAssignedToOther = updatedOrder.rider_assignment === 'assigned' &&
-              updatedOrder.rider_id &&
-              updatedOrder.rider_id !== rider.phone &&
-              updatedOrder.rider_id !== rider.Rider_ID &&
-              (!cleanPhone || updatedRiderClean !== cleanPhone);
-            if (isAssignedToOther) return;
-
-            // Trigger notification when merchant accepts and order reaches PREPARING
-            if (isEligibleNotificationStatus(updatedOrder.status)) {
-              const store = dbStores.find((s) => s.id === updatedOrder.store_id);
-              const mapped = mapDbOrderToAppOrder(updatedOrder, store);
-
-              // If rider is on break, show temporary 3s read-only gray preview
-              if (isBreakActiveRef.current) {
-                showBreakOrderPreview(mapped);
-                return;
-              }
-
-              if (!isOnlineRef.current) return;
-
-              setIncomingOrder((prev) => (prev?.id === updatedOrder.id ? mapped : (prev || mapped)));
-            }
-          }
-        );
-      } catch (err) {
-        console.warn('Live order sync error:', err);
+      } else {
+        setIncomingOrder(null);
       }
-    };
 
-    setupLiveOrders();
+      // 3. Sync live delivered statistics & history from Supabase
+      const stats = await fetchRiderDeliveredStats(rider.phone || rider.name);
+      setEarnings((prev) => ({
+        ...prev,
+        today: stats.todayEarnings,
+        todayDeliveries: stats.todayDeliveries,
+        thisWeek: stats.totalEarnings,
+        weekDeliveries: stats.totalDeliveries,
+        thisMonth: stats.totalEarnings,
+        monthDeliveries: stats.totalDeliveries,
+        baseFare: stats.todayEarnings,
+      }));
+      if (stats.orders.length > 0) {
+        setOrdersHistory(stats.orders);
+      }
+    } catch (err) {
+      console.warn('Live order sync error:', err);
+    }
+  }, [rider.phone, rider.Rider_ID, rider.name, rider.isVerified, rider.verificationStatus]);
+
+  // Realtime subscription + lifecycle sync
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    if (rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      return;
+    }
+
+    syncLiveOrders();
+
+    try {
+      unsubscribe = subscribeToOrders(
+        () => {
+          syncLiveOrders();
+        },
+        () => {
+          syncLiveOrders();
+        }
+      );
+    } catch (err) {
+      console.warn('Realtime subscribe error:', err);
+    }
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [rider.isVerified, rider.verificationStatus, rider.phone, syncLiveOrders]);
+
+  // High-frequency polling when online (3s interval guarantees instant order detection)
+  useEffect(() => {
+    if (!isOnline || rider.isVerified === false || rider.verificationStatus === 'PENDING') {
+      return;
+    }
+
+    // Immediate check on going online
+    syncLiveOrders();
+
+    const pollTimer = setInterval(() => {
+      if (isOnlineRef.current && !activeOrderRef.current) {
+        syncLiveOrders();
+      }
+    }, 3000);
+
+    // Instant sync when rider switches back to tab
+    const handleFocus = () => {
+      if (isOnlineRef.current && !activeOrderRef.current) {
+        syncLiveOrders();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(pollTimer);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isOnline, rider.isVerified, rider.verificationStatus, syncLiveOrders]);
 
   // ─── Online Gate ─────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Bike,
   Plus,
@@ -24,6 +24,20 @@ import {
 import { useAdminStore } from "../store/useAdminStore";
 import { AdminRider } from "../types/admin";
 import { Modal } from "../components/common/Modal";
+import { supabase } from "../lib/supabase";
+
+const calculateAge = (dobString?: string | null): number | null => {
+  if (!dobString) return null;
+  const birthDate = new Date(dobString);
+  if (isNaN(birthDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age : null;
+};
 
 export const FleetView: React.FC = () => {
   const {
@@ -49,6 +63,51 @@ export const FleetView: React.FC = () => {
 
   // Review & Verification Modal states
   const [reviewRider, setReviewRider] = useState<AdminRider | null>(null);
+  const [discoveredPassbookUrl, setDiscoveredPassbookUrl] = useState<string | null>(null);
+  const [isCheckingPassbook, setIsCheckingPassbook] = useState(false);
+
+  useEffect(() => {
+    if (!reviewRider) {
+      setDiscoveredPassbookUrl(null);
+      setIsCheckingPassbook(false);
+      return;
+    }
+    const directUrl = reviewRider.bank_passbook_doc_url || reviewRider.passbook_doc_url;
+    if (directUrl) {
+      setDiscoveredPassbookUrl(directUrl);
+      setIsCheckingPassbook(false);
+      return;
+    }
+
+    // If passbook doc url is missing in DB, check Supabase Storage kyc/<phone> for bank_* scan
+    let isMounted = true;
+    const fetchStoragePassbook = async () => {
+      try {
+        setIsCheckingPassbook(true);
+        const phone = reviewRider.phone || reviewRider.id;
+        const { data, error } = await supabase.storage
+          .from("rider-documents")
+          .list(`kyc/${phone}`);
+        if (!error && data && data.length > 0 && isMounted) {
+          const bankFile = data
+            .filter((f) => f.name.toLowerCase().startsWith("bank_") || f.name.toLowerCase().startsWith("passbook_"))
+            .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))[0];
+          if (bankFile) {
+            const publicUrl = `https://satzvkmpatnbxpeiecvg.supabase.co/storage/v1/object/public/rider-documents/kyc/${phone}/${bankFile.name}`;
+            setDiscoveredPassbookUrl(publicUrl);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not check passbook in storage:", err);
+      } finally {
+        if (isMounted) setIsCheckingPassbook(false);
+      }
+    };
+    fetchStoragePassbook();
+    return () => {
+      isMounted = false;
+    };
+  }, [reviewRider]);
   const [rejectingRider, setRejectingRider] = useState<AdminRider | null>(null);
   const [rejectionReason, setRejectionReason] = useState("Documents or details could not be verified.");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -166,7 +225,7 @@ export const FleetView: React.FC = () => {
 
   const handleDeleteRider = async (riderId: string) => {
     const rider = riders.find((r) => r.id === riderId);
-    const label = rider?.name || rider?.Rider_ID || riderId;
+    const label = rider?.name || rider?.minnit_id || rider?.Rider_ID || riderId;
     if (
       window.confirm(
         `Permanently delete "${label}" from the database?\n\nThis cannot be undone. The rider's application, KYC files, and session history will be removed.`
@@ -189,7 +248,7 @@ export const FleetView: React.FC = () => {
 
     if (success) {
       setReviewRider(null);
-      showToast(`Rider ${rider.Rider_ID || rider.name} approved successfully!`);
+      showToast(`Rider ${rider.minnit_id || rider.Rider_ID || rider.name} approved successfully!`);
     } else {
       alert("Failed to approve rider. Please try again.");
     }
@@ -203,7 +262,7 @@ export const FleetView: React.FC = () => {
     setIsProcessing(false);
 
     if (success) {
-      const rejectedId = rejectingRider.Rider_ID || rejectingRider.name;
+      const rejectedId = rejectingRider.minnit_id || rejectingRider.Rider_ID || rejectingRider.name;
       setRejectingRider(null);
       setReviewRider(null);
       showToast(`Rider ${rejectedId} marked as rejected.`);
@@ -421,7 +480,7 @@ export const FleetView: React.FC = () => {
                         </div>
                         <p className="text-xs text-slate-500 font-mono mt-0.5">{rider.phone}</p>
                         <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-300 text-amber-800 rounded-md text-[10px] font-mono font-bold mt-1">
-                          <span>ID: {rider.Rider_ID || rider.id}</span>
+                          <span>ID: {rider.minnit_id || rider.Rider_ID || rider.id}</span>
                         </div>
                       </div>
                     </div>
@@ -452,7 +511,14 @@ export const FleetView: React.FC = () => {
                     {rider.dob && (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">DOB:</span>
-                        <span className="font-mono text-slate-700">{rider.dob}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-slate-700">{rider.dob}</span>
+                          {calculateAge(rider.dob) !== null && (
+                            <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded font-sans text-[10px] font-bold">
+                              {calculateAge(rider.dob)} yrs
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -668,7 +734,7 @@ export const FleetView: React.FC = () => {
                   <div>
                     <h3 className="font-bold text-base text-slate-900">{rider.name}</h3>
                     <p className="text-xs text-slate-500 font-mono">{rider.phone}</p>
-                    <span className="text-[10px] font-mono text-slate-400">ID: {rider.Rider_ID || rider.id}</span>
+                    <span className="text-[10px] font-mono text-slate-400">ID: {rider.minnit_id || rider.Rider_ID || rider.id}</span>
                   </div>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-300">
                     Rejected
@@ -708,7 +774,7 @@ export const FleetView: React.FC = () => {
           isOpen={true}
           onClose={() => setReviewRider(null)}
           title="Rider Registration Review"
-          subtitle={`Rider ID: ${reviewRider.Rider_ID || reviewRider.id} • ${reviewRider.name}`}
+          subtitle={`Rider ID: ${reviewRider.minnit_id || reviewRider.Rider_ID || reviewRider.id} • ${reviewRider.name}`}
           maxWidth="2xl"
         >
           <div className="space-y-5 text-xs text-slate-700">
@@ -760,7 +826,7 @@ export const FleetView: React.FC = () => {
 
                 <div className="pt-1 flex flex-wrap gap-2">
                   <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-lg text-[10px] font-mono font-bold">
-                    Rider ID: {reviewRider.Rider_ID || reviewRider.id}
+                    Rider ID: {reviewRider.minnit_id || reviewRider.Rider_ID || reviewRider.id}
                   </span>
                   <span className="px-2.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10px] font-bold">
                     Zone: {reviewRider.selected_zone_name || "Robertsonpet"}
@@ -784,7 +850,9 @@ export const FleetView: React.FC = () => {
                   : "");
 
               const reviewPassbookUrl =
-                reviewRider.bank_passbook_doc_url || reviewRider.passbook_doc_url;
+                reviewRider.bank_passbook_doc_url ||
+                reviewRider.passbook_doc_url ||
+                discoveredPassbookUrl;
 
               return (
                 <>
@@ -797,9 +865,18 @@ export const FleetView: React.FC = () => {
                       </h4>
 
                       <div className="space-y-1.5 text-[11px]">
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <span className="text-slate-500">Date of Birth (DOB):</span>
-                          <span className="font-semibold text-slate-900 font-mono">{reviewRider.dob || "Not provided"}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-900 font-mono">
+                              {reviewRider.dob || "Not provided"}
+                            </span>
+                            {calculateAge(reviewRider.dob) !== null && (
+                              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded font-sans text-[10px] font-bold">
+                                {calculateAge(reviewRider.dob)} yrs old
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-500">Alternate Contact:</span>
@@ -941,7 +1018,12 @@ export const FleetView: React.FC = () => {
                             )}
                           </div>
 
-                          {reviewPassbookUrl ? (
+                          {isCheckingPassbook ? (
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 pt-1">
+                              <span className="w-2.5 h-2.5 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin shrink-0" />
+                              <span>Checking attached scan...</span>
+                            </div>
+                          ) : reviewPassbookUrl ? (
                             <button
                               type="button"
                               onClick={() => setPreviewDoc({ title: `${reviewRider.name} - Bank Passbook / Cheque`, url: resolveDocUrl(reviewPassbookUrl) })}
@@ -1052,7 +1134,7 @@ export const FleetView: React.FC = () => {
           isOpen={true}
           onClose={() => setRejectingRider(null)}
           title="Reject Rider Application"
-          subtitle={`Provide a notice for ${rejectingRider.name} (${rejectingRider.Rider_ID || rejectingRider.phone})`}
+          subtitle={`Provide a notice for ${rejectingRider.name} (${rejectingRider.minnit_id || rejectingRider.Rider_ID || rejectingRider.phone})`}
           maxWidth="md"
         >
           <div className="space-y-4 text-xs">

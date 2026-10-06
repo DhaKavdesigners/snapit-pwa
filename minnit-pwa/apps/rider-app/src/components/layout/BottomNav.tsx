@@ -51,13 +51,13 @@ export const BottomNav: React.FC = () => {
       active: pathname === '/earnings',
     },
     {
-      label: 'Alerts',
-      id: 'tour-nav-alerts',
-      href: '/alerts',
-      icon: 'notifications',
-      active: pathname.startsWith('/alerts'),
-      badge: unreadAlertsCount > 0 ? (unreadAlertsCount > 9 ? '9+' : `${unreadAlertsCount}`) : undefined,
-      badgeColor: 'bg-red-500',
+      label: 'Rewards',
+      id: 'tour-nav-rewards',
+      href: '/rewards',
+      icon: 'redeem',
+      active: pathname.startsWith('/rewards') || pathname.startsWith('/alerts'),
+      badge: '🎁',
+      badgeColor: 'bg-emerald-600',
     },
   ];
 

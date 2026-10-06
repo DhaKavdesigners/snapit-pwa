@@ -556,6 +556,7 @@ export const ZonesView: React.FC = () => {
     return (
       r.name.toLowerCase().includes(q) ||
       r.phone.includes(q) ||
+      (r.minnit_id && r.minnit_id.toLowerCase().includes(q)) ||
       (r.Rider_ID && r.Rider_ID.toLowerCase().includes(q))
     );
   });
@@ -865,7 +866,7 @@ export const ZonesView: React.FC = () => {
                         <div>
                           <h4 className="font-black text-sm text-slate-900">{rider.name}</h4>
                           <p className="text-xs text-slate-500 font-mono mt-0.5">
-                            ID: {rider.Rider_ID || rider.id}
+                            ID: {rider.minnit_id || rider.Rider_ID || rider.id}
                           </p>
                         </div>
 

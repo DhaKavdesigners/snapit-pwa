@@ -532,12 +532,7 @@ export default function DashboardPage() {
           rider={rider}
           isOpen={showFirstLoginInstructions || showManualGuideModal}
           onClose={handleCompleteFirstLoginInstructions}
-          onStartTour={() => {
-            setShowFirstLoginInstructions(false);
-            setShowManualGuideModal(false);
-            router.push('/');
-            startInteractiveDemo();
-          }}
+          onStartTour={handleCompleteFirstLoginInstructions}
         />
       </div>
     </AppShell>
