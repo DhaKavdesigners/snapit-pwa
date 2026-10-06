@@ -106,7 +106,7 @@ export const ApprovedRiderWelcomeModal: React.FC<ApprovedRiderWelcomeModalProps>
             {/* Momo Speech Greeting */}
             <div className="mt-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 rounded-2xl px-4 py-2 shadow-2xs text-center max-w-[290px]">
               <p className="text-xs font-black text-emerald-950 leading-snug">
-                &ldquo;Welcome to Minnit, {rider.name?.split(' ')[0] || 'Partner'}! 🎉 Let&apos;s do a quick live delivery demo!&rdquo;
+                &ldquo;Welcome to Minnit, {rider.name?.split(' ')[0] || 'Partner'}! 🎉 You are officially certified to start delivering!&rdquo;
               </p>
             </div>
           </div>

@@ -1774,6 +1774,9 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => {
+                  try {
+                    sessionStorage.setItem('minnit_first_login_after_approval', 'true');
+                  } catch {}
                   setLoginRiderId(registeredRiderId || rider.Rider_ID || '');
                   setLoginMpin('');
                   setLoginError('');

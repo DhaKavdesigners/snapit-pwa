@@ -90,14 +90,27 @@ export default function DashboardPage() {
     if (prevIsVerifiedRef.current === false) {
       setShowFirstLoginInstructions(true);
     } 
-    // 2. Fresh app visit as verified rider: check if interactive demo was already completed
+    // 2. Fresh app visit as verified rider: ONLY show if rider was just approved after registration
     else if (prevIsVerifiedRef.current === null) {
-      const isDemoCompleted =
+      const hasSeenApprovalModal =
         typeof window !== 'undefined' &&
-        localStorage.getItem(`minnit_demo_completed_${riderKey}`) === 'true';
+        (localStorage.getItem(`minnit_approval_welcome_seen_${riderKey}`) === 'true' ||
+         localStorage.getItem(`minnit_first_login_instructions_${riderKey}`) === 'true' ||
+         localStorage.getItem(`minnit_rider_instructions_completed_${riderKey}`) === 'true' ||
+         localStorage.getItem(`minnit_demo_completed_${riderKey}`) === 'true' ||
+         Boolean(rider.rider_instructions_completed));
 
-      if (!isDemoCompleted) {
+      const isFirstLoginAfterApproval =
+        typeof window !== 'undefined' &&
+        sessionStorage.getItem('minnit_first_login_after_approval') === 'true';
+
+      if (!hasSeenApprovalModal && isFirstLoginAfterApproval) {
         setShowFirstLoginInstructions(true);
+        try {
+          sessionStorage.removeItem('minnit_first_login_after_approval');
+        } catch {}
+      } else {
+        setShowFirstLoginInstructions(false);
       }
     }
 
@@ -109,9 +122,11 @@ export default function DashboardPage() {
     setShowManualGuideModal(false);
     const riderKey = rider.phone || rider.Rider_ID || rider.riderId || 'default_rider';
     try {
+      localStorage.setItem(`minnit_approval_welcome_seen_${riderKey}`, 'true');
       localStorage.setItem(`minnit_first_login_instructions_${riderKey}`, 'true');
       localStorage.setItem(`minnit_rider_instructions_completed_${riderKey}`, 'true');
-      localStorage.setItem(`minnit_approval_welcome_seen_${riderKey}`, 'true');
+      localStorage.setItem(`minnit_demo_completed_${riderKey}`, 'true');
+      sessionStorage.removeItem('minnit_first_login_after_approval');
     } catch {}
 
     updateRiderProfile({ rider_instructions_completed: true });
