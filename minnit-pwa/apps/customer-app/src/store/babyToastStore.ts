@@ -33,7 +33,7 @@ export const useBabyToastStore = create<BabyToastState>((set) => ({
     set({ visible: true, type, productName });
     dismissTimer = setTimeout(() => {
       set({ visible: false });
-    }, 2400);
+    }, 1600);
   },
   hideToast: () => {
     if (dismissTimer) clearTimeout(dismissTimer);

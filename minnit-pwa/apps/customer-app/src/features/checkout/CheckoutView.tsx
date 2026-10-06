@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
+import { useOrderStore } from '../../store/orderStore';
 import { formatCurrency } from '../../utils/currency';
 import { Button } from '../../components/ui/Button';
 import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
@@ -314,7 +315,9 @@ export const CheckoutView: React.FC = () => {
       
       clearCart();
       setIsSubmitting(false);
-      navigate('/success', { replace: true });
+      // Seamless direct transition to Live Order Tracking (eliminating redundant 2nd success screen)
+      useOrderStore.getState().setTrackerOpen(true, displayId);
+      navigate('/', { replace: true });
     }
   };
 

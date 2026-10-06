@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   X, MapPin, Store as StoreIcon, Package, Check, 
   Bike, Home, Sparkles, Clock, AlertCircle, Phone, 
-  ChefHat, HelpCircle, ArrowRight, CheckCircle2, ShieldCheck, Box, MessageSquare, Star
+  ChefHat, HelpCircle, ArrowRight, CheckCircle2, ShieldCheck, Box, MessageSquare, Star, Lock
 } from 'lucide-react';
 import { useOrderStore, LiveOrder, getActiveOrders } from '../../store/orderStore';
 import { useAuthStore } from '../../store/authStore';
@@ -703,26 +703,47 @@ export const LiveOrderTrackerModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4-Digit Delivery Verification Handshake PIN */}
-                <div className="bg-emerald-500/15 border border-emerald-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-1.5">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    Delivery Handshake PIN
-                  </span>
-                  <div className="flex items-center gap-2.5 my-1">
-                    {deliveryPin.split('').map((digit, i) => (
-                      <div
-                        key={i}
-                        className="w-11 h-13 rounded-xl bg-white text-gray-950 font-mono font-black text-2xl flex items-center justify-center shadow-lg border-2 border-emerald-400"
-                      >
-                        {digit}
-                      </div>
-                    ))}
+                {/* 4-Digit Delivery Verification Handshake PIN (Revealed ONLY when out for delivery) */}
+                {progressState.isOutForDelivery ? (
+                  <div className="bg-emerald-500/15 border border-emerald-400/50 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-1.5 animate-fadeIn">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      Delivery Handshake PIN
+                    </span>
+                    <div className="flex items-center gap-2.5 my-1">
+                      {deliveryPin.split('').map((digit, i) => (
+                        <div
+                          key={i}
+                          className="w-11 h-13 rounded-xl bg-white text-gray-950 font-mono font-black text-2xl flex items-center justify-center shadow-lg border-2 border-emerald-400"
+                        >
+                          {digit}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-emerald-100/90 font-medium">
+                      Share this 4-digit PIN with {riderInfo?.name || currentOrder.rider_name || 'the delivery rider'} upon delivery to complete verification.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-emerald-100/90 font-medium">
-                    Share this 4-digit PIN with {riderInfo?.name || currentOrder.rider_name || 'the delivery rider'} upon delivery to complete verification.
-                  </p>
-                </div>
+                ) : (
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between text-left">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-400 shrink-0">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 block">
+                          Delivery Handshake PIN
+                        </span>
+                        <p className="text-[11px] text-gray-300 font-medium leading-tight">
+                          PIN will be revealed once package is out for delivery 🛵
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-400 bg-white/10 px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0 border border-white/10">
+                      Locked
+                    </span>
+                  </div>
+                )}
               </motion.div>
             )}
 

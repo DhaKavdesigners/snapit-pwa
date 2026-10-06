@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, X } from 'lucide-react';
 import { useBabyToastStore, BabyToastType } from '../../store/babyToastStore';
 
 // ── Girl mascot: Catie (Shopping) ─────────────────────────────────────────────
@@ -76,6 +77,7 @@ const TOAST_CONFIG: Record<
 
 export const BabyToast: React.FC = () => {
   const { visible, type, productName, hideToast } = useBabyToastStore();
+  const navigate = useNavigate();
   const config = type ? TOAST_CONFIG[type] : null;
 
   return (
@@ -83,16 +85,22 @@ export const BabyToast: React.FC = () => {
       {visible && config && (
         <motion.div
           key={type}
-          initial={{ opacity: 0, y: 80, scale: 0.85 }}
+          initial={{ opacity: 0, y: -50, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 60, scale: 0.9 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-          className="fixed bottom-20 left-1/2 z-[200] pointer-events-auto"
+          exit={{ opacity: 0, y: -35, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 440, damping: 28 }}
+          className="fixed top-3 left-1/2 z-[250] pointer-events-auto"
           style={{ x: '-50%', transform: 'translateX(-50%)' }}
         >
-          <div className="flex items-center gap-3 bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] border border-gray-100 pr-4 overflow-hidden max-w-[320px] w-[290px]">
+          <div 
+            onClick={() => {
+              hideToast();
+              navigate('/cart');
+            }}
+            className="flex items-center gap-2.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.16)] border border-emerald-100 pr-2.5 overflow-hidden w-[92vw] max-w-[340px] cursor-pointer active:scale-[0.98] transition-transform select-none"
+          >
             {/* Mascot avatar */}
-            <div className={`w-16 h-16 shrink-0 bg-gradient-to-br ${config.accent} relative overflow-hidden`}>
+            <div className={`w-13 h-13 shrink-0 bg-gradient-to-br ${config.accent} relative overflow-hidden rounded-l-2xl`}>
               <img
                 src={config.img}
                 alt="Minnit mascot"
@@ -100,22 +108,30 @@ export const BabyToast: React.FC = () => {
               />
             </div>
 
-            {/* Text */}
-            <div className="flex-1 py-3 min-w-0">
-              <p className="font-black text-sm text-gray-900 leading-tight">{config.headline}</p>
+            {/* Text & Quick View Bag shortcut */}
+            <div className="flex-1 py-2 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="font-black text-xs text-gray-900 leading-tight">{config.headline}</p>
+                <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-0.5">
+                  View Bag <ArrowRight className="w-2.5 h-2.5" />
+                </span>
+              </div>
               {productName && (
-                <p className="text-[11px] font-bold text-emerald-700 truncate mt-0.5">{productName}</p>
+                <p className="text-[11px] font-bold text-emerald-800 truncate mt-0.5">{productName}</p>
               )}
-              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{config.sub}</p>
+              <p className="text-[9.5px] text-gray-500 mt-0.5 leading-tight truncate">{config.sub}</p>
             </div>
 
             {/* Dismiss */}
             <button
-              onClick={hideToast}
-              className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                hideToast();
+              }}
+              className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
               aria-label="Close notification"
             >
-              <X className="w-3 h-3 text-gray-500" />
+              <X className="w-3.5 h-3.5 text-gray-500" />
             </button>
           </div>
         </motion.div>
