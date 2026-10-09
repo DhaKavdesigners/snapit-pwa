@@ -129,9 +129,8 @@ export const useStores = (context: 'shopping' | 'food') => {
   return useQuery({
     queryKey: ['stores', context],
     queryFn: () => fetchLiveStores(context),
-    staleTime: 0,
-    refetchInterval: 2500,
-    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -139,9 +138,8 @@ export const useAllStores = () => {
   return useQuery({
     queryKey: ['stores', 'all'],
     queryFn: () => fetchLiveStores(),
-    staleTime: 0,
-    refetchInterval: 2500,
-    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -149,9 +147,8 @@ export const useProducts = (context: 'shopping' | 'food', category?: string) => 
   return useQuery({
     queryKey: ['products', context, category],
     queryFn: () => fetchLiveProducts(context, category),
-    staleTime: 0,
-    refetchInterval: 2500,
-    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -159,9 +156,8 @@ export const useAllProducts = () => {
   return useQuery({
     queryKey: ['products', 'all'],
     queryFn: () => fetchLiveProducts(),
-    staleTime: 0,
-    refetchInterval: 2500,
-    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -177,9 +173,8 @@ export const useTrending = (context: 'shopping' | 'food') => {
       });
       return sorted.slice(0, 8);
     },
-    staleTime: 0,
-    refetchInterval: 2500,
-    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -190,9 +185,8 @@ export const useTodaysPicks = () => {
       const liveShopping = await fetchLiveProducts('shopping');
       return liveShopping.filter(p => p.inStock && p.storeIsOpen !== false).slice(0, 5);
     },
-    staleTime: 0,
-    refetchInterval: 2500,
-    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 };
 

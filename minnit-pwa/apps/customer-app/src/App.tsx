@@ -15,10 +15,10 @@ import { SessionGuard } from './components/auth/SessionGuard';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       retry: 1,
-      staleTime: 0,
+      staleTime: 30000,
     },
   },
 });
