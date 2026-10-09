@@ -23,7 +23,7 @@ export const ContextToggle: React.FC = () => {
           <span>Food</span>
         </button>
 
-        {/* Shopping Second */}
+        {/* Groceries Second */}
         <button
           onClick={() => setContext('shopping')}
           className={`relative z-10 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold transition-all duration-300 w-1/2 rounded-full cursor-pointer select-none ${
@@ -31,10 +31,10 @@ export const ContextToggle: React.FC = () => {
               ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
               : 'text-emerald-900/70 hover:text-emerald-900 bg-transparent'
           }`}
-          aria-label="Switch to Shopping"
+          aria-label="Switch to Groceries"
         >
           <ShoppingBag className="w-4 h-4 shrink-0" />
-          <span>Shopping</span>
+          <span>Groceries</span>
         </button>
       </div>
     </div>

@@ -171,24 +171,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
               variant="outline"
               size="sm"
               onClick={() => {
-                const isFirstEverItem = items.length === 0;
-                const isMoreItems = items.length >= 2;
-                const success = addItem(product.id, stock);
-                if (success) {
-                  if (isFoodProduct) {
-                    // Momo (food boy) toasts — smart food name detection
-                    showToast(detectFoodToastType(product.name, isFirstEverItem, isMoreItems), product.name);
-                  } else {
-                    // Catie (shopping girl) toasts
-                    if (isFirstEverItem) {
-                      showToast('item_added_first', product.name);
-                    } else if (isMoreItems) {
-                      showToast('more_item', product.name);
-                    } else {
-                      showToast('item_added', product.name);
-                    }
-                  }
-                }
+                addItem(product.id, stock);
               }}
               aria-label={`Add ${product.name} to cart`}
               className="border-brand text-brand hover:bg-brand hover:text-white w-7 h-7 p-0 rounded-full transition-colors shadow-sm"

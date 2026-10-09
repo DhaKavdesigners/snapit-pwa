@@ -100,7 +100,7 @@ export const BabyToast: React.FC = () => {
             className="flex items-center gap-2.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.16)] border border-emerald-100 pr-2.5 overflow-hidden w-[92vw] max-w-[340px] cursor-pointer active:scale-[0.98] transition-transform select-none"
           >
             {/* Mascot avatar */}
-            <div className={`w-13 h-13 shrink-0 bg-gradient-to-br ${config.accent} relative overflow-hidden rounded-l-2xl`}>
+            <div className={`w-12 h-12 shrink-0 bg-gradient-to-br ${config.accent} relative overflow-hidden rounded-l-2xl`}>
               <img
                 src={config.img}
                 alt="Minnit mascot"

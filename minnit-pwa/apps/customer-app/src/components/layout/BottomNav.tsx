@@ -21,21 +21,27 @@ const BabyCartIcon: React.FC<{ isActive: boolean; cartCount: number; isFood: boo
   isFood,
 }) => {
   const controls = useAnimation();
+  const badgeControls = useAnimation();
   const prevCount = useRef(cartCount);
 
   useEffect(() => {
     if (cartCount > prevCount.current) {
-      (async () => {
-        await controls.start({ scale: 1.35, rotate: -8, transition: { duration: 0.12, ease: 'easeOut' } });
-        await controls.start({ scale: 0.9, rotate: 6, transition: { duration: 0.1 } });
-        await controls.start({ scale: 1.1, rotate: -3, transition: { duration: 0.1 } });
-        await controls.start({ scale: 1, rotate: 0, transition: { duration: 0.15, ease: 'easeInOut' } });
-      })();
+      // Energetic spring bounce & joyful wiggle on Catie/Momo mascot
+      controls.start({
+        scale: [1, 1.35, 0.88, 1.15, 1],
+        rotate: [0, -12, 10, -5, 0],
+        transition: { duration: 0.4, ease: 'easeOut' },
+      });
+      // Punchy pop on the count badge
+      badgeControls.start({
+        scale: [1, 1.6, 0.9, 1.2, 1],
+        transition: { duration: 0.35, ease: 'easeOut' },
+      });
     }
     prevCount.current = cartCount;
-  }, [cartCount, controls]);
+  }, [cartCount, controls, badgeControls]);
 
-  // Catie (girl) for shopping, Momo (boy) for food
+  // Catie (girl) for shopping/groceries, Momo (boy) for food
   const img = isFood
     ? cartCount > 0 ? '/baby/boy_cart_with_item.jpg' : '/baby/boy_cart_empty_food.jpg'
     : cartCount > 0 ? '/baby/cart_with_item.jpg' : '/baby/cart_empty.jpg';
@@ -61,11 +67,14 @@ const BabyCartIcon: React.FC<{ isActive: boolean; cartCount: number; isFood: boo
           className="w-full h-full object-cover object-top"
         />
       </div>
-      {/* Count badge */}
+      {/* Count badge with punchy pop animation */}
       {cartCount > 0 && (
-        <span className="absolute -top-1 -right-1.5 bg-emerald-600 text-white text-[9px] font-black min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full shadow border border-white">
+        <motion.span
+          animate={badgeControls}
+          className="absolute -top-1 -right-1.5 bg-emerald-600 text-white text-[9px] font-black min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full shadow border border-white"
+        >
           {cartCount > 9 ? '9+' : cartCount}
-        </span>
+        </motion.span>
       )}
     </motion.div>
   );

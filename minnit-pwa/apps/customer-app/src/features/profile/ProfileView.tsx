@@ -1179,34 +1179,40 @@ export const ProfileView: React.FC = () => {
 
         {/* ── Hero header card ── */}
         <div className="relative overflow-hidden rounded-3xl mb-5 bg-gradient-to-br from-emerald-600 via-brand to-emerald-800 p-5 shadow-[0_12px_40px_rgba(5,150,105,0.35)]">
-          <div className="absolute -top-8 -right-8 w-36 h-36 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-10 -left-6 w-28 h-28 bg-white/5 rounded-full" />
+          <div className="absolute -top-8 -right-8 w-36 h-36 bg-white/10 rounded-full pointer-events-none" />
+          <div className="absolute -bottom-10 -left-6 w-28 h-28 bg-white/5 rounded-full pointer-events-none" />
 
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="rounded-2xl overflow-hidden border-2 border-white/30 shadow-lg shrink-0" style={{ width: 64, height: 64 }}>
+          {/* Top-Right Customer Tier Badge */}
+          <div className="absolute top-3.5 right-3.5 z-20">
+            {orderCount >= 2 ? (
+              <div className="bg-amber-400/25 backdrop-blur-md text-amber-300 text-[10.5px] px-2.5 py-1 rounded-full font-black border-2 border-amber-400 flex items-center gap-1 shadow-md">
+                <span>⭐</span>
+                <span>Star Customer</span>
+              </div>
+            ) : orderCount === 1 ? (
+              <div className="bg-amber-400/15 backdrop-blur-md text-amber-200 text-[10px] px-2.5 py-1 rounded-full font-bold border-2 border-amber-400 flex items-center gap-1 shadow-xs">
+                <span>Order more for Star Customer</span>
+              </div>
+            ) : (
+              <div className="bg-white/15 backdrop-blur-md text-white/90 text-[10px] px-2.5 py-1 rounded-full font-medium border border-white/25 flex items-center gap-1">
+                <span>Order more for Star Customer</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3.5 relative z-10 pt-2">
+            <div className="rounded-2xl overflow-hidden border-2 border-white/30 shadow-lg shrink-0" style={{ width: 60, height: 60 }}>
               <img src={avatarUrl} alt={formData.name} className="w-full h-full object-cover" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-0.5">Welcome back</p>
-              <h2 className="font-black text-xl text-white truncate leading-tight">{formData.name || 'User'}</h2>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="bg-white/20 backdrop-blur-md text-white border border-white/25 px-2.5 py-0.5 rounded-lg text-xs font-mono font-black tracking-wider shadow-xs">
+            <div className="flex-1 min-w-0 pr-1">
+              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest leading-tight">Welcome back</p>
+              <h2 className="font-black text-xl text-white truncate leading-tight mt-0.5">{formData.name || 'User'}</h2>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <span className="bg-white/20 backdrop-blur-md text-white border border-white/25 px-2.5 py-0.5 rounded-lg text-xs font-mono font-black tracking-wider shadow-xs whitespace-nowrap inline-flex items-center">
                   ID: {displayMinnitId}
                 </span>
               </div>
             </div>
-            {/* Dynamic trust badge */}
-            {isTrusted ? (
-              <div className="shrink-0 bg-amber-400/20 backdrop-blur-md text-amber-200 text-xs px-2.5 py-1 rounded-full font-bold border border-amber-300/40 flex items-center gap-1">
-                <span>⭐</span>
-                Verified Customer
-              </div>
-            ) : (
-              <div className="shrink-0 bg-white/20 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-full font-medium border border-white/30 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                Phone Verified
-              </div>
-            )}
           </div>
         </div>
 

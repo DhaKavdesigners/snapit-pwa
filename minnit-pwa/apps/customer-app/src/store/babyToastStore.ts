@@ -29,6 +29,10 @@ export const useBabyToastStore = create<BabyToastState>((set) => ({
   type: null,
   productName: '',
   showToast: (type, productName = '') => {
+    // Suppress pop-up overlays on cart adding (pure mascot icon bounce on bottom nav)
+    if (type !== 'favourite_saved' && type !== 'food_favourite') {
+      return;
+    }
     if (dismissTimer) clearTimeout(dismissTimer);
     set({ visible: true, type, productName });
     dismissTimer = setTimeout(() => {
