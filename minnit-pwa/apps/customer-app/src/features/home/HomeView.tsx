@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Tag } from 'lucide-react';
+import { Plus, Tag, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SearchBar } from './SearchBar';
 import { ContextToggle } from './ContextToggle';
@@ -12,6 +12,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ProductCard } from '../../components/ProductCard';
 import { useProducts, useTrending, useTodaysPicks, useStores } from '../../api/queries';
 import { useContextStore } from '../../store/contextStore';
+import { useOrderStore, getActiveOrders } from '../../store/orderStore';
 
 export const HomeView: React.FC = () => {
   const { activeContext } = useContextStore();
@@ -21,6 +22,10 @@ export const HomeView: React.FC = () => {
   const { data: trending, isLoading: trendingLoading, error: trendingError, refetch: refetchTrending } = useTrending(activeContext);
   const { data: stores } = useStores(activeContext);
   const { data: todaysPicks, isLoading: todaysLoading, refetch: refetchTodays } = useTodaysPicks();
+  const { orders, setTrackerOpen } = useOrderStore();
+  const activePodOrder = getActiveOrders(orders).find(
+    (o) => (o.payment_method === 'PAY_ON_DELIVERY_QR' || (o.payment_method || '').includes('DELIVERY'))
+  );
 
   const handleRefresh = async () => {
     await Promise.all([
@@ -165,6 +170,29 @@ export const HomeView: React.FC = () => {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="p-4 pt-2 bg-slate-50 min-h-screen">
+        {/* ⚠️ Temporary Top Banner for Active UPI on Delivery Orders */}
+        {activePodOrder && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border border-amber-300/90 rounded-2xl p-2.5 px-3 flex items-center justify-between gap-2.5 shadow-2xs"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <p className="text-[10.5px] text-amber-950 font-bold leading-tight truncate">
+                <span className="text-amber-900 font-black">Security Note:</span> When rider arrives, pay ONLY to official Minnit QR in Rider App — never to personal QR.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTrackerOpen(true, activePodOrder.id)}
+              className="text-[10px] font-black text-amber-900 bg-amber-200/90 hover:bg-amber-300 px-2.5 py-1 rounded-xl shrink-0 cursor-pointer transition-all active:scale-95 shadow-2xs"
+            >
+              Track
+            </button>
+          </motion.div>
+        )}
+
         {/* 1. Search Bar */}
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
 

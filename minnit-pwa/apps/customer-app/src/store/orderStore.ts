@@ -40,6 +40,8 @@ export interface LiveOrder {
   rider_rating?: number;
   rejection_reason?: string;
   recipient_phone?: string;
+  payment_method?: string;
+  payment_status?: string;
 }
 
 interface OrderState {

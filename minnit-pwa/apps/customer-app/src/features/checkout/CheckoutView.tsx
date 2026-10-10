@@ -530,31 +530,19 @@ export const CheckoutView: React.FC = () => {
           </div>
         </section>
 
-        {/* ── 2. Alternate Phone Number (Optional) ── */}
-        <section className="bg-white rounded-3xl p-4 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="font-black text-[11px] uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-emerald-600" />
-              Alternate Phone Number <span className="text-[10px] text-gray-400 font-normal lowercase">(optional)</span>
-            </label>
-          </div>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-600 font-black text-xs font-mono">
-              +91
-            </div>
-            <input
-              type="tel"
-              value={alternatePhone}
-              onChange={(e) => setAlternatePhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
-              placeholder="e.g. 98765 43210 (Rider calls if primary unreachable)"
-              maxLength={10}
-              className="w-full bg-gray-50/80 border-2 border-gray-200 focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 rounded-2xl pl-12 pr-4 py-2.5 text-xs font-semibold text-gray-900 placeholder-gray-400 transition-all outline-none"
-            />
-          </div>
-          <p className="text-[10px] text-gray-500 font-medium px-1">
-            Rider will call this backup number if primary number is unreachable at your doorstep.
-          </p>
-        </section>
+        {/* ── 2. Alternate Phone Number (Simple & Compact) ── */}
+        <div className="bg-white rounded-2xl px-3.5 py-2.5 border border-emerald-100/80 shadow-2xs flex items-center gap-2.5">
+          <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span className="text-[11px] font-mono font-bold text-gray-400 shrink-0">+91</span>
+          <input
+            type="tel"
+            value={alternatePhone}
+            onChange={(e) => setAlternatePhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+            placeholder="Alternate phone number (optional backup)"
+            maxLength={10}
+            className="flex-1 bg-transparent text-xs font-semibold text-gray-900 placeholder-gray-400 outline-none"
+          />
+        </div>
 
         {/* ── 3. Select Delivery Address & Doorstep Pinning ── */}
         <section className="space-y-3">
@@ -822,14 +810,6 @@ export const CheckoutView: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-
-            {/* ⚠️ Critical Security Note Banner */}
-            <div className="bg-amber-50/90 border border-amber-300/90 rounded-2xl p-3 flex items-start gap-2.5 shadow-2xs">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-[10.5px] text-amber-950 font-bold leading-relaxed">
-                <span className="text-amber-900 font-black">⚠️ Important Security Note:</span> Do NOT pay to the rider's personal QR code! Orders will fail verification. Pay ONLY to the official Minnit QR code generated inside the Minnit Rider App.
-              </p>
-            </div>
           </div>
         </section>
 
@@ -1158,14 +1138,6 @@ export const CheckoutView: React.FC = () => {
                     </span>
                   </div>
                 </button>
-
-                {/* ⚠️ Critical Security Note Banner inside Modal */}
-                <div className="bg-amber-50/90 border border-amber-300/90 rounded-2xl p-3 flex items-start gap-2.5 shadow-2xs">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-[10.5px] text-amber-950 font-bold leading-relaxed">
-                    <span className="text-amber-900 font-black">⚠️ Important Security Note:</span> Do NOT pay to the rider's personal QR code! Orders will fail verification. Pay ONLY to the official Minnit QR code generated inside the Minnit Rider App.
-                  </p>
-                </div>
               </div>
 
               {/* Trust Badge */}

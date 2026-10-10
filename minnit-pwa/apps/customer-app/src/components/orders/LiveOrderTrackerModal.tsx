@@ -556,6 +556,16 @@ export const LiveOrderTrackerModal: React.FC = () => {
                   </p>
                 </div>
               </div>
+
+              {/* UPI on Delivery Small Security Indication */}
+              {((currentOrder.payment_method === 'PAY_ON_DELIVERY_QR') || (currentOrder.payment_method || '').includes('DELIVERY')) && status !== 'DELIVERED' && status !== 'CANCELLED' && (
+                <div className="bg-amber-50/95 border border-amber-300/90 rounded-2xl p-2.5 px-3 mt-2 flex items-start gap-2 shadow-2xs">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[10.5px] text-amber-950 font-bold leading-tight">
+                    <span className="font-black text-amber-900">Security Note:</span> Pay ONLY to official Minnit QR code generated inside the Minnit Rider App upon arrival. Do NOT pay to any personal QR code!
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* ── 2. CELEBRATORY PARTY POP TAB (SHOWN WHEN DELIVERED) ── */}
