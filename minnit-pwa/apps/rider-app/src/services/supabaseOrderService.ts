@@ -672,60 +672,194 @@ export async function fetchRiderProfileFromDb(
 }
 
 /** Fetch rider delivered orders and calculate actual live earnings from Supabase */
-export async function fetchRiderDeliveredStats(riderPhoneOrName?: string): Promise<{
+export async function fetchRiderDeliveredStats(...identifiers: (string | undefined)[]): Promise<{
   todayEarnings: number;
   todayDeliveries: number;
+  thisWeekEarnings: number;
+  thisWeekDeliveries: number;
+  thisMonthEarnings: number;
+  thisMonthDeliveries: number;
   totalEarnings: number;
   totalDeliveries: number;
   orders: Order[];
 }> {
   try {
-    if (!riderPhoneOrName) {
-      return { todayEarnings: 0, todayDeliveries: 0, totalEarnings: 0, totalDeliveries: 0, orders: [] };
+    const rawIds = identifiers.filter((id): id is string => Boolean(id && typeof id === 'string' && id.trim()));
+    if (rawIds.length === 0) {
+      return {
+        todayEarnings: 0,
+        todayDeliveries: 0,
+        thisWeekEarnings: 0,
+        thisWeekDeliveries: 0,
+        thisMonthEarnings: 0,
+        thisMonthDeliveries: 0,
+        totalEarnings: 0,
+        totalDeliveries: 0,
+        orders: [],
+      };
     }
-    const cleanId = riderPhoneOrName.replace(/[^0-9]/g, '').slice(-10) || riderPhoneOrName;
 
-    const { data: dbOrders, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('status', 'DELIVERED')
-      .eq('rider_id', cleanId)
-      .order('created_at', { ascending: false });
-
-    if (error || !dbOrders) {
-      return { todayEarnings: 0, todayDeliveries: 0, totalEarnings: 0, totalDeliveries: 0, orders: [] };
+    const candidateSet = new Set<string>();
+    for (const raw of rawIds) {
+      candidateSet.add(raw.trim());
+      const cleanPhone = raw.replace(/[^0-9]/g, '').slice(-10);
+      if (cleanPhone.length >= 10) {
+        candidateSet.add(cleanPhone);
+      }
     }
+    const candidates = Array.from(candidateSet);
+    const orClauses = candidates.map((c) => `rider_id.eq.${c}`).join(',');
 
     const stores = await fetchStores();
-    const mappedOrders = dbOrders.map((o) => {
-      const store = stores.find((s) => s.id === o.store_id);
-      return mapDbOrderToAppOrder(o, store);
+    const dbOrdersList: any[] = [];
+
+    // 1. Try querying rider_order_assignments if table exists
+    try {
+      const { data: assignments, error: aErr } = await supabase
+        .from('rider_order_assignments')
+        .select('*, order:orders(*)')
+        .or(orClauses)
+        .in('status', ['DELIVERED', 'COMPLETED'])
+        .order('created_at', { ascending: false });
+
+      if (!aErr && assignments && assignments.length > 0) {
+        assignments.forEach((a: any) => {
+          const o = a.order || {};
+          const customerOrderId = o.id || a.order_id;
+          const distanceKm = Number(a.distance_km || o.distance_km || 2.4);
+          const earning = Number(a.earning || o.delivery_fee) || calculateDeliveryFee({ distanceKm }).feeRupees;
+          dbOrdersList.push({
+            id: customerOrderId,
+            store_id: o.store_id,
+            created_at: a.delivered_at || a.updated_at || a.created_at || o.created_at,
+            updated_at: a.delivered_at || a.updated_at || o.updated_at,
+            delivered_at: a.delivered_at || a.updated_at,
+            delivery_fee: earning,
+            distance_km: distanceKm,
+            raw_order: o,
+          });
+        });
+      }
+    } catch (assignTableErr) {
+      // Ignore if table does not exist
+    }
+
+    // 2. Query standard orders table
+    try {
+      const { data: dbOrders, error: oErr } = await supabase
+        .from('orders')
+        .select('*')
+        .or(orClauses)
+        .in('status', ['DELIVERED', 'COMPLETED'])
+        .order('created_at', { ascending: false });
+
+      if (!oErr && dbOrders && dbOrders.length > 0) {
+        dbOrders.forEach((o: any) => {
+          if (!dbOrdersList.some((item) => item.id === o.id)) {
+            const distanceKm = Number(o.distance_km || 2.4);
+            const earning = Number(o.delivery_fee || o.earning || o.payout) || calculateDeliveryFee({ distanceKm }).feeRupees;
+            dbOrdersList.push({
+              id: o.id,
+              store_id: o.store_id,
+              created_at: o.delivered_at || o.updated_at || o.created_at,
+              updated_at: o.delivered_at || o.updated_at || o.updated_at,
+              delivered_at: o.delivered_at || o.updated_at,
+              delivery_fee: earning,
+              distance_km: distanceKm,
+              raw_order: o,
+            });
+          }
+        });
+      }
+    } catch (orderQueryErr) {
+      console.warn('Error querying orders table in fetchRiderDeliveredStats:', orderQueryErr);
+    }
+
+    const mappedOrders: Order[] = dbOrdersList.map((item) => {
+      const store = stores.find((s) => s.id === item.store_id);
+      if (item.raw_order && item.raw_order.items) {
+        return mapDbOrderToAppOrder(item.raw_order, store);
+      }
+      const dist = Number(item.distance_km || 2.4);
+      return {
+        id: item.id,
+        orderNumber: formatOrderNumber(item.id),
+        status: 'delivered' as const,
+        restaurantName: store?.name || 'Store Partner',
+        restaurantAddress: store?.address || 'Store Location',
+        deliveryAddress: 'Customer Location',
+        distanceKm: dist,
+        estimatedMinutes: Math.max(5, Math.round(dist * 4 + 5)),
+        otp: '4821',
+        items: [],
+        totalAmount: 0,
+        earnings: item.delivery_fee,
+        timestamp: item.created_at ? new Date(item.created_at).toLocaleTimeString() : 'Delivered',
+        customerName: 'Customer',
+        customerPhone: '',
+        paymentMethod: 'UPI' as const,
+        notes: '',
+      };
     });
 
-    const now = new Date();
-    const todayYear = now.getFullYear();
-    const todayMonth = now.getMonth();
-    const todayDate = now.getDate();
+    const todayBounds = getISTDateBounds('today');
+    const weekBounds = getISTDateBounds('this_week');
+    const monthBounds = getISTDateBounds('this_month');
 
-    const todayOrders = dbOrders.filter((o) => {
-      if (!o.created_at) return false;
-      const d = new Date(o.created_at);
-      return d.getFullYear() === todayYear && d.getMonth() === todayMonth && d.getDate() === todayDate;
+    let todayEarnings = 0;
+    let todayDeliveries = 0;
+    let thisWeekEarnings = 0;
+    let thisWeekDeliveries = 0;
+    let thisMonthEarnings = 0;
+    let thisMonthDeliveries = 0;
+    let totalEarnings = 0;
+
+    dbOrdersList.forEach((item) => {
+      const orderTimeIso = item.created_at || item.updated_at;
+      const orderEarning = Number(item.delivery_fee) || 30;
+      totalEarnings += orderEarning;
+
+      if (orderTimeIso) {
+        const t = new Date(orderTimeIso).getTime();
+        if (todayBounds && t >= new Date(todayBounds.startUtc).getTime() && t <= new Date(todayBounds.endUtc).getTime()) {
+          todayEarnings += orderEarning;
+          todayDeliveries++;
+        }
+        if (weekBounds && t >= new Date(weekBounds.startUtc).getTime() && t <= new Date(weekBounds.endUtc).getTime()) {
+          thisWeekEarnings += orderEarning;
+          thisWeekDeliveries++;
+        }
+        if (monthBounds && t >= new Date(monthBounds.startUtc).getTime() && t <= new Date(monthBounds.endUtc).getTime()) {
+          thisMonthEarnings += orderEarning;
+          thisMonthDeliveries++;
+        }
+      }
     });
-
-    const todayEarnings = todayOrders.reduce((sum, o) => sum + (Number(o.delivery_fee) || 45), 0);
-    const totalEarnings = dbOrders.reduce((sum, o) => sum + (Number(o.delivery_fee) || 45), 0);
 
     return {
       todayEarnings,
-      todayDeliveries: todayOrders.length,
+      todayDeliveries,
+      thisWeekEarnings,
+      thisWeekDeliveries,
+      thisMonthEarnings,
+      thisMonthDeliveries,
       totalEarnings,
-      totalDeliveries: dbOrders.length,
+      totalDeliveries: dbOrdersList.length,
       orders: mappedOrders,
     };
   } catch (err) {
     console.warn('Error fetching rider delivered stats:', err);
-    return { todayEarnings: 0, todayDeliveries: 0, totalEarnings: 0, totalDeliveries: 0, orders: [] };
+    return {
+      todayEarnings: 0,
+      todayDeliveries: 0,
+      thisWeekEarnings: 0,
+      thisWeekDeliveries: 0,
+      thisMonthEarnings: 0,
+      thisMonthDeliveries: 0,
+      totalEarnings: 0,
+      totalDeliveries: 0,
+      orders: [],
+    };
   }
 }
 

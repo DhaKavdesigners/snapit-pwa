@@ -107,7 +107,13 @@ export default function RewardsPage() {
   const { rider, earnings, alerts, markAlertAsRead, updateRiderProfile } = useRider();
 
   const [testBonus, setTestBonus] = useState(0);
-  const completedToday = (earnings?.todayDeliveries ?? 0) + testBonus;
+  const totalCompleted = Math.max(
+    earnings?.todayDeliveries ?? 0,
+    earnings?.weekDeliveries ?? 0,
+    earnings?.monthDeliveries ?? 0,
+    rider.totalDeliveries ?? 0
+  );
+  const completedToday = totalCompleted + testBonus;
 
   const [claimedIds, setClaimedIds] = useState<string[]>([]);
   const [vouchers, setVouchers] = useState<VoucherItem[]>([]);
@@ -231,11 +237,11 @@ export default function RewardsPage() {
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100/90 border border-emerald-300/80 px-2.5 py-1 rounded-full shadow-2xs">
                 <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                Today&apos;s Quest
+                Milestone Quest
               </span>
               <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
-                Resets at midnight
+                Active Cycle
               </span>
             </div>
 

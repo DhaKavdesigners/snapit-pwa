@@ -9,12 +9,9 @@ import {
   triggerHaptic,
   getFormattedDayLabel,
   getActivePreferenceWindow,
-  areAllTodayCutoffsPassed,
 } from '@/services/preferenceService';
 import { PreferenceWindowId } from '@/types';
 import {
-  MapPin,
-  ChevronDown,
   Check,
   CheckCircle2,
   Calendar,
@@ -73,7 +70,6 @@ export default function AvailabilityPage() {
 
   const activeWindowId = getActivePreferenceWindow();
   const activeWindow = AVAILABILITY_WINDOWS.find((w) => w.id === activeWindowId);
-  const allTodayCutoffsPassed = areAllTodayCutoffsPassed();
 
   // Toggle preference for active day
   const handleTogglePreference = (id: PreferenceWindowId) => {
@@ -168,47 +164,17 @@ export default function AvailabilityPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-3.5 pt-1 pb-16 max-w-md mx-auto w-full px-3">
-        {/* ── 1. TOP HEADER & ZONE / GUIDE BUTTONS ── */}
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <div>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-              <span>Availability</span>
-            </h1>
-            <p className="text-[11px] font-bold text-slate-500">
-              Pick your shift windows for order priority.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Momo Quick Guide Button */}
-            <button
-              type="button"
-              onClick={handleOpenMomoGuide}
-              className="flex items-center gap-1 bg-emerald-50 border border-emerald-300 rounded-full px-2.5 py-1.5 text-xs font-black text-emerald-800 shadow-2xs hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
-              title="Learn how shift priority works"
-            >
-              <img
-                src="/images/momo/characters/hi_momo.jpeg"
-                alt="Momo"
-                className="w-4 h-4 rounded-full object-cover"
-              />
-              <span>Guide</span>
-            </button>
-
-            {/* Zone Selector */}
-            <button
-              type="button"
-              onClick={() => setIsZoneModalOpen(true)}
-              className="flex items-center gap-1 bg-white border border-slate-200/90 rounded-full px-2.5 py-1.5 shadow-2xs text-xs font-bold text-slate-700 hover:border-slate-300 hover:bg-slate-50 active:scale-95 transition-all cursor-pointer"
-            >
-              <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span className="truncate max-w-[95px]">{rider.selectedZone || 'Robertsonpet'}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
-            </button>
-          </div>
+        {/* ── 1. TOP HEADER ── */}
+        <div className="pt-1">
+          <h1 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+            <span>Availability</span>
+          </h1>
+          <p className="text-[11px] font-bold text-slate-500">
+            Pick your shift windows for order priority.
+          </p>
         </div>
 
-        {/* ── 2. ACTIVE WINDOW BANNER (Exact UI from screenshot) ── */}
+        {/* ── 2. ACTIVE WINDOW BANNER ── */}
         {activeWindow && (
           <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-3">
@@ -230,7 +196,7 @@ export default function AvailabilityPage() {
           </div>
         )}
 
-        {/* ── 3. DAY SELECTOR (Today vs Tomorrow - Exact UI) ── */}
+        {/* ── 3. DAY SELECTOR (Today vs Tomorrow) ── */}
         <div className="bg-slate-100/90 p-1 rounded-2xl flex items-center gap-1 border border-slate-200/80 shadow-2xs">
           <button
             type="button"
@@ -271,19 +237,41 @@ export default function AvailabilityPage() {
           </button>
         </div>
 
-        {/* ── 4. STATUS PILL (Exact UI from screenshot) ── */}
-        <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-3 flex items-center gap-2 text-xs font-semibold text-emerald-900">
-          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-          <p className="leading-snug">
-            {selectedDay === 'tomorrow'
-              ? 'All windows are open for tomorrow. Lock in your priority.'
-              : allTodayCutoffsPassed
-              ? "Today's window cutoffs have passed. Plan Tomorrow."
-              : 'Lock in your shift windows to get nearby order priority.'}
-          </p>
+        {/* ── 4. MOMO GUIDE ON TOP (Friendly Mascot Card - Visible Without Scrolling) ── */}
+        <div
+          onClick={handleOpenMomoGuide}
+          className="bg-gradient-to-r from-emerald-50 via-white to-teal-50 border border-emerald-200/90 rounded-2xl p-3 shadow-2xs flex items-center justify-between gap-3 cursor-pointer hover:border-emerald-300 active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-emerald-300 shadow-xs shrink-0 bg-white">
+              <img
+                src="/images/momo/characters/hi_momo.jpeg"
+                alt="Momo Guide"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">
+                  Momo Explains
+                </span>
+              </div>
+              <h4 className="text-xs font-black text-slate-900 mt-0.5 truncate">
+                How does shift priority work?
+              </h4>
+              <p className="text-[11px] text-slate-500 font-medium truncate">
+                Tap to see the 8-step visual walkthrough 🚀
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-1 text-xs font-black text-emerald-700 bg-emerald-100 px-2.5 py-1.5 rounded-xl">
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Guide</span>
+          </div>
         </div>
 
-        {/* ── 5. SECTION HEADER (Exact UI from screenshot) ── */}
+        {/* ── 5. SECTION HEADER ── */}
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider">
             {selectedDay === 'today' ? "TODAY'S WINDOWS" : "TOMORROW'S WINDOWS"}
@@ -293,7 +281,7 @@ export default function AvailabilityPage() {
           </span>
         </div>
 
-        {/* ── 6. 4 SHIFT WINDOW CARDS (Exact UI from screenshot) ── */}
+        {/* ── 6. 4 SHIFT WINDOW CARDS ── */}
         <div className="flex flex-col gap-2.5">
           {AVAILABILITY_WINDOWS.map((window) => {
             const isToday = selectedDay === 'today';
@@ -348,40 +336,6 @@ export default function AvailabilityPage() {
               </div>
             );
           })}
-        </div>
-
-        {/* ── 7. MOMO WAITING TO EXPLAIN IT (Friendly Mascot Card) ── */}
-        <div
-          onClick={handleOpenMomoGuide}
-          className="bg-gradient-to-r from-emerald-50 via-white to-teal-50 border border-emerald-200/90 rounded-2xl p-3 shadow-2xs flex items-center justify-between gap-3 cursor-pointer hover:border-emerald-300 active:scale-[0.99] transition-all"
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-emerald-300 shadow-xs shrink-0 bg-white">
-              <img
-                src="/images/momo/characters/hi_momo.jpeg"
-                alt="Momo Guide"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-black uppercase text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">
-                  Momo Explains
-                </span>
-              </div>
-              <h4 className="text-xs font-black text-slate-900 mt-0.5 truncate">
-                How does shift priority work?
-              </h4>
-              <p className="text-[11px] text-slate-500 font-medium truncate">
-                Tap to see the 8-step visual walkthrough 🚀
-              </p>
-            </div>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-1 text-xs font-black text-emerald-700 bg-emerald-100 px-2.5 py-1.5 rounded-xl">
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Guide</span>
-          </div>
         </div>
 
         {/* ── 8. SAVE PREFERENCES BUTTON (Exact UI from screenshot) ── */}

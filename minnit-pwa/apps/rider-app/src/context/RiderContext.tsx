@@ -972,8 +972,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
               vehicleNumber: dbProfile.vehicle_number || prev.vehicleNumber,
               selectedZone: dbProfile.selected_zone_name || prev.selectedZone,
               selectedZoneId: dbProfile.selected_zone_id || prev.selectedZoneId,
-              walletBalance: dbProfile.wallet_balance ?? prev.walletBalance ?? 0,
-              totalDeliveries: dbProfile.total_deliveries ?? prev.totalDeliveries ?? 0,
+              walletBalance: Math.max(Number(dbProfile.wallet_balance) || 0, prev.walletBalance || 0),
+              totalDeliveries: Math.max(Number(dbProfile.total_deliveries) || 0, prev.totalDeliveries || 0),
             };
 
             try {
@@ -1060,8 +1060,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
                 vehicleNumber: payload.new.vehicle_number || prev.vehicleNumber,
                 selectedZone: payload.new.selected_zone_name || prev.selectedZone,
                 selectedZoneId: payload.new.selected_zone_id || prev.selectedZoneId,
-                walletBalance: payload.new.wallet_balance ?? prev.walletBalance ?? 0,
-                totalDeliveries: payload.new.total_deliveries ?? prev.totalDeliveries ?? 0,
+                walletBalance: Math.max(Number(payload.new.wallet_balance) || 0, prev.walletBalance || 0),
+                totalDeliveries: Math.max(Number(payload.new.total_deliveries) || 0, prev.totalDeliveries || 0),
               };
 
               try {
@@ -2136,24 +2136,48 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // 3. Sync live delivered statistics & history from Supabase
-      const stats = await fetchRiderDeliveredStats(rider.phone || rider.name);
+      const stats = await fetchRiderDeliveredStats(
+        rider.phone,
+        rider.Rider_ID,
+        rider.name,
+        rider.id,
+        rider.minnit_id
+      );
       setEarnings((prev) => ({
         ...prev,
         today: stats.todayEarnings,
         todayDeliveries: stats.todayDeliveries,
-        thisWeek: stats.totalEarnings,
-        weekDeliveries: stats.totalDeliveries,
-        thisMonth: stats.totalEarnings,
-        monthDeliveries: stats.totalDeliveries,
+        thisWeek: stats.thisWeekEarnings || stats.totalEarnings,
+        weekDeliveries: stats.thisWeekDeliveries || stats.totalDeliveries,
+        thisMonth: stats.thisMonthEarnings || stats.totalEarnings,
+        monthDeliveries: stats.thisMonthDeliveries || stats.totalDeliveries,
         baseFare: stats.todayEarnings,
       }));
       if (stats.orders.length > 0) {
         setOrdersHistory(stats.orders);
       }
+      if (stats.totalEarnings > 0 || stats.totalDeliveries > 0) {
+        setRider((prev) => {
+          const nextWallet = Math.max(prev.walletBalance || 0, stats.totalEarnings);
+          const nextDeliveries = Math.max(prev.totalDeliveries || 0, stats.totalDeliveries);
+          if (nextWallet === prev.walletBalance && nextDeliveries === prev.totalDeliveries) {
+            return prev;
+          }
+          const updated = {
+            ...prev,
+            walletBalance: nextWallet,
+            totalDeliveries: nextDeliveries,
+          };
+          try {
+            localStorage.setItem('snapit_rider_profile_v2', JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+      }
     } catch (err) {
       console.warn('Live order sync error:', err);
     }
-  }, [rider.phone, rider.Rider_ID, rider.name, rider.isVerified, rider.verificationStatus]);
+  }, [rider.phone, rider.Rider_ID, rider.name, rider.id, rider.minnit_id, rider.isVerified, rider.verificationStatus]);
 
   // Realtime subscription + lifecycle sync
   useEffect(() => {

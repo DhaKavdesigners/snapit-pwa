@@ -26,7 +26,8 @@ export default function EarningsPage() {
 
   // Real synchronized values from logged-in rider profile
   const isPending = (rider.isVerified === false || rider.verificationStatus === 'PENDING') && !isDemoMode && demoCreditedAmount === 0;
-  const realBalance = isPending ? 0 : (rider.walletBalance || 0);
+  const deliveryEarnings = Math.max(earnings.thisWeek || 0, earnings.thisMonth || 0, earnings.today || 0);
+  const realBalance = isPending ? 0 : Math.max(rider.walletBalance || 0, deliveryEarnings);
   const realTodayEarnings = isPending ? 0 : (earnings.today || 0);
   const realWeekEarnings = isPending ? 0 : (earnings.thisWeek || 0);
   const realMonthEarnings = isPending ? 0 : (earnings.thisMonth || 0);
