@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { WalletSummary } from '@/types/earnings';
-import { Wallet, Calendar, History, Sparkles, ShieldCheck, Zap } from 'lucide-react';
-import confetti from 'canvas-confetti';
-import { triggerHaptic } from '@/services/preferenceService';
+import { Wallet, Calendar, History, ShieldCheck, Zap } from 'lucide-react';
 
 interface SnapitWalletSectionProps {
   wallet: WalletSummary;
@@ -15,96 +13,63 @@ export const SnapitWalletSection: React.FC<SnapitWalletSectionProps> = ({
   wallet,
   onOpenPayoutHistory,
 }) => {
-  const handleCelebrate = () => {
-    triggerHaptic([30, 50, 30]);
-    try {
-      confetti({
-        particleCount: 70,
-        spread: 70,
-        origin: { y: 0.4 },
-        colors: ['#10b981', '#34d399', '#f59e0b', '#60a5fa'],
-      });
-    } catch {}
-  };
-
   return (
-    <div className="relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 border border-emerald-500/35 shadow-xl shadow-emerald-950/25 flex flex-col gap-3.5">
-      {/* Ambient background glows */}
-      <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/25 rounded-full blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-10 -left-10 w-36 h-36 bg-teal-400/15 rounded-full blur-2xl" />
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/60 p-5 border-2 border-emerald-200/90 shadow-xs flex flex-col gap-3.5">
+      {/* Subtle background ambient accents (exact match with rewards page milestone quest card) */}
+      <div className="pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full bg-emerald-200/30 blur-xl" />
+      <div className="pointer-events-none absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-teal-200/30 blur-xl" />
 
-      {/* 1. Header: Wallet Label + History & Celebrate Triggers */}
+      {/* 1. Header: Pill Tag & History Trigger */}
       <div className="relative z-10 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 flex items-center justify-center shadow-inner">
-            <Wallet className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300/90 block leading-tight">
-              Minnit Wallet
-            </span>
-            <span className="text-[10px] font-bold text-slate-400">
-              Official Rider Vault
-            </span>
-          </div>
-        </div>
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100/90 border border-emerald-300/80 px-2.5 py-1 rounded-full shadow-2xs">
+          <Wallet className="w-3.5 h-3.5 text-emerald-700" />
+          Minnit Wallet
+        </span>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handleCelebrate}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 border border-amber-400/30 text-[10px] font-black transition-all active:scale-95 cursor-pointer shadow-2xs backdrop-blur-sm"
-            title="Celebrate Your Earnings!"
-          >
-            <Sparkles className="w-3 h-3 text-amber-400 fill-amber-400" />
-            <span>Celebrate 🎉</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenPayoutHistory}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white border border-white/10 text-[10px] font-extrabold transition-all active:scale-95 cursor-pointer shadow-2xs backdrop-blur-sm"
-            title="View Payout History"
-          >
-            <History className="w-3 h-3 text-slate-400" />
-            <span>History</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenPayoutHistory}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 text-[11px] font-bold transition-all active:scale-95 cursor-pointer shadow-2xs"
+          title="View Payout History"
+        >
+          <History className="w-3.5 h-3.5 text-slate-500" />
+          <span>History</span>
+        </button>
       </div>
 
-      {/* 2. Main Wallet Balance (Celebratory Typography) */}
-      <div className="relative z-10 my-0.5" onClick={handleCelebrate} role="button" tabIndex={0}>
+      {/* 2. Main Wallet Balance (Exact Typography & Badge match with Reward Page) */}
+      <div className="relative z-10">
         <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
           Available Payout Balance
         </span>
-        <div className="flex items-baseline gap-1.5 mt-1.5">
-          <span className="text-2xl font-black text-emerald-400 font-mono">₹</span>
-          <h2 className="text-[40px] font-black text-white font-mono tracking-tight leading-none drop-shadow-sm">
+        <div className="flex items-baseline gap-1 mt-1">
+          <span className="text-2xl font-black text-emerald-600 font-mono">₹</span>
+          <h2 className="text-4xl font-black text-slate-900 font-mono tracking-tight leading-none">
             {wallet.balance.toLocaleString()}
           </h2>
-          <span className="ml-2 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+          <span className="ml-auto text-xs font-black text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
             ✦ 100% Verified
           </span>
         </div>
       </div>
 
       {/* 3. Next Automated Payout Pod */}
-      <div className="relative z-10 bg-white/[0.08] backdrop-blur-md rounded-2xl p-3 border border-white/10 flex items-center justify-between gap-3 shadow-inner">
+      <div className="relative z-10 bg-white/95 rounded-2xl p-3 border border-emerald-200/80 shadow-2xs flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
-            <p className="text-xs font-black text-white truncate">
-              Next Payout: <span className="text-emerald-400 font-mono">₹{wallet.nextPayoutAmount.toLocaleString()}</span>
+            <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+            <p className="text-xs font-black text-slate-900 truncate">
+              Next Payout: <span className="text-emerald-700 font-mono font-black">₹{wallet.nextPayoutAmount.toLocaleString()}</span>
             </p>
           </div>
-          <p className="text-[10px] font-medium text-slate-300/80 mt-0.5 truncate">
-            Automated deposit on <strong className="text-emerald-300 font-bold">{wallet.nextPayoutDate}</strong> • 0% Bank Fee
+          <p className="text-[11px] font-semibold text-slate-500 mt-0.5 truncate">
+            Automated deposit on <strong className="text-slate-800">{wallet.nextPayoutDate}</strong> • 0% Bank Fee
           </p>
         </div>
 
-        <div className="w-8 h-8 rounded-xl bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 flex items-center justify-center shrink-0">
-          <Calendar className="w-4 h-4 text-emerald-300" />
+        <div className="w-8 h-8 rounded-xl bg-emerald-100/90 border border-emerald-200 text-emerald-800 flex items-center justify-center shrink-0">
+          <Calendar className="w-4 h-4 text-emerald-700" />
         </div>
       </div>
     </div>

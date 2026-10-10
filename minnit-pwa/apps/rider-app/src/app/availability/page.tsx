@@ -50,6 +50,7 @@ export default function AvailabilityPage() {
   // Selection states
   const [todaySelected, setTodaySelected] = useState<PreferenceWindowId[]>([]);
   const [tomorrowSelected, setTomorrowSelected] = useState<PreferenceWindowId[]>([]);
+  const [currentMinutes, setCurrentMinutes] = useState(getIstMinutesFromMidnight());
 
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,6 +60,15 @@ export default function AvailabilityPage() {
   const [isMomoGuideOpen, setIsMomoGuideOpen] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  // Real-time IST minute tracker (updates every 10 seconds for strict slot closing)
+  useEffect(() => {
+    setCurrentMinutes(getIstMinutesFromMidnight());
+    const interval = setInterval(() => {
+      setCurrentMinutes(getIstMinutesFromMidnight());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Sync initial selections from context
   useEffect(() => {
@@ -70,13 +80,13 @@ export default function AvailabilityPage() {
   }, [tomorrowPreferences]);
 
 
-  // Toggle preference for active day
+  // Toggle preference for active day (Strict Closing: cannot select/toggle once shift start time has arrived)
   const handleTogglePreference = (window: AvailabilityWindow) => {
     const isToday = selectedDay === 'today';
-    const currentMinutes = getIstMinutesFromMidnight();
-    const endMinutes = window.endHour * 60 + window.endMinute;
-    const isExpired = isToday && currentMinutes >= endMinutes;
-    if (isExpired) return;
+    const nowMinutes = getIstMinutesFromMidnight();
+    const startMinutes = window.startHour * 60 + window.startMinute;
+    const isStrictlyClosed = isToday && nowMinutes >= startMinutes;
+    if (isStrictlyClosed) return;
 
     triggerHaptic(10);
     setSavedSuccess(false);
@@ -259,7 +269,7 @@ export default function AvailabilityPage() {
           </span>
         </div>
 
-        {/* ── 5. 4 SHIFT WINDOW CARDS (Expired slots grayed out & unselectable) ── */}
+        {/* ── 5. 4 SHIFT WINDOW CARDS (Strict Closing: started slots locked/expired) ── */}
         <div className="flex flex-col gap-2.5">
           {AVAILABILITY_WINDOWS.map((window) => {
             const isToday = selectedDay === 'today';
@@ -267,19 +277,20 @@ export default function AvailabilityPage() {
               ? todaySelected.includes(window.id)
               : tomorrowSelected.includes(window.id);
 
-            const currentMinutes = getIstMinutesFromMidnight();
             const startMinutes = window.startHour * 60 + window.startMinute;
             const endMinutes = window.endHour * 60 + window.endMinute;
-            const isExpired = isToday && currentMinutes >= endMinutes;
+            const isStrictlyClosed = isToday && currentMinutes >= startMinutes;
             const isActiveNow = isToday && currentMinutes >= startMinutes && currentMinutes < endMinutes;
 
             return (
               <div
                 key={window.id}
-                onClick={() => !isExpired && handleTogglePreference(window)}
+                onClick={() => !isStrictlyClosed && handleTogglePreference(window)}
                 className={`rounded-2xl p-3.5 border-2 transition-all duration-150 select-none flex items-center justify-between gap-3 ${
-                  isExpired
-                    ? 'bg-slate-100/70 border-slate-200/80 text-slate-400 opacity-60 cursor-not-allowed'
+                  isStrictlyClosed
+                    ? isSelected
+                      ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950 cursor-not-allowed'
+                      : 'bg-slate-100/70 border-slate-200/80 text-slate-400 opacity-60 cursor-not-allowed'
                     : isSelected
                     ? 'bg-emerald-50/50 border-emerald-500 shadow-2xs cursor-pointer active:scale-[0.99]'
                     : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs cursor-pointer active:scale-[0.99]'
@@ -289,7 +300,7 @@ export default function AvailabilityPage() {
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl transition-colors ${
-                      isExpired
+                      isStrictlyClosed && !isSelected
                         ? 'bg-slate-200/80 text-slate-400 grayscale'
                         : isSelected
                         ? 'bg-emerald-600 text-white shadow-xs'
@@ -301,28 +312,43 @@ export default function AvailabilityPage() {
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className={`font-black text-sm leading-tight ${isExpired ? 'text-slate-400' : 'text-slate-900'}`}>
+                      <h4
+                        className={`font-black text-sm leading-tight ${
+                          isStrictlyClosed && !isSelected ? 'text-slate-400' : 'text-slate-900'
+                        }`}
+                      >
                         {window.label}
                       </h4>
-                      {isActiveNow && (
+                      {isActiveNow && isSelected && (
                         <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 tracking-wider">
                           Active Now
                         </span>
                       )}
                     </div>
-                    <p className={`font-mono text-xs mt-0.5 ${isExpired ? 'text-slate-400' : 'font-bold text-slate-600'}`}>
+                    <p
+                      className={`font-mono text-xs mt-0.5 ${
+                        isStrictlyClosed && !isSelected ? 'text-slate-400' : 'font-bold text-slate-600'
+                      }`}
+                    >
                       {window.timeRange}
                     </p>
                   </div>
                 </div>
 
-                {/* Right: Expired Lock Badge OR Select Checkmark */}
+                {/* Right: Expired Lock Badge OR Locked Badge OR Select Checkmark */}
                 <div className="shrink-0">
-                  {isExpired ? (
-                    <div className="flex items-center gap-1 bg-slate-200/90 text-slate-500 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                      <Lock className="w-3 h-3 text-slate-400" />
-                      <span>Expired</span>
-                    </div>
+                  {isStrictlyClosed ? (
+                    isSelected ? (
+                      <div className="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-200">
+                        <Lock className="w-3 h-3 text-emerald-700" />
+                        <span>Locked</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 bg-slate-200/90 text-slate-500 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        <Lock className="w-3 h-3 text-slate-400" />
+                        <span>Expired</span>
+                      </div>
+                    )
                   ) : (
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
@@ -340,39 +366,65 @@ export default function AvailabilityPage() {
           })}
         </div>
 
-        {/* ── 8. SAVE PREFERENCES BUTTON (Exact UI from screenshot) ── */}
+        {/* ── 8. SAVE PREFERENCES BUTTON (Adapts when today's windows are all closed) ── */}
         <div className="pt-1">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`w-full py-4 px-6 rounded-full font-black text-sm tracking-wide shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border ${
-              savedSuccess
-                ? 'bg-emerald-700 border-emerald-600 text-white shadow-emerald-700/30'
-                : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500/30 text-white shadow-emerald-600/30'
-            }`}
-          >
-            {isSaving ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Saving Preferences...</span>
-              </>
-            ) : savedSuccess ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-white" />
-                <span>Preferences Saved!</span>
-              </>
+          {selectedDay === 'today' &&
+          AVAILABILITY_WINDOWS.every((w) => currentMinutes >= w.startHour * 60 + w.startMinute) ? (
+            todaySelected.length > 0 ? (
+              <button
+                type="button"
+                disabled
+                className="w-full py-4 px-6 rounded-full font-black text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2 border bg-emerald-700/90 border-emerald-600 text-white cursor-not-allowed opacity-90"
+              >
+                <Lock className="w-4 h-4 text-white" />
+                <span>Today's Shifts Locked In</span>
+              </button>
             ) : (
-              <>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic(10);
+                  setSelectedDay('tomorrow');
+                }}
+                className="w-full py-4 px-6 rounded-full font-black text-sm tracking-wide shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border bg-emerald-600 hover:bg-emerald-500 border-emerald-500/30 text-white shadow-emerald-600/30"
+              >
                 <Sparkles className="w-4 h-4 text-emerald-200" />
-                <span>
-                  {selectedDay === 'today'
-                    ? "Save Today's Preferences"
-                    : "Save Tomorrow's Preferences"}
-                </span>
-              </>
-            )}
-          </button>
+                <span>Today Closed • Plan Tomorrow's Shifts →</span>
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`w-full py-4 px-6 rounded-full font-black text-sm tracking-wide shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border ${
+                savedSuccess
+                  ? 'bg-emerald-700 border-emerald-600 text-white shadow-emerald-700/30'
+                  : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500/30 text-white shadow-emerald-600/30'
+              }`}
+            >
+              {isSaving ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Saving Preferences...</span>
+                </>
+              ) : savedSuccess ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                  <span>Preferences Saved!</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-emerald-200" />
+                  <span>
+                    {selectedDay === 'today'
+                      ? "Save Today's Preferences"
+                      : "Save Tomorrow's Preferences"}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* ── 9. ZONE SELECTION MODAL ── */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/AppShell';
 import { SnapitWalletSection } from '@/components/earnings/SnapitWalletSection';
@@ -15,10 +15,13 @@ import {
   MONTHLY_PAYOUTS,
 } from '@/services/earningsData';
 import { formatOrderNumber } from '@/utils/orderUtils';
-import { Sparkles, Store, ArrowRight, Landmark } from 'lucide-react';
+import { triggerHaptic } from '@/services/preferenceService';
+import confetti from 'canvas-confetti';
+import { Sparkles, Store, ArrowRight, Landmark, PartyPopper, X } from 'lucide-react';
 
 export default function EarningsPage() {
   const { rider, earnings, isDemoMode, demoCreditedAmount, ordersHistory } = useRider();
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
 
   const handleScrollToHistory = () => {
     const el = document.getElementById('payout-history');
@@ -34,6 +37,25 @@ export default function EarningsPage() {
   const realTodayEarnings = isPending ? 0 : (earnings.today || 0);
   const realWeekEarnings = isPending ? 0 : (earnings.thisWeek || 0);
   const realMonthEarnings = isPending ? 0 : (earnings.thisMonth || 0);
+
+  // Automatic celebration popup on page open whenever rider has earned amount
+  useEffect(() => {
+    if (realBalance > 0) {
+      const timer = setTimeout(() => {
+        setShowCelebrationModal(true);
+        triggerHaptic([30, 60, 30]);
+        try {
+          confetti({
+            particleCount: 90,
+            spread: 80,
+            origin: { y: 0.45 },
+            colors: ['#10b981', '#059669', '#34d399', '#f59e0b', '#6366f1'],
+          });
+        } catch {}
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [realBalance]);
 
   // Synchronized Wallet Data
   const walletData = useMemo(() => ({
@@ -82,7 +104,7 @@ export default function EarningsPage() {
           </div>
         </div>
 
-        {/* ── 1. MINNIT WALLET CARD (Glowing Celebratory Emerald Mesh) ── */}
+        {/* ── 1. MINNIT WALLET CARD (Fresh Mint/Emerald Reward Theme) ── */}
         <div id="tour-today-earnings" className="flex flex-col gap-3.5">
           <SnapitWalletSection
             wallet={walletData}
@@ -187,6 +209,57 @@ export default function EarningsPage() {
           monthlyPayouts={MONTHLY_PAYOUTS}
         />
       </div>
+
+      {/* ── AUTOMATIC CELEBRATION MODAL ON EARNINGS PAGE ── */}
+      {showCelebrationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-br from-emerald-50/95 via-white to-teal-50/90 p-6 border-2 border-emerald-300 shadow-2xl text-center flex flex-col items-center gap-3.5 animate-scale-up">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowCelebrationModal(false)}
+              className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Celebratory Icon */}
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 text-3xl">
+              <PartyPopper className="w-8 h-8 text-white" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200">
+                🎉 Earnings Celebration
+              </span>
+              <div className="flex items-baseline justify-center gap-1 mt-2">
+                <span className="text-2xl font-black text-emerald-600 font-mono">₹</span>
+                <span className="text-4xl font-black text-slate-900 font-mono tracking-tight leading-none">
+                  {realBalance}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-slate-700 mt-1">
+                Credited & Ready in Your Wallet!
+              </p>
+              <p className="text-[11px] font-medium text-slate-500 max-w-[250px] mx-auto">
+                Every delivery pays off! Keep up the great work and claim your milestone rewards.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCelebrationModal(false);
+                triggerHaptic(10);
+              }}
+              className="w-full mt-1 py-3 px-5 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md shadow-emerald-600/30 hover:from-emerald-700 hover:to-teal-700 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Keep Riding & Earning 🚀</span>
+            </button>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
