@@ -319,11 +319,11 @@ export const CheckoutView: React.FC = () => {
         isFood: isFoodOrder,
       });
       
+      orderPlacedRef.current = true;
       clearCart();
       setIsSubmitting(false);
-      // Seamless direct transition to Live Order Tracking (eliminating redundant 2nd success screen)
-      useOrderStore.getState().setTrackerOpen(true, displayId);
-      navigate('/', { replace: true });
+      // Celebratory Order Placed screen (with audio chime, confetti, arrival time & live tracking CTA)
+      navigate('/success', { replace: true });
     }
   };
 
@@ -434,6 +434,11 @@ export const CheckoutView: React.FC = () => {
     setIsAddressModalOpen(false);
   };
 
+  const handleSelectAndConfirmAddress = (addressId: 'registered' | 'college' | 'new') => {
+    setSelectedAddressId(addressId);
+    setIsAddressModalOpen(false);
+  };
+
   React.useEffect(() => {
     if (items.length === 0 && !orderPlacedRef.current) {
       navigate('/cart', { replace: true });
@@ -465,47 +470,36 @@ export const CheckoutView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto relative min-h-screen bg-gradient-to-b from-emerald-50/70 via-slate-50 to-emerald-50/40 flex flex-col pb-36 shadow-2xl overflow-x-hidden">
+    <div className="max-w-md mx-auto relative min-h-screen bg-[#F6F8F7] flex flex-col pb-36 shadow-2xl overflow-x-hidden">
 
-      {/* ── High-Focus Secure Green Header (Transforms Out-Of-Theme For Customer Focus) ── */}
-      <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-emerald-900 text-white px-4 py-3.5 sticky top-0 z-30 shadow-xl border-b border-emerald-500/30">
+      {/* ── Professional Unified Fintech Header ── */}
+      <div className="bg-white/95 backdrop-blur-md px-4 py-3 sticky top-0 z-30 shadow-xs border-b border-slate-200/70">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => navigate(-1)} 
-              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white flex items-center justify-center cursor-pointer border border-white/10 shadow-xs"
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all text-slate-700 flex items-center justify-center cursor-pointer border border-slate-200/60 shadow-2xs"
               aria-label="Back"
             >
-              <ChevronLeft className="w-5 h-5 text-white" />
+              <ChevronLeft className="w-5 h-5 text-slate-700" />
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-black text-xl text-white tracking-tight">Checkout</h1>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <h1 className="font-black text-lg text-slate-900 tracking-tight">Checkout</h1>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
-              <p className="text-[10px] text-emerald-300 font-bold flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              <p className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-600" />
                 Direct Local Store Delivery
               </p>
             </div>
           </div>
 
-          <div className="bg-emerald-400/20 text-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-400/40 flex items-center gap-1.5 shadow-sm">
-            <Lock className="w-3 h-3 text-emerald-300" />
-            <span>Secured Pay</span>
+          <div className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-200/90 flex items-center gap-1.5 shadow-2xs">
+            <Lock className="w-3 h-3 text-emerald-600" />
+            <span>100% Secured</span>
           </div>
         </div>
-      </div>
-
-      {/* 🔒 Security Mode Color Transition Banner (Attracts Customer Focus) */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-4 py-2 flex items-center justify-between text-xs font-black shadow-md">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-200 animate-pulse" />
-          <span className="tracking-wide">🔒 100% Bank Grade Encrypted Checkout</span>
-        </div>
-        <span className="text-[9.5px] font-black bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs">
-          Safe Pay
-        </span>
       </div>
 
       <div className="p-4 flex flex-col gap-5 overflow-y-auto">
@@ -884,8 +878,8 @@ export const CheckoutView: React.FC = () => {
                   
                   {/* Registered Address */}
                   <label 
-                    className={`flex items-start gap-3 bg-white p-4 rounded-2xl border shadow-sm cursor-pointer relative overflow-hidden ${selectedAddressId === 'registered' ? 'border-brand ring-2 ring-brand/20' : 'border-gray-200'}`}
-                    onClick={() => setSelectedAddressId('registered')}
+                    className={`flex items-start gap-3 bg-white p-4 rounded-2xl border shadow-sm cursor-pointer relative overflow-hidden transition-all ${selectedAddressId === 'registered' ? 'border-brand ring-2 ring-brand/20 bg-emerald-50/20' : 'border-gray-200 hover:border-emerald-200'}`}
+                    onClick={() => handleSelectAndConfirmAddress('registered')}
                   >
                     {selectedAddressId === 'registered' && <div className="absolute top-0 left-0 w-1.5 h-full bg-brand" />}
                     <input type="radio" name="address" className="mt-1" checked={selectedAddressId === 'registered'} readOnly />
@@ -902,8 +896,8 @@ export const CheckoutView: React.FC = () => {
 
                   {/* College Address */}
                   <label 
-                    className={`flex items-start gap-3 bg-white p-4 rounded-2xl border cursor-pointer relative overflow-hidden ${selectedAddressId === 'college' ? 'border-brand ring-2 ring-brand/20' : 'border-gray-200'}`}
-                    onClick={() => setSelectedAddressId('college')}
+                    className={`flex items-start gap-3 bg-white p-4 rounded-2xl border shadow-sm cursor-pointer relative overflow-hidden transition-all ${selectedAddressId === 'college' ? 'border-brand ring-2 ring-brand/20 bg-emerald-50/20' : 'border-gray-200 hover:border-emerald-200'}`}
+                    onClick={() => handleSelectAndConfirmAddress('college')}
                   >
                     {selectedAddressId === 'college' && <div className="absolute top-0 left-0 w-1.5 h-full bg-brand" />}
                     <input type="radio" name="address" className="mt-1" checked={selectedAddressId === 'college'} readOnly />
@@ -919,8 +913,8 @@ export const CheckoutView: React.FC = () => {
                   
                   {newLine1.trim().length > 0 && (
                     <label 
-                      className={`flex items-start gap-3 bg-white p-4 rounded-2xl border cursor-pointer relative overflow-hidden ${selectedAddressId === 'new' ? 'border-brand ring-2 ring-brand/20' : 'border-gray-200'}`}
-                      onClick={() => setSelectedAddressId('new')}
+                      className={`flex items-start gap-3 bg-white p-4 rounded-2xl border shadow-sm cursor-pointer relative overflow-hidden transition-all ${selectedAddressId === 'new' ? 'border-brand ring-2 ring-brand/20 bg-emerald-50/20' : 'border-gray-200 hover:border-emerald-200'}`}
+                      onClick={() => handleSelectAndConfirmAddress('new')}
                     >
                       {selectedAddressId === 'new' && <div className="absolute top-0 left-0 w-1.5 h-full bg-brand" />}
                       <input type="radio" name="address" className="mt-1" checked={selectedAddressId === 'new'} readOnly />
@@ -935,11 +929,21 @@ export const CheckoutView: React.FC = () => {
                     </label>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  {/* Confirm & Deliver Here Button */}
+                  <button 
+                    type="button"
+                    onClick={() => setIsAddressModalOpen(false)}
+                    className="w-full mt-2 py-3.5 bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white font-black text-xs rounded-2xl shadow-md uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    <span>Confirm & Deliver Here</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100">
                     <button 
                       type="button"
                       onClick={() => setIsAddingNew(true)}
-                      className="border-2 border-dashed border-emerald-300 bg-emerald-50/60 text-emerald-800 font-black py-3.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-emerald-50 active:scale-95 transition-all text-xs uppercase tracking-wider"
+                      className="border-2 border-dashed border-emerald-300 bg-emerald-50/60 text-emerald-800 font-black py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-emerald-50 active:scale-95 transition-all text-xs uppercase tracking-wider"
                     >
                       <MapPin className="w-4 h-4 text-brand shrink-0" />
                       <span>Add Address</span>
@@ -947,7 +951,7 @@ export const CheckoutView: React.FC = () => {
                     <button 
                       type="button"
                       onClick={() => setIsMapModalOpen(true)}
-                      className="bg-gradient-to-r from-emerald-600 to-brand text-white font-black py-3.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all text-xs uppercase tracking-wider"
+                      className="bg-gradient-to-r from-emerald-600 to-brand text-white font-black py-3 px-2 rounded-2xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all text-xs uppercase tracking-wider"
                     >
                       <MapPin className="w-4 h-4 text-white shrink-0" />
                       <span>{pinnedCoords ? 'Relocate Pin' : 'Pin on Map'}</span>
