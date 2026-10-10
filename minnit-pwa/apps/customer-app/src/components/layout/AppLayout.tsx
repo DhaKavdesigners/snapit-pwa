@@ -5,6 +5,7 @@ import { BottomNav } from './BottomNav';
 import { FloatingRiderBubble } from '../orders/FloatingRiderBubble';
 import { LiveOrderTrackerModal } from '../orders/LiveOrderTrackerModal';
 import { BabyToast } from '../ui/BabyToast';
+import { FlyToCartOverlay } from '../ui/FlyToCartOverlay';
 import { useOrderStore } from '../../store/orderStore';
 import { useAuthStore } from '../../store/authStore';
 
@@ -61,8 +62,8 @@ export const AppLayout: React.FC = () => {
       {/* Unique Roadmap Delivery Track Modal Sheet (Only for authenticated user) */}
       {isLoggedIn && <LiveOrderTrackerModal />}
 
-      {/* Global Baby Mascot Toast */}
-      <BabyToast />
+      {/* Fly-to-Cart Parabolic Drop Animation */}
+      <FlyToCartOverlay />
 
       <BottomNav />
     </div>

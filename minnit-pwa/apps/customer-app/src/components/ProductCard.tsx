@@ -4,6 +4,7 @@ import { formatCurrency } from '../utils/currency';
 import { useCartStore } from '../store/cartStore';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useBabyToastStore, detectFoodToastType } from '../store/babyToastStore';
+import { useFlyToCartStore } from '../store/flyToCartStore';
 import { useContextStore } from '../store/contextStore';
 import { Plus, Minus, Heart } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -17,6 +18,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = false }) => {
   const { items, addItem, updateQuantity } = useCartStore();
+  const { triggerFly } = useFlyToCartStore();
   const { isFavorite, toggleFavorite } = useFavoritesStore();
   const { showToast } = useBabyToastStore();
   const { activeContext } = useContextStore();
@@ -151,8 +153,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
               </button>
               <span className="text-[11px] font-bold w-3 text-center">{quantity}</span>
               <button
-                onClick={() => {
+                onClick={(e) => {
                   if (!isReachedMax) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    triggerFly({
+                      startX: rect.left + rect.width / 2,
+                      startY: rect.top + rect.height / 2,
+                      imageUrl: imgSrc || product.imageUrl,
+                      isFood: isFoodProduct,
+                    });
                     updateQuantity(product.id, quantity + 1, stock);
                   }
                 }}
@@ -170,7 +179,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, fullWidth = f
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                triggerFly({
+                  startX: rect.left + rect.width / 2,
+                  startY: rect.top + rect.height / 2,
+                  imageUrl: imgSrc || product.imageUrl,
+                  isFood: isFoodProduct,
+                });
                 addItem(product.id, stock);
               }}
               aria-label={`Add ${product.name} to cart`}

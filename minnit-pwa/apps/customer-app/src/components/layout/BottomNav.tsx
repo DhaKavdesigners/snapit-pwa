@@ -185,7 +185,9 @@ export const BottomNav: React.FC = () => {
             >
               {/* Cart tab: Catie (shopping) or Momo (food) baby mascot */}
               {item.path === '/cart' ? (
-                <BabyCartIcon isActive={isActive} cartCount={cartItemsCount} isFood={isFoodMode} />
+                <div id="bottom-nav-cart-target">
+                  <BabyCartIcon isActive={isActive} cartCount={cartItemsCount} isFood={isFoodMode} />
+                </div>
               ) : (
                 /* All other tabs: standard circular pill icon */
                 <div
