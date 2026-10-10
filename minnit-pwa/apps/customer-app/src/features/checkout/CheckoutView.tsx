@@ -465,30 +465,47 @@ export const CheckoutView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto relative min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col pb-32 shadow-2xl overflow-x-hidden">
+    <div className="max-w-md mx-auto relative min-h-screen bg-gradient-to-b from-emerald-50/70 via-slate-50 to-emerald-50/40 flex flex-col pb-36 shadow-2xl overflow-x-hidden">
 
-      {/* ── Header ── */}
-      <div className="bg-white/90 backdrop-blur-xl px-4 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-sm border-b border-emerald-100/80">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="w-10 h-10 rounded-full bg-gray-100/80 flex items-center justify-center hover:bg-emerald-50 active:scale-95 transition-all text-gray-700"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div>
-            <h1 className="font-black text-xl text-text-primary tracking-tight">Checkout</h1>
-            <p className="text-[10px] text-text-secondary font-bold flex items-center gap-1 text-emerald-700">
-              <Sparkles className="w-3 h-3 text-emerald-500" />
-              Direct Local Delivery
-            </p>
+      {/* ── High-Focus Secure Green Header (Transforms Out-Of-Theme For Customer Focus) ── */}
+      <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-emerald-900 text-white px-4 py-3.5 sticky top-0 z-30 shadow-xl border-b border-emerald-500/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white flex items-center justify-center cursor-pointer border border-white/10 shadow-xs"
+              aria-label="Back"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-black text-xl text-white tracking-tight">Checkout</h1>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+              <p className="text-[10px] text-emerald-300 font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                Direct Local Store Delivery
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-emerald-400/20 text-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-400/40 flex items-center gap-1.5 shadow-sm">
+            <Lock className="w-3 h-3 text-emerald-300" />
+            <span>Secured Pay</span>
           </div>
         </div>
+      </div>
 
-        <div className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          Secured
+      {/* 🔒 Security Mode Color Transition Banner (Attracts Customer Focus) */}
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-4 py-2 flex items-center justify-between text-xs font-black shadow-md">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-200 animate-pulse" />
+          <span className="tracking-wide">🔒 100% Bank Grade Encrypted Checkout</span>
         </div>
+        <span className="text-[9.5px] font-black bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs">
+          Safe Pay
+        </span>
       </div>
 
       <div className="p-4 flex flex-col gap-5 overflow-y-auto">
@@ -628,7 +645,7 @@ export const CheckoutView: React.FC = () => {
                 onClick={() => setIsAddressModalOpen(true)}
                 className="mt-3 text-white bg-brand font-black text-xs px-4 py-2 rounded-xl shadow-md uppercase tracking-wider"
               >
-                + Add Address
+                Add Address
               </button>
             </div>
           )}
@@ -708,8 +725,8 @@ export const CheckoutView: React.FC = () => {
               onClick={() => setIsAddressModalOpen(true)}
               className="bg-white border-2 border-emerald-200 text-emerald-800 font-black py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs hover:bg-emerald-50 active:scale-95 transition-all shadow-xs"
             >
-              <Plus className="w-4 h-4 text-brand" />
-              <span>+ Add Address</span>
+              <MapPin className="w-4 h-4 text-brand" />
+              <span>Add Address</span>
             </button>
           </div>
 
@@ -924,7 +941,7 @@ export const CheckoutView: React.FC = () => {
                       onClick={() => setIsAddingNew(true)}
                       className="border-2 border-dashed border-emerald-300 bg-emerald-50/60 text-emerald-800 font-black py-3.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-emerald-50 active:scale-95 transition-all text-xs uppercase tracking-wider"
                     >
-                      <Plus className="w-4 h-4 text-brand shrink-0" />
+                      <MapPin className="w-4 h-4 text-brand shrink-0" />
                       <span>Add Address</span>
                     </button>
                     <button 

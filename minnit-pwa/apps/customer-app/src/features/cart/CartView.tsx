@@ -23,6 +23,18 @@ export const CartView: React.FC = () => {
   const [couponCode, setCouponCode] = React.useState('');
   const [couponError, setCouponError] = React.useState('');
 
+  // Lock body scroll and prevent background interaction when Bill Details modal is open
+  React.useEffect(() => {
+    if (isBillModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isBillModalOpen]);
+
   const isRegistered = isLoggedIn && !!userProfile;
 
   const cartItemsWithDetails = items.map(item => ({
@@ -399,16 +411,20 @@ export const CartView: React.FC = () => {
         </button>
       </div>
 
-      {/* ── Bill Details Popup Sheet ── */}
+      {/* ── Bill Details Popup Sheet (With deep backdrop shadow, click-outside-to-dismiss & checkout CTA) ── */}
       <AnimatePresence>
         {isBillModalOpen && (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-xs">
+          <div 
+            onClick={() => setIsBillModalOpen(false)}
+            className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/75 backdrop-blur-sm"
+          >
             <motion.div
+              onClick={(e) => e.stopPropagation()}
               initial={{ y: "100%", opacity: 0.5 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              className="bg-white w-full max-w-md mx-auto rounded-t-3xl overflow-hidden shadow-2xl flex flex-col p-5 border-t border-emerald-100"
+              className="bg-white w-full max-w-md mx-auto rounded-t-3xl overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] flex flex-col p-5 border-t border-emerald-100"
             >
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3" />
               <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
@@ -430,7 +446,7 @@ export const CartView: React.FC = () => {
                 </button>
               </div>
 
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3 mb-5">
                 <div className="flex justify-between text-xs text-gray-600 font-medium">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -468,13 +484,46 @@ export const CartView: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsBillModalOpen(false)}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-black text-xs rounded-xl uppercase tracking-wider cursor-pointer active:scale-95 transition-all"
-              >
-                Close
-              </button>
+              {/* Direct Proceed to Checkout CTA inside the open bill */}
+              <div className="space-y-2">
+                <button
+                  disabled={hasOfflineItems}
+                  className={`w-full h-14 font-black text-sm rounded-2xl transition-all flex items-center justify-between px-6 uppercase tracking-wider ${
+                    hasOfflineItems 
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                      : 'bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_30px_rgba(5,150,105,0.5)] active:scale-[0.98] cursor-pointer'
+                  }`}
+                  onClick={() => {
+                    setIsBillModalOpen(false);
+                    if (hasOfflineItems) return;
+                    if (!isRegistered) {
+                      navigate('/profile?redirect=/cart');
+                    } else {
+                      navigate('/checkout');
+                    }
+                  }}
+                >
+                  <span>
+                    {hasOfflineItems 
+                      ? 'Store is Offline' 
+                      : !isRegistered 
+                        ? 'Add Address & Order' 
+                        : 'Proceed to Checkout'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono">{formatCurrency(total)}</span>
+                    {!hasOfflineItems && <ArrowRight className="h-5 w-5 animate-pulse" />}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsBillModalOpen(false)}
+                  className="w-full py-2 text-gray-400 hover:text-gray-600 font-bold text-xs uppercase tracking-wider cursor-pointer text-center"
+                >
+                  Dismiss Bill
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
