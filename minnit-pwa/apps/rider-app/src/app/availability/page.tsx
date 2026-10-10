@@ -8,9 +8,9 @@ import {
   AVAILABILITY_WINDOWS,
   triggerHaptic,
   getFormattedDayLabel,
-  getActivePreferenceWindow,
+  getIstMinutesFromMidnight,
 } from '@/services/preferenceService';
-import { PreferenceWindowId } from '@/types';
+import { PreferenceWindowId, AvailabilityWindow } from '@/types';
 import {
   Check,
   CheckCircle2,
@@ -20,6 +20,7 @@ import {
   ChevronRight,
   X,
   BookOpen,
+  Lock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -68,15 +69,20 @@ export default function AvailabilityPage() {
     if (tomorrowPreferences) setTomorrowSelected(tomorrowPreferences);
   }, [tomorrowPreferences]);
 
-  const activeWindowId = getActivePreferenceWindow();
-  const activeWindow = AVAILABILITY_WINDOWS.find((w) => w.id === activeWindowId);
 
   // Toggle preference for active day
-  const handleTogglePreference = (id: PreferenceWindowId) => {
+  const handleTogglePreference = (window: AvailabilityWindow) => {
+    const isToday = selectedDay === 'today';
+    const currentMinutes = getIstMinutesFromMidnight();
+    const endMinutes = window.endHour * 60 + window.endMinute;
+    const isExpired = isToday && currentMinutes >= endMinutes;
+    if (isExpired) return;
+
     triggerHaptic(10);
     setSavedSuccess(false);
 
-    if (selectedDay === 'today') {
+    const id = window.id;
+    if (isToday) {
       setTodaySelected((prev) =>
         prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
       );
@@ -166,55 +172,30 @@ export default function AvailabilityPage() {
       <div className="flex flex-col gap-3.5 pt-1 pb-16 max-w-md mx-auto w-full px-3">
         {/* ── 1. TOP HEADER ── */}
         <div className="pt-1">
-          <h1 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-            <span>Availability</span>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+            <span>Select Preference</span>
           </h1>
-          <p className="text-[11px] font-bold text-slate-500">
-            Pick your shift windows for order priority.
+          <p className="text-xs font-bold text-slate-500 mt-0.5">
+            Select preference to get priority orders
           </p>
         </div>
 
-        {/* ── 2. ACTIVE WINDOW BANNER ── */}
-        {activeWindow && (
-          <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-2xs">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{activeWindow.emoji}</span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-black text-xs text-slate-900">
-                    {activeWindow.label} Active
-                  </h4>
-                  <span className="font-mono text-[10px] font-bold text-slate-600 bg-white/90 px-2 py-0.5 rounded border border-slate-200">
-                    {activeWindow.timeRange}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                  Riders with this window get nearby priority.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── 3. DAY SELECTOR (Today vs Tomorrow) ── */}
-        <div className="bg-slate-100/90 p-1 rounded-2xl flex items-center gap-1 border border-slate-200/80 shadow-2xs">
+        {/* ── 2. SLEEK DAY SELECTOR (Today vs Tomorrow) ── */}
+        <div className="flex items-center justify-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 w-full shadow-2xs">
           <button
             type="button"
             onClick={() => {
               triggerHaptic(6);
               setSelectedDay('today');
             }}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               selectedDay === 'today'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                : 'text-slate-500 hover:text-slate-900'
+                ? 'bg-white text-emerald-800 shadow-xs border border-slate-200/90'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Calendar className="w-3.5 h-3.5 text-emerald-600" />
             <span>{todayLabel}</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              {todaySelected.length} active
-            </span>
           </button>
 
           <button
@@ -223,21 +204,18 @@ export default function AvailabilityPage() {
               triggerHaptic(6);
               setSelectedDay('tomorrow');
             }}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               selectedDay === 'tomorrow'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                : 'text-slate-500 hover:text-slate-900'
+                ? 'bg-white text-emerald-800 shadow-xs border border-slate-200/90'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-teal-600" />
             <span>{tomorrowLabel}</span>
-            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-              OPEN
-            </span>
           </button>
         </div>
 
-        {/* ── 4. MOMO GUIDE ON TOP (Friendly Mascot Card - Visible Without Scrolling) ── */}
+        {/* ── 3. MOMO GUIDE ON TOP (Friendly Mascot Card - Visible Without Scrolling) ── */}
         <div
           onClick={handleOpenMomoGuide}
           className="bg-gradient-to-r from-emerald-50 via-white to-teal-50 border border-emerald-200/90 rounded-2xl p-3 shadow-2xs flex items-center justify-between gap-3 cursor-pointer hover:border-emerald-300 active:scale-[0.99] transition-all"
@@ -271,17 +249,17 @@ export default function AvailabilityPage() {
           </div>
         </div>
 
-        {/* ── 5. SECTION HEADER ── */}
+        {/* ── 4. SECTION HEADER ── */}
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider">
-            {selectedDay === 'today' ? "TODAY'S WINDOWS" : "TOMORROW'S WINDOWS"}
+            {selectedDay === 'today' ? "TODAY'S SHIFTS" : "TOMORROW'S SHIFTS"}
           </h3>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
             {currentDayCount} of 4 selected
           </span>
         </div>
 
-        {/* ── 6. 4 SHIFT WINDOW CARDS ── */}
+        {/* ── 5. 4 SHIFT WINDOW CARDS (Expired slots grayed out & unselectable) ── */}
         <div className="flex flex-col gap-2.5">
           {AVAILABILITY_WINDOWS.map((window) => {
             const isToday = selectedDay === 'today';
@@ -289,21 +267,31 @@ export default function AvailabilityPage() {
               ? todaySelected.includes(window.id)
               : tomorrowSelected.includes(window.id);
 
+            const currentMinutes = getIstMinutesFromMidnight();
+            const startMinutes = window.startHour * 60 + window.startMinute;
+            const endMinutes = window.endHour * 60 + window.endMinute;
+            const isExpired = isToday && currentMinutes >= endMinutes;
+            const isActiveNow = isToday && currentMinutes >= startMinutes && currentMinutes < endMinutes;
+
             return (
               <div
                 key={window.id}
-                onClick={() => handleTogglePreference(window.id)}
-                className={`rounded-2xl p-3.5 border-2 transition-all duration-150 select-none flex items-center justify-between gap-3 cursor-pointer active:scale-[0.99] ${
-                  isSelected
-                    ? 'bg-emerald-50/40 border-emerald-500 shadow-2xs'
-                    : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
+                onClick={() => !isExpired && handleTogglePreference(window)}
+                className={`rounded-2xl p-3.5 border-2 transition-all duration-150 select-none flex items-center justify-between gap-3 ${
+                  isExpired
+                    ? 'bg-slate-100/70 border-slate-200/80 text-slate-400 opacity-60 cursor-not-allowed'
+                    : isSelected
+                    ? 'bg-emerald-50/50 border-emerald-500 shadow-2xs cursor-pointer active:scale-[0.99]'
+                    : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs cursor-pointer active:scale-[0.99]'
                 }`}
               >
                 {/* Left: Icon Squircle + Title & Time */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl transition-colors ${
-                      isSelected
+                      isExpired
+                        ? 'bg-slate-200/80 text-slate-400 grayscale'
+                        : isSelected
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'bg-slate-100 border border-slate-200'
                     }`}
@@ -312,26 +300,40 @@ export default function AvailabilityPage() {
                   </div>
 
                   <div className="min-w-0">
-                    <h4 className="font-black text-sm text-slate-900 leading-tight">
-                      {window.label}
-                    </h4>
-                    <p className="font-mono text-xs font-bold text-slate-600 mt-0.5">
+                    <div className="flex items-center gap-2">
+                      <h4 className={`font-black text-sm leading-tight ${isExpired ? 'text-slate-400' : 'text-slate-900'}`}>
+                        {window.label}
+                      </h4>
+                      {isActiveNow && (
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 tracking-wider">
+                          Active Now
+                        </span>
+                      )}
+                    </div>
+                    <p className={`font-mono text-xs mt-0.5 ${isExpired ? 'text-slate-400' : 'font-bold text-slate-600'}`}>
                       {window.timeRange}
                     </p>
                   </div>
                 </div>
 
-                {/* Right: Checkmark Circle */}
+                {/* Right: Expired Lock Badge OR Select Checkmark */}
                 <div className="shrink-0">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                      isSelected
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'border-2 border-slate-300 bg-white'
-                    }`}
-                  >
-                    {isSelected && <Check className="w-4 h-4 stroke-[3]" />}
-                  </div>
+                  {isExpired ? (
+                    <div className="flex items-center gap-1 bg-slate-200/90 text-slate-500 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      <Lock className="w-3 h-3 text-slate-400" />
+                      <span>Expired</span>
+                    </div>
+                  ) : (
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'border-2 border-slate-300 bg-white hover:border-emerald-400'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-4 h-4 stroke-[3]" />}
+                    </div>
+                  )}
                 </div>
               </div>
             );

@@ -23,7 +23,10 @@ export const getNextSundayDate = (): string => {
   return `${String(nextSunday.getDate()).padStart(2, '0')} ${months[nextSunday.getMonth()]}`;
 };
 
-export const getRealWeeklyEarnings = (todayEarnings: number = 0): WeeklyBarData[] => {
+export const getRealWeeklyEarnings = (
+  todayEarnings: number = 0,
+  ordersHistory: any[] = []
+): WeeklyBarData[] => {
   const days: { day: string; dayFull: string; dayIndex: number }[] = [
     { day: 'Mon', dayFull: 'Monday', dayIndex: 1 },
     { day: 'Tue', dayFull: 'Tuesday', dayIndex: 2 },
@@ -36,12 +39,45 @@ export const getRealWeeklyEarnings = (todayEarnings: number = 0): WeeklyBarData[
 
   const currentDayIndex = new Date().getDay();
 
+  // Aggregate orders by day of week
+  const dayEarningsMap: Record<number, { amount: number; deliveries: number }> = {};
+  days.forEach((d) => {
+    dayEarningsMap[d.dayIndex] = { amount: 0, deliveries: 0 };
+  });
+
+  if (ordersHistory && ordersHistory.length > 0) {
+    ordersHistory.forEach((o) => {
+      const timeStr = o.completedAt || o.timestamp || o.createdAt || o.updatedAt;
+      const earning = Number(o.earnings || o.delivery_fee || 30);
+      if (timeStr) {
+        const d = new Date(timeStr);
+        if (!isNaN(d.getTime())) {
+          const dayIdx = d.getDay();
+          if (dayEarningsMap[dayIdx]) {
+            dayEarningsMap[dayIdx].amount += earning;
+            dayEarningsMap[dayIdx].deliveries += 1;
+          }
+        }
+      }
+    });
+  }
+
+  // Ensure current day has at least todayEarnings
+  if (dayEarningsMap[currentDayIndex]) {
+    dayEarningsMap[currentDayIndex].amount = Math.max(
+      dayEarningsMap[currentDayIndex].amount,
+      todayEarnings
+    );
+  }
+
   return days.map((d) => {
     const isToday = d.dayIndex === currentDayIndex;
+    const stat = dayEarningsMap[d.dayIndex] || { amount: 0, deliveries: 0 };
     return {
       day: d.day,
       dayFull: d.dayFull,
-      amount: isToday ? todayEarnings : 0,
+      amount: stat.amount,
+      deliveries: stat.deliveries,
       isToday,
     };
   });

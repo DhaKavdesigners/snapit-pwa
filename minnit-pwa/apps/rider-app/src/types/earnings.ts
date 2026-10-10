@@ -1,8 +1,9 @@
-﻿export interface WeeklyBarData {
+export interface WeeklyBarData {
   day: string;
   dayFull: string;
   amount: number;
   isToday?: boolean;
+  deliveries?: number;
 }
 
 export interface RecentEarning {
@@ -33,6 +34,9 @@ export interface EarningsSummaryStats {
   today: number;
   thisWeek: number;
   thisMonth: number;
+  todayDeliveries?: number;
+  weekDeliveries?: number;
+  monthDeliveries?: number;
 }
 
 export interface MonthOption {
