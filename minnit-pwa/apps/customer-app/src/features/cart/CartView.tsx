@@ -17,23 +17,28 @@ export const CartView: React.FC = () => {
   const { data: allProducts = [...mockShoppingProducts, ...mockFoodProducts] } = useAllProducts();
   const navigate = useNavigate();
 
-  // Modal and Coupon states
-  const [isBillModalOpen, setIsBillModalOpen] = React.useState(false);
-  const [isCouponInputOpen, setIsCouponInputOpen] = React.useState(false);
+  // Coupon states
+  const [hasCouponPrompt, setHasCouponPrompt] = React.useState(false);
   const [couponCode, setCouponCode] = React.useState('');
-  const [couponError, setCouponError] = React.useState('');
+  const [appliedDiscount, setAppliedDiscount] = React.useState(0);
+  const [couponMessage, setCouponMessage] = React.useState('');
 
-  // Lock body scroll and prevent background interaction when Bill Details modal is open
-  React.useEffect(() => {
-    if (isBillModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+  const handleApplyCoupon = () => {
+    const clean = couponCode.trim().toUpperCase();
+    if (!clean) {
+      setCouponMessage('Please enter a coupon code.');
+      setAppliedDiscount(0);
+      return;
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isBillModalOpen]);
+    if (clean === 'MINNIT50' || clean === 'MINNIT' || clean === 'WELCOME') {
+      const discount = Math.min(itemTotal, 5000); // ₹50 discount (5000 paise)
+      setAppliedDiscount(discount);
+      setCouponMessage(`🎉 Coupon "${clean}" applied! ₹${discount / 100} discount added.`);
+    } else {
+      setCouponMessage(`Coupon code "${clean}" is invalid or expired.`);
+      setAppliedDiscount(0);
+    }
+  };
 
   const isRegistered = isLoggedIn && !!userProfile;
 
@@ -44,7 +49,7 @@ export const CartView: React.FC = () => {
 
   const itemTotal   = cartItemsWithDetails.reduce((sum, item) => sum + (item.product!.price * item.quantity), 0);
   const deliveryFee = calculateDeliveryFee({ subtotalRupees: itemTotal / 100 }).feePaise;
-  const total       = itemTotal + deliveryFee;
+  const total       = Math.max(0, itemTotal + deliveryFee - appliedDiscount);
 
   // Detect food mode: context is food OR any item in cart belongs to a food store (storeId starts with 'f')
   const isFoodMode = activeContext === 'food' ||
@@ -142,7 +147,7 @@ export const CartView: React.FC = () => {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
               <ShoppingBag className="h-5 w-5" />
             </div>
-            Your Cart
+            My Cart
           </h2>
           <span className="text-xs font-black bg-emerald-100/70 text-emerald-800 px-3 py-1 rounded-full border border-emerald-200">
             {cartItemsWithDetails.length} {cartItemsWithDetails.length === 1 ? 'Item' : 'Items'}
@@ -266,36 +271,41 @@ export const CartView: React.FC = () => {
           })}
         </div>
 
-        {/* ── Interactive Coupon Code Card ── */}
-        {!isCouponInputOpen ? (
-          <div 
-            onClick={() => setIsCouponInputOpen(true)}
-            className="bg-white rounded-2xl p-3 border border-emerald-100 shadow-2xs flex items-center justify-between cursor-pointer hover:border-emerald-300 transition-all mb-4 select-none"
-          >
+        {/* ── 1. Interactive Coupon Flow ("Do you have a coupon?" -> Yes) ── */}
+        {!hasCouponPrompt ? (
+          <div className="bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/50 rounded-2xl p-3.5 border border-emerald-200/90 shadow-2xs flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                <Tag className="w-3.5 h-3.5" />
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Tag className="w-4 h-4" />
               </div>
-              <span className="text-xs font-bold text-gray-800 truncate">Have a coupon code?</span>
+              <div>
+                <p className="text-xs font-black text-emerald-950 leading-tight">Do you have a coupon?</p>
+                <p className="text-[10px] text-emerald-700 font-medium leading-tight mt-0.5">Save more on your order</p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setIsCouponInputOpen(true); }}
-              className="text-xs font-black text-brand uppercase tracking-wider bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-xl cursor-pointer transition-colors shrink-0"
+              onClick={() => setHasCouponPrompt(true)}
+              className="bg-brand hover:bg-emerald-700 text-white font-black text-xs px-4 py-2 rounded-xl uppercase tracking-wider shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
             >
-              Apply
+              Yes
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl p-3 border border-emerald-200 shadow-sm mb-4 space-y-2">
+          <div className="bg-white rounded-2xl p-3.5 border-2 border-emerald-300 shadow-sm mb-4 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-gray-800 flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-brand" />
+              <span className="text-xs font-black text-gray-900 flex items-center gap-1.5 uppercase tracking-wide">
+                <Tag className="w-4 h-4 text-brand" />
                 Enter Coupon Code
               </span>
               <button 
                 type="button" 
-                onClick={() => { setIsCouponInputOpen(false); setCouponError(''); }}
+                onClick={() => {
+                  setHasCouponPrompt(false);
+                  setCouponCode('');
+                  setAppliedDiscount(0);
+                  setCouponMessage('');
+                }}
                 className="text-[11px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 Cancel
@@ -307,60 +317,99 @@ export const CartView: React.FC = () => {
                 value={couponCode}
                 onChange={(e) => {
                   setCouponCode(e.target.value.toUpperCase());
-                  if (couponError) setCouponError('');
+                  if (couponMessage) setCouponMessage('');
                 }}
-                placeholder="e.g. MINNIT50"
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                placeholder="e.g. MINNIT50 or WELCOME"
+                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold uppercase tracking-wider text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:bg-white"
               />
               <button
                 type="button"
-                onClick={() => {
-                  const clean = couponCode.trim();
-                  if (!clean) {
-                    setCouponError('Please enter a coupon code.');
-                    return;
-                  }
-                  setCouponError(`Coupon code "${clean}" is invalid or expired.`);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer uppercase tracking-wider shrink-0"
+                onClick={handleApplyCoupon}
+                className="bg-brand hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer uppercase tracking-wider shrink-0 active:scale-95 shadow-xs"
               >
                 Apply
               </button>
             </div>
-            {couponError && (
-              <p className="text-[10.5px] font-bold text-red-600 leading-tight">
-                {couponError}
+            {couponMessage && (
+              <p className={`text-[11px] font-bold ${appliedDiscount > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                {couponMessage}
               </p>
             )}
           </div>
         )}
 
-      </div>
-
-      {/* ── Sticky Bottom Checkout Bar (With Stuck Bill Summary & View Bill CTA) ── */}
-      <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-xl px-4 py-3 border-t border-emerald-100/90 shadow-[0_-10px_30px_rgba(5,150,105,0.08)] z-40 rounded-t-3xl pb-4">
-        
-        {/* Stuck Bill Summary Header Line */}
-        <div className="flex items-center justify-between px-1 py-1 mb-2.5">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">To Pay</span>
-            <span className="font-mono font-black text-base text-gray-900 leading-tight">{formatCurrency(total)}</span>
+        {/* ── 2. Inline Bill Details (Directly on Cart Page - No Popup) ── */}
+        <div className="bg-white rounded-3xl p-4.5 border border-emerald-100 shadow-[0_4px_20px_rgba(5,150,105,0.06)] mb-6 space-y-3.5">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Zap className="w-4 h-4 fill-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-black text-base text-gray-900 leading-tight">Bill Details</h3>
+                <span className="text-[10px] font-bold text-emerald-700">Instant Fast Delivery</span>
+              </div>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200/90 px-2 py-0.5 rounded-full">
+              KGF Local
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsBillModalOpen(true)}
-            className="text-[11px] font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/90 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 active:scale-95 cursor-pointer shadow-2xs"
-          >
-            <span>View Detailed Bill</span>
-            <ChevronUp className="w-3.5 h-3.5 text-emerald-600" />
-          </button>
+
+          <div className="space-y-3">
+            <div className="flex justify-between text-xs text-gray-600 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Item Total ({cartItemsWithDetails.length} {cartItemsWithDetails.length === 1 ? 'item' : 'items'})
+              </span>
+              <span className="font-bold text-gray-900 font-mono">{formatCurrency(itemTotal)}</span>
+            </div>
+
+            <div className="flex justify-between text-xs text-gray-600 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                Delivery Fee (KGF Fast Drop)
+              </span>
+              <span className="font-bold text-gray-900 font-mono">{formatCurrency(deliveryFee)}</span>
+            </div>
+
+            <div className="flex justify-between text-xs text-gray-600 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Taxes &amp; Platform Fee
+              </span>
+              <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] border border-emerald-100">
+                ₹0 FREE
+              </span>
+            </div>
+
+            {/* Display reduced discount right inside the bill details */}
+            {appliedDiscount > 0 && (
+              <div className="flex justify-between text-xs text-emerald-700 font-bold bg-emerald-50/80 px-2.5 py-1.5 rounded-xl border border-emerald-200/80">
+                <span className="flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                  Coupon Discount ({couponCode})
+                </span>
+                <span className="font-mono">-{formatCurrency(appliedDiscount)}</span>
+              </div>
+            )}
+
+            <div className="border-t-2 border-dashed border-gray-100 pt-3 flex items-center justify-between">
+              <div>
+                <span className="font-black text-base text-gray-900 block leading-tight">To Pay</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Inclusive of all taxes</span>
+              </div>
+              <span className="font-black text-xl text-brand font-mono tracking-tight bg-emerald-50 px-3.5 py-1 rounded-2xl border border-emerald-200">
+                {formatCurrency(total)}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Where should we deliver prompt with direct Sign Up option */}
         {!isRegistered && (
           <div 
             onClick={() => navigate('/profile?redirect=/cart')}
-            className="flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 via-white to-teal-50 border border-emerald-200/90 rounded-2xl px-4 py-2.5 mb-2.5 shadow-2xs cursor-pointer hover:border-emerald-300 transition-all active:scale-[0.99]"
+            className="flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 via-white to-teal-50 border border-emerald-200/90 rounded-2xl px-4 py-2.5 mb-6 shadow-2xs cursor-pointer hover:border-emerald-300 transition-all active:scale-[0.99]"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
@@ -381,6 +430,10 @@ export const CartView: React.FC = () => {
           </div>
         )}
 
+      </div>
+
+      {/* ── 3. Sticky Bottom Checkout Bar ── */}
+      <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-xl px-4 py-3 border-t border-emerald-100/90 shadow-[0_-10px_30px_rgba(5,150,105,0.08)] z-40 rounded-t-3xl pb-4">
         <button
           disabled={hasOfflineItems}
           className={`w-full h-14 font-black text-sm rounded-2xl transition-all flex items-center justify-between px-6 uppercase tracking-wider ${
@@ -410,124 +463,6 @@ export const CartView: React.FC = () => {
           </div>
         </button>
       </div>
-
-      {/* ── Bill Details Popup Sheet (With deep backdrop shadow, click-outside-to-dismiss & checkout CTA) ── */}
-      <AnimatePresence>
-        {isBillModalOpen && (
-          <div 
-            onClick={() => setIsBillModalOpen(false)}
-            className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/75 backdrop-blur-sm"
-          >
-            <motion.div
-              onClick={(e) => e.stopPropagation()}
-              initial={{ y: "100%", opacity: 0.5 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              className="bg-white w-full max-w-md mx-auto rounded-t-3xl overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.5)] flex flex-col p-5 border-t border-emerald-100"
-            >
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3" />
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <Zap className="w-4 h-4 fill-amber-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-base text-gray-900 leading-tight">Bill Details</h3>
-                    <span className="text-[10px] font-bold text-emerald-700">Instant Delivery</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsBillModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 active:scale-95 transition-all cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3 mb-5">
-                <div className="flex justify-between text-xs text-gray-600 font-medium">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Item Total ({cartItemsWithDetails.length} {cartItemsWithDetails.length === 1 ? 'item' : 'items'})
-                  </span>
-                  <span className="font-bold text-gray-900">{formatCurrency(itemTotal)}</span>
-                </div>
-
-                <div className="flex justify-between text-xs text-gray-600 font-medium">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-500" />
-                    Delivery Fee (KGF Fast Drop)
-                  </span>
-                  <span className="font-bold text-gray-900">{formatCurrency(deliveryFee)}</span>
-                </div>
-
-                <div className="flex justify-between text-xs text-gray-600 font-medium">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    Taxes &amp; Platform Fee
-                  </span>
-                  <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] border border-emerald-100">
-                    ₹0 FREE
-                  </span>
-                </div>
-
-                <div className="border-t-2 border-dashed border-gray-100 pt-3 flex items-center justify-between">
-                  <div>
-                    <span className="font-black text-base text-gray-900 block leading-tight">To Pay</span>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Inclusive of all taxes</span>
-                  </div>
-                  <span className="font-black text-xl text-brand font-mono tracking-tight bg-emerald-50 px-3.5 py-1 rounded-2xl border border-emerald-200">
-                    {formatCurrency(total)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Direct Proceed to Checkout CTA inside the open bill */}
-              <div className="space-y-2">
-                <button
-                  disabled={hasOfflineItems}
-                  className={`w-full h-14 font-black text-sm rounded-2xl transition-all flex items-center justify-between px-6 uppercase tracking-wider ${
-                    hasOfflineItems 
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                      : 'bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_30px_rgba(5,150,105,0.5)] active:scale-[0.98] cursor-pointer'
-                  }`}
-                  onClick={() => {
-                    setIsBillModalOpen(false);
-                    if (hasOfflineItems) return;
-                    if (!isRegistered) {
-                      navigate('/profile?redirect=/cart');
-                    } else {
-                      navigate('/checkout');
-                    }
-                  }}
-                >
-                  <span>
-                    {hasOfflineItems 
-                      ? 'Store is Offline' 
-                      : !isRegistered 
-                        ? 'Add Address & Order' 
-                        : 'Proceed to Checkout'}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono">{formatCurrency(total)}</span>
-                    {!hasOfflineItems && <ArrowRight className="h-5 w-5 animate-pulse" />}
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsBillModalOpen(false)}
-                  className="w-full py-2 text-gray-400 hover:text-gray-600 font-bold text-xs uppercase tracking-wider cursor-pointer text-center"
-                >
-                  Dismiss Bill
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

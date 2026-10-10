@@ -470,33 +470,33 @@ export const CheckoutView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto relative min-h-screen bg-[#F6F8F7] flex flex-col pb-36 shadow-2xl overflow-x-hidden">
+    <div className="max-w-md mx-auto relative min-h-screen bg-gradient-to-b from-[#064e3b] via-[#043d2e] to-[#022c22] text-white flex flex-col pb-36 shadow-2xl overflow-x-hidden">
 
-      {/* ── Professional Unified Fintech Header ── */}
-      <div className="bg-white/95 backdrop-blur-md px-4 py-3 sticky top-0 z-30 shadow-xs border-b border-slate-200/70">
+      {/* ── Professional Rich Green Fintech Header ── */}
+      <div className="bg-[#064e3b]/95 backdrop-blur-md px-4 py-3.5 sticky top-0 z-30 shadow-md border-b border-emerald-500/30 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => navigate(-1)} 
-              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all text-slate-700 flex items-center justify-center cursor-pointer border border-slate-200/60 shadow-2xs"
+              className="w-9 h-9 rounded-full bg-emerald-900/90 hover:bg-emerald-800 active:scale-95 transition-all text-white flex items-center justify-center cursor-pointer border border-emerald-600/50 shadow-xs"
               aria-label="Back"
             >
-              <ChevronLeft className="w-5 h-5 text-slate-700" />
+              <ChevronLeft className="w-5 h-5 text-white" />
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-black text-lg text-slate-900 tracking-tight">Checkout</h1>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <h1 className="font-black text-xl text-white tracking-tight">Checkout</h1>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               </div>
-              <p className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+              <p className="text-[10px] text-emerald-300 font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
                 Direct Local Store Delivery
               </p>
             </div>
           </div>
 
-          <div className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-200/90 flex items-center gap-1.5 shadow-2xs">
-            <Lock className="w-3 h-3 text-emerald-600" />
+          <div className="bg-emerald-950/80 text-emerald-300 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-500/50 flex items-center gap-1.5 shadow-xs">
+            <Lock className="w-3 h-3 text-emerald-400" />
             <span>100% Secured</span>
           </div>
         </div>
@@ -505,28 +505,28 @@ export const CheckoutView: React.FC = () => {
       <div className="p-4 flex flex-col gap-5 overflow-y-auto">
 
         {/* ── 1. Signed In User Card ── */}
-        <section className="bg-white rounded-3xl p-4 border border-emerald-100 shadow-[0_4px_20px_rgba(5,150,105,0.04)] relative overflow-hidden">
+        <section className="bg-emerald-900/70 backdrop-blur-md rounded-3xl p-4 border border-emerald-500/30 shadow-xl text-white relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-black text-[11px] uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
-              <UserCheck className="w-4 h-4 text-brand" />
+            <h2 className="font-black text-[11px] uppercase tracking-widest text-emerald-300 flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-emerald-400" />
               Signed In User
             </h2>
-            <span className="text-[10px] font-black bg-emerald-100/70 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
               Verified
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20 font-black text-base">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-400 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/30 font-black text-base">
               {(userProfile?.name || 'V')[0]?.toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-black text-sm text-gray-900 truncate">
+              <h3 className="font-black text-sm text-white truncate">
                 {userProfile?.name || 'Vishva D'}
               </h3>
               <div className="flex items-center gap-2 mt-1">
-                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono text-[11px] font-black tracking-wide">
+                <span className="bg-emerald-950 text-emerald-300 border border-emerald-600/50 px-2 py-0.5 rounded-md font-mono text-[11px] font-black tracking-wide">
                   ID: {userProfile?.minnit_id || (() => {
                     const phone = (userProfile?.phone || '').replace(/\D/g, '').slice(-10);
                     if (phone === '8217649688') return generateUserId(1);
@@ -535,34 +535,34 @@ export const CheckoutView: React.FC = () => {
                     return generateUserId(num);
                   })()}
                 </span>
-                <span className="text-xs text-gray-500 font-mono">+91 {userProfile?.phone || ''}</span>
+                <span className="text-xs text-emerald-200 font-mono">+91 {userProfile?.phone || ''}</span>
               </div>
             </div>
           </div>
         </section>
 
         {/* ── 2. Alternate Phone Number (Simple & Compact) ── */}
-        <div className="bg-white rounded-2xl px-3.5 py-2.5 border border-emerald-100/80 shadow-2xs flex items-center gap-2.5">
-          <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span className="text-[11px] font-mono font-bold text-gray-400 shrink-0">+91</span>
+        <div className="bg-emerald-900/70 backdrop-blur-md rounded-2xl px-3.5 py-2.5 border border-emerald-500/30 shadow-xs flex items-center gap-2.5">
+          <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span className="text-[11px] font-mono font-bold text-emerald-300 shrink-0">+91</span>
           <input
             type="tel"
             value={alternatePhone}
             onChange={(e) => setAlternatePhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
             placeholder="Alternate phone number (optional backup)"
             maxLength={10}
-            className="flex-1 bg-transparent text-xs font-semibold text-gray-900 placeholder-gray-400 outline-none"
+            className="flex-1 bg-transparent text-xs font-semibold text-white placeholder-emerald-400/60 outline-none"
           />
         </div>
 
         {/* ── 3. Select Delivery Address & Doorstep Pinning ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="font-black text-xs uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-brand" />
+            <h2 className="font-black text-xs uppercase tracking-widest text-emerald-200 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
               Select Delivery Address
             </h2>
-            <span className="text-[10px] font-bold bg-brand/10 text-brand px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
               {pinnedCoords ? 'Doorstep Pinned' : 'Doorstep Drop'}
             </span>
           </div>
@@ -572,49 +572,49 @@ export const CheckoutView: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 rounded-3xl p-4 shadow-[0_8px_30px_rgba(5,150,105,0.07)] border-2 transition-all relative overflow-hidden ${
-                pinnedCoords ? 'border-brand ring-4 ring-brand/10' : 'border-emerald-200/90'
+              className={`bg-gradient-to-br from-emerald-900/90 to-teal-950/90 backdrop-blur-md rounded-3xl p-4 shadow-xl border-2 transition-all relative overflow-hidden ${
+                pinnedCoords ? 'border-emerald-400 ring-4 ring-emerald-500/25' : 'border-emerald-500/50'
               }`}
             >
-              <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-emerald-400 to-brand" />
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-emerald-400 to-teal-300" />
               
               <div className="flex gap-3 pl-1">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-400 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/30">
                   <MapPin className="w-5 h-5 text-white" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="bg-brand text-white text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-xs">
+                    <span className="bg-emerald-500 text-white text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-xs">
                       {displayTitle}
                     </span>
                     
                     {pinnedCoords && (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
+                      <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-200 bg-emerald-950 border border-emerald-500 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                         Exact Pin Set
                       </span>
                     )}
                   </div>
 
-                  <p className="text-xs text-gray-700 leading-relaxed font-medium mt-1">
+                  <p className="text-xs text-emerald-50 leading-relaxed font-medium mt-1">
                     {displayAddressLine}
-                    {displayLandmark && <span className="block text-gray-500 font-normal mt-0.5">Near: {displayLandmark}</span>}
-                    {displayPin && <span className="inline-block mt-1 font-mono font-bold text-gray-800 bg-emerald-100/60 px-1.5 py-0.5 rounded text-[11px]">PIN: {displayPin}</span>}
+                    {displayLandmark && <span className="block text-emerald-300 font-normal mt-0.5">Near: {displayLandmark}</span>}
+                    {displayPin && <span className="inline-block mt-1 font-mono font-bold text-emerald-300 bg-emerald-950 border border-emerald-700 px-1.5 py-0.5 rounded text-[11px]">PIN: {displayPin}</span>}
                   </p>
 
-                  {/* Pinned Coordinates Indicator (Hiding raw coordinates from consumer) */}
+                  {/* Pinned Coordinates Indicator */}
                   {pinnedCoords && (
-                    <div className="mt-2.5 p-2.5 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 text-emerald-950 font-bold min-w-0">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-700 shrink-0">
-                          <LocateFixed className="w-3.5 h-3.5 text-brand shrink-0" />
+                    <div className="mt-2.5 p-2.5 bg-emerald-950/80 border border-emerald-500/40 rounded-2xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 text-white font-bold min-w-0">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0">
+                          <LocateFixed className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         </div>
                         <div className="truncate">
-                          <span className="block font-black text-xs text-emerald-950">
+                          <span className="block font-black text-xs text-white">
                             Exact Doorstep Location Pinned ✓
                           </span>
-                          <span className="block text-[10px] text-emerald-700 font-medium truncate">
+                          <span className="block text-[10px] text-emerald-300 font-medium truncate">
                             {pinnedCoords.addressHint ? `Near: ${pinnedCoords.addressHint}` : 'Rider will deliver directly to this pinned spot'}
                           </span>
                         </div>
@@ -622,7 +622,7 @@ export const CheckoutView: React.FC = () => {
                       <button 
                         type="button" 
                         onClick={() => setIsMapModalOpen(true)}
-                        className="text-brand font-black text-xs bg-white border border-emerald-300 px-3 py-1.5 rounded-xl hover:bg-emerald-50 active:scale-95 transition-all shadow-2xs shrink-0 ml-2"
+                        className="text-emerald-300 font-black text-xs bg-emerald-900 border border-emerald-500/60 px-3 py-1.5 rounded-xl hover:bg-emerald-800 active:scale-95 transition-all shadow-xs shrink-0 ml-2 cursor-pointer"
                       >
                         Relocate Pin
                       </button>
@@ -632,12 +632,12 @@ export const CheckoutView: React.FC = () => {
               </div>
             </motion.div>
           ) : (
-            <div className="bg-white rounded-3xl p-6 border-2 border-dashed border-emerald-200 text-center shadow-sm">
+            <div className="bg-emerald-900/60 rounded-3xl p-6 border-2 border-dashed border-emerald-500/50 text-center shadow-sm">
               <MapPin className="w-9 h-9 text-emerald-400 mx-auto mb-2" />
-              <p className="font-bold text-gray-700 text-sm">No delivery address selected</p>
+              <p className="font-bold text-white text-sm">No delivery address selected</p>
               <button
                 onClick={() => setIsAddressModalOpen(true)}
-                className="mt-3 text-white bg-brand font-black text-xs px-4 py-2 rounded-xl shadow-md uppercase tracking-wider"
+                className="mt-3 text-white bg-emerald-500 hover:bg-emerald-600 font-black text-xs px-4 py-2 rounded-xl shadow-md uppercase tracking-wider cursor-pointer"
               >
                 Add Address
               </button>
@@ -645,15 +645,15 @@ export const CheckoutView: React.FC = () => {
           )}
 
           {/* Ordering for someone else toggle */}
-          <div className="bg-white rounded-2xl p-3.5 border border-emerald-100/80 shadow-xs">
+          <div className="bg-emerald-900/70 backdrop-blur-md rounded-2xl p-3.5 border border-emerald-500/30 shadow-xs">
             <label className="flex items-center justify-between cursor-pointer select-none">
               <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-brand" />
-                <span className="font-bold text-xs text-gray-800">Ordering for someone else?</span>
+                <User className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-xs text-white">Ordering for someone else?</span>
               </div>
               <input 
                 type="checkbox" 
-                className="w-4 h-4 text-brand rounded border-gray-300 focus:ring-brand accent-emerald-600 cursor-pointer"
+                className="w-4 h-4 rounded border-emerald-600 accent-emerald-400 cursor-pointer"
                 checked={isSomeoneElse}
                 onChange={(e) => setIsSomeoneElse(e.target.checked)}
               />
@@ -665,34 +665,34 @@ export const CheckoutView: React.FC = () => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2.5 pt-3 mt-3 border-t border-emerald-50 overflow-hidden"
+                  className="space-y-2.5 pt-3 mt-3 border-t border-emerald-700/50 overflow-hidden"
                 >
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-emerald-300 mb-1">
                       Recipient Name *
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. Rahul Sharma"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                      className="w-full bg-emerald-950/90 border border-emerald-600 text-white placeholder-emerald-400/60 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-emerald-400"
                       value={recipientName}
                       onChange={(e) => setRecipientName(e.target.value)}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-emerald-300 mb-1">
                       Recipient Phone Number *
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-mono text-xs">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400 font-mono text-xs">
                         +91
                       </div>
                       <input
                         type="tel"
                         placeholder="98765 43210"
                         maxLength={10}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                        className="w-full bg-emerald-950/90 border border-emerald-600 text-white placeholder-emerald-400/60 rounded-xl pl-11 pr-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-emerald-400"
                         value={recipientPhone}
                         onChange={(e) => setRecipientPhone(e.target.value.replace(/[^0-9]/g, ''))}
                       />
@@ -708,7 +708,7 @@ export const CheckoutView: React.FC = () => {
             <button 
               type="button"
               onClick={() => setIsMapModalOpen(true)}
-              className="bg-gradient-to-r from-emerald-600 to-brand text-white font-black py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all hover:brightness-105"
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all hover:brightness-105 cursor-pointer"
             >
               <Compass className="w-4 h-4 animate-spin [animation-duration:8s]" />
               <span>{pinnedCoords ? 'Relocate Pin on Map' : '🗺️ Pin on Map'}</span>
@@ -717,17 +717,17 @@ export const CheckoutView: React.FC = () => {
             <button 
               type="button"
               onClick={() => setIsAddressModalOpen(true)}
-              className="bg-white border-2 border-emerald-200 text-emerald-800 font-black py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs hover:bg-emerald-50 active:scale-95 transition-all shadow-xs"
+              className="bg-emerald-950/90 border-2 border-emerald-400/80 text-emerald-200 font-black py-3 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs hover:bg-emerald-900 active:scale-95 transition-all shadow-xs cursor-pointer"
             >
-              <MapPin className="w-4 h-4 text-brand" />
+              <MapPin className="w-4 h-4 text-emerald-400" />
               <span>Add Address</span>
             </button>
           </div>
 
-          {/* Destination Status Pill (Consumer-friendly: coordinates hidden) */}
-          <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse shrink-0" />
-            <span className="text-[11px] font-bold text-emerald-900 truncate">
+          {/* Destination Status Pill */}
+          <div className="bg-emerald-950/90 border border-emerald-500/40 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-[11px] font-bold text-emerald-200 truncate">
               {pinnedCoords 
                 ? `📍 Delivering to: ${displayTitle} • Exact Doorstep Pinned ✓`
                 : `📍 Delivering to: ${displayTitle} (${displayPin})`
@@ -736,14 +736,14 @@ export const CheckoutView: React.FC = () => {
           </div>
         </section>
 
-        {/* ── 2. Payment Method Section ── */}
+        {/* ── 4. Payment Method Section ── */}
         <section>
           <div className="flex items-center justify-between mb-2.5 px-1">
-            <h2 className="font-black text-xs uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
-              <CreditCard className="w-3.5 h-3.5 text-brand" />
+            <h2 className="font-black text-xs uppercase tracking-widest text-emerald-200 flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
               Payment Method
             </h2>
-            <span className="text-[10px] font-bold text-emerald-700">Total Payable: {formatCurrency(total)}</span>
+            <span className="text-[10px] font-bold text-emerald-300">Total Payable: {formatCurrency(total)}</span>
           </div>
           
           <div className="flex flex-col gap-3">
@@ -751,35 +751,35 @@ export const CheckoutView: React.FC = () => {
             <motion.div 
               whileTap={{ scale: 0.99 }}
               onClick={() => setPaymentMethod('online')}
-              className={`rounded-3xl p-4 border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden ${
+              className={`rounded-3xl p-4 border-2 transition-all cursor-pointer shadow-xl relative overflow-hidden ${
                 paymentMethod === 'online'
-                  ? 'border-emerald-500 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/40 ring-4 ring-emerald-500/10'
-                  : 'border-gray-200 bg-white hover:border-emerald-200'
+                  ? 'border-emerald-400 bg-gradient-to-br from-emerald-900/95 to-teal-950/95 ring-4 ring-emerald-400/25'
+                  : 'border-emerald-700/60 bg-emerald-950/70 hover:border-emerald-500'
               }`}
             >
               <div className="flex items-start gap-3.5">
                 {/* Radio Circle */}
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                  paymentMethod === 'online' ? 'border-brand bg-brand' : 'border-gray-300'
+                  paymentMethod === 'online' ? 'border-emerald-400 bg-emerald-400 text-emerald-950' : 'border-emerald-600'
                 }`}>
-                  {paymentMethod === 'online' && <Check className="w-3 h-3 text-white" />}
+                  {paymentMethod === 'online' && <Check className="w-3 h-3 text-emerald-950 stroke-[3]" />}
                 </div>
 
                 {/* Icon badge */}
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-400 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className="font-black text-sm text-gray-900">
+                    <p className="font-black text-sm text-white">
                       Pay Now
                     </p>
-                    <span className="text-[9px] font-black text-white bg-gradient-to-r from-emerald-500 to-brand px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                    <span className="text-[9px] font-black text-emerald-950 bg-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                       Instant
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-600 font-medium leading-relaxed">
+                  <p className="text-[11px] text-emerald-200 font-medium leading-relaxed">
                     Instant online payment via UPI (GPay, PhonePe, Paytm), Debit/Credit Cards, or NetBanking.
                   </p>
                 </div>
@@ -790,32 +790,32 @@ export const CheckoutView: React.FC = () => {
             <motion.div 
               whileTap={{ scale: 0.99 }}
               onClick={() => setPaymentMethod('upiDelivery')}
-              className={`rounded-3xl p-4 border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden ${
+              className={`rounded-3xl p-4 border-2 transition-all cursor-pointer shadow-xl relative overflow-hidden ${
                 paymentMethod === 'upiDelivery'
-                  ? 'border-emerald-500 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/40 ring-4 ring-emerald-500/10'
-                  : 'border-gray-200 bg-white hover:border-emerald-200'
+                  ? 'border-emerald-400 bg-gradient-to-br from-emerald-900/95 to-teal-950/95 ring-4 ring-emerald-400/25'
+                  : 'border-emerald-700/60 bg-emerald-950/70 hover:border-emerald-500'
               }`}
             >
               <div className="flex items-start gap-3.5">
                 {/* Radio Circle */}
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                  paymentMethod === 'upiDelivery' ? 'border-brand bg-brand' : 'border-gray-300'
+                  paymentMethod === 'upiDelivery' ? 'border-emerald-400 bg-emerald-400 text-emerald-950' : 'border-emerald-600'
                 }`}>
-                  {paymentMethod === 'upiDelivery' && <Check className="w-3 h-3 text-white" />}
+                  {paymentMethod === 'upiDelivery' && <Check className="w-3 h-3 text-emerald-950 stroke-[3]" />}
                 </div>
 
                 {/* Icon badge */}
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-teal-500/20">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-teal-500/20">
                   <QrCode className="w-5 h-5 text-white" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className="font-black text-sm text-gray-900">
+                    <p className="font-black text-sm text-white">
                       Pay on Delivery
                     </p>
                   </div>
-                  <p className="text-[11px] text-gray-600 font-medium leading-relaxed">
+                  <p className="text-[11px] text-emerald-200 font-medium leading-relaxed">
                     Rider will show an order-specific UPI QR code upon arrival at your doorstep. Scan &amp; pay via any UPI app.
                   </p>
                 </div>
@@ -827,29 +827,29 @@ export const CheckoutView: React.FC = () => {
       </div>
 
       {/* ── Sticky Bottom CTA ── */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-xl border-t border-emerald-100/80 p-4 shadow-[0_-10px_30px_rgba(5,150,105,0.08)] z-30">
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#064e3b]/95 backdrop-blur-xl border-t border-emerald-500/40 p-4 shadow-[0_-10px_35px_rgba(0,0,0,0.6)] z-30">
         <button
           onClick={handleProceedToPayment}
           disabled={isSubmitting}
-          className="w-full h-14 bg-gradient-to-r from-emerald-600 via-brand to-teal-600 text-white font-black text-base rounded-2xl shadow-[0_10px_25px_rgba(5,150,105,0.4)] hover:shadow-[0_12px_30px_rgba(5,150,105,0.5)] active:scale-[0.98] transition-all flex items-center justify-between px-6 uppercase tracking-wider cursor-pointer disabled:opacity-90"
+          className="w-full h-14 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-emerald-950 font-black text-base rounded-2xl shadow-[0_0_30px_rgba(52,211,153,0.5)] active:scale-[0.98] transition-all flex items-center justify-between px-6 uppercase tracking-wider cursor-pointer disabled:opacity-90"
         >
           {isSubmitting ? (
             <div className="flex items-center justify-center gap-2.5 w-full">
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span className="text-sm font-bold tracking-normal normal-case">Securing your order...</span>
+              <div className="w-5 h-5 border-2 border-emerald-950/30 border-t-emerald-950 rounded-full animate-spin" />
+              <span className="text-sm font-bold tracking-normal normal-case text-emerald-950">Securing your order...</span>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-emerald-200" />
+              <div className="flex items-center gap-2 text-emerald-950">
+                <Lock className="w-4 h-4 text-emerald-950" />
                 <span>{paymentMethod === 'online' ? `Pay ${formatCurrency(total)} Now` : `Pay on Delivery`}</span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-emerald-100 lowercase">
+              <div className="flex items-center gap-2 text-emerald-950">
+                <span className="text-xs font-bold text-emerald-900 lowercase">
                   {paymentMethod === 'online' ? 'instant online' : formatCurrency(total)}
                 </span>
-                <ArrowRight className="w-5 h-5 animate-pulse" />
+                <ArrowRight className="w-5 h-5 animate-pulse text-emerald-950" />
               </div>
             </>
           )}
