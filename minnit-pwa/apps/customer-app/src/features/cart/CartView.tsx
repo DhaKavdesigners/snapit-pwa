@@ -185,7 +185,7 @@ export const CartView: React.FC = () => {
                       : 'bg-gray-50/50 border-gray-100/80'
                 }`}
               >
-                <div className="relative w-13 h-13 rounded-xl overflow-hidden bg-white border border-gray-100 shrink-0">
+                <div className="relative w-16 h-16 min-w-[64px] max-w-[64px] h-[64px] rounded-2xl overflow-hidden bg-white border border-gray-100 shrink-0 flex items-center justify-center">
                   <img 
                     src={item.product!.imageUrl} 
                     alt={item.product!.name} 
@@ -198,7 +198,7 @@ export const CartView: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 pr-1">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`text-[9px] font-bold uppercase tracking-wider ${isItemStoreClosed ? 'text-red-600' : 'text-emerald-700'}`}>
                       {item.product!.storeName || 'Minnit Store'}
@@ -217,16 +217,16 @@ export const CartView: React.FC = () => {
                     </p>
                   )}
 
-                  <div className="font-mono font-black text-xs text-gray-900 mt-0.5">
+                  <div className="font-mono font-black text-xs text-gray-900 mt-1">
                     {formatCurrency(item.product!.price * item.quantity)}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <div className="flex items-center bg-white border border-emerald-200/80 rounded-xl h-7 overflow-hidden shadow-2xs">
+                  <div className="flex items-center bg-white border border-emerald-200/80 rounded-xl h-8 overflow-hidden shadow-2xs">
                     <button 
                       onClick={() => updateQuantity(item.productId, item.quantity - 1, stock)}
-                      className="w-6 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                      className="w-7 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
                     >
                       <Minus className="h-3 w-3" />
                     </button>
@@ -238,7 +238,7 @@ export const CartView: React.FC = () => {
                         }
                       }}
                       disabled={isItemStoreClosed || isMaxReached}
-                      className={`w-6 h-7 flex items-center justify-center transition-colors ${
+                      className={`w-7 h-8 flex items-center justify-center transition-colors ${
                         isItemStoreClosed || isMaxReached 
                           ? 'text-gray-300 cursor-not-allowed bg-gray-50' 
                           : 'text-brand hover:bg-emerald-50 active:bg-emerald-100'
