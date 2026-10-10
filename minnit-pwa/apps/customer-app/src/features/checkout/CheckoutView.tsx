@@ -11,7 +11,7 @@ import {
   ChevronLeft, MapPin, CreditCard, Banknote,
   CheckCircle2, ArrowRight, X, User, Plus, ShieldCheck,
   Zap, Sparkles, Lock, Gift, Check, Phone, LocateFixed,
-  UserCheck, Compass, CheckCircle, QrCode, Tag
+  UserCheck, Compass, CheckCircle, QrCode, Tag, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
@@ -327,7 +327,7 @@ export const CheckoutView: React.FC = () => {
     }
   };
 
-  // Triggered when clicking bottom "Pay ₹X / place order" button: opens choice popup
+  // Triggered when clicking bottom CTA button: executes selected payment mode
   const handleProceedToPayment = () => {
     if (isSubmitting) return;
     if (!isLoggedIn || !userProfile) {
@@ -335,8 +335,11 @@ export const CheckoutView: React.FC = () => {
       navigate('/profile?redirect=/checkout');
       return;
     }
-    // Open the 2-option popup (Pay Now or Pay on Delivery)
-    setIsPaymentChoiceModalOpen(true);
+    if (paymentMethod === 'online') {
+      handlePayNow();
+    } else {
+      handlePayOnDeliveryQR();
+    }
   };
 
   // Option 1: Pay Now with Razorpay
@@ -734,145 +737,98 @@ export const CheckoutView: React.FC = () => {
           </div>
         </section>
 
-        {/* ── 2. Bill & Savings Details Card ── */}
+        {/* ── 2. Payment Method Section ── */}
         <section>
-          <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-center justify-between mb-2.5 px-1">
             <h2 className="font-black text-xs uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
-              Bill Details
+              <CreditCard className="w-3.5 h-3.5 text-brand" />
+              Payment Method
             </h2>
-            <span className="text-[10px] font-bold text-emerald-700">Instant Delivery</span>
+            <span className="text-[10px] font-bold text-emerald-700">Total Payable: {formatCurrency(total)}</span>
           </div>
-
-          <div className="bg-white rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-100 space-y-3">
-            {/* Item total */}
-            <div className="flex justify-between text-xs text-gray-600 font-medium">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                Item Total ({cartItemsWithDetails.length} items)
-              </span>
-              <span className="font-bold text-gray-900">{formatCurrency(itemTotal)}</span>
-            </div>
-
-            {/* Delivery */}
-            <div className="flex justify-between text-xs text-gray-600 font-medium">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                Delivery Fee (KGF Fast Drop)
-              </span>
-              <span className="font-bold text-gray-900">{formatCurrency(deliveryFee)}</span>
-            </div>
-
-            {/* Platform & Taxes */}
-            <div className="flex justify-between text-xs text-gray-600 font-medium">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                Taxes &amp; Platform Fee
-              </span>
-              <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] border border-emerald-100">
-                ₹0 FREE
-              </span>
-            </div>
-
-            {/* Minnit Guarantee banner */}
-            <div className="bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 rounded-2xl p-3 border border-emerald-100 flex items-center gap-2.5">
-              <Gift className="w-4 h-4 text-emerald-600 shrink-0" />
-              <p className="text-[11px] font-bold text-emerald-900 leading-tight">
-                Minnit Promise: 100% Fresh &amp; Quality Guaranteed on delivery!
-              </p>
-            </div>
-
-            {/* One-Line Coupon Code Option */}
-            <div className="flex items-center justify-between bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-2.5 px-3.5 transition-all">
-              <div className="flex items-center gap-2 min-w-0">
-                <Tag className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-xs font-bold text-gray-700 truncate">Have a coupon code?</span>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => alert("Coupon codes are coming soon in KGF!")}
-                className="text-xs font-black text-brand uppercase tracking-wider hover:text-emerald-700 active:scale-95 transition-transform cursor-pointer shrink-0"
-              >
-                Apply
-              </button>
-            </div>
-
-            {/* Grand Total Pill */}
-            <div className="border-t-2 border-dashed border-gray-100 pt-3 flex items-center justify-between">
-              <div>
-                <span className="font-black text-base text-gray-900 block leading-tight">To Pay</span>
-                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Inclusive of all taxes</span>
-              </div>
-              <span className="font-black text-2xl text-brand font-mono tracking-tight bg-emerald-50 px-3.5 py-1 rounded-2xl border border-emerald-200">
-                {formatCurrency(total)}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* ── 3. Payment Method Section ── */}
-        <section>
-          <h2 className="font-black text-xs uppercase tracking-widest text-emerald-800 mb-2 px-1 flex items-center gap-1.5">
-            <CreditCard className="w-3.5 h-3.5 text-brand" />
-            Payment Method
-          </h2>
           
-          <div className="flex flex-col gap-3.5">
-            {/* 1. Online Payment Card */}
+          <div className="flex flex-col gap-3">
+            {/* 1. Pay Now Card */}
             <motion.div 
               whileTap={{ scale: 0.99 }}
               onClick={() => setPaymentMethod('online')}
-              className={`rounded-3xl p-4.5 p-4 border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden ${
+              className={`rounded-3xl p-4 border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden ${
                 paymentMethod === 'online'
                   ? 'border-emerald-500 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/40 ring-4 ring-emerald-500/10'
                   : 'border-gray-200 bg-white hover:border-emerald-200'
               }`}
             >
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-start gap-3.5">
                 {/* Radio Circle */}
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
                   paymentMethod === 'online' ? 'border-brand bg-brand' : 'border-gray-300'
                 }`}>
-                  {paymentMethod === 'online' && <Check className="w-3.5 h-3.5 text-white" />}
+                  {paymentMethod === 'online' && <Check className="w-3 h-3 text-white" />}
                 </div>
 
                 {/* Icon badge */}
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="font-black text-sm text-gray-900">
-                      Pay Online (UPI / Card)
+                      Pay Now
                     </p>
                     <span className="text-[9px] font-black text-white bg-gradient-to-r from-emerald-500 to-brand px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                       Instant
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-500 font-medium">GPay • PhonePe • Paytm • Cards</p>
+                  <p className="text-[11px] text-gray-600 font-medium leading-relaxed">
+                    Instant online payment via UPI (GPay, PhonePe, Paytm), Debit/Credit Cards, or NetBanking.
+                  </p>
                 </div>
               </div>
             </motion.div>
 
-            {/* 2. Cash on Delivery (Disabled) */}
-            <div 
-              onClick={() => alert("Cash on Delivery will be enabled soon in KGF!")}
-              className="rounded-3xl p-4 border border-gray-200 bg-gray-50/80 opacity-60 cursor-pointer select-none flex items-center gap-3.5"
+            {/* 2. Pay on Delivery Card */}
+            <motion.div 
+              whileTap={{ scale: 0.99 }}
+              onClick={() => setPaymentMethod('upiDelivery')}
+              className={`rounded-3xl p-4 border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden ${
+                paymentMethod === 'upiDelivery'
+                  ? 'border-emerald-500 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/40 ring-4 ring-emerald-500/10'
+                  : 'border-gray-200 bg-white hover:border-emerald-200'
+              }`}
             >
-              <div className="w-6 h-6 rounded-full border-2 border-gray-300 shrink-0" />
-              <div className="w-11 h-11 rounded-2xl bg-gray-200 text-gray-500 flex items-center justify-center shrink-0">
-                <Banknote className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="font-bold text-sm text-gray-700">Cash on Delivery</p>
-                  <span className="text-[9px] font-black text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full uppercase">
-                    Coming Soon
-                  </span>
+              <div className="flex items-start gap-3.5">
+                {/* Radio Circle */}
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  paymentMethod === 'upiDelivery' ? 'border-brand bg-brand' : 'border-gray-300'
+                }`}>
+                  {paymentMethod === 'upiDelivery' && <Check className="w-3 h-3 text-white" />}
                 </div>
-                <p className="text-[11px] text-gray-400">Available in upcoming update</p>
+
+                {/* Icon badge */}
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-teal-500/20">
+                  <QrCode className="w-5 h-5 text-white" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="font-black text-sm text-gray-900">
+                      Pay on Delivery
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-gray-600 font-medium leading-relaxed">
+                    Rider will show an order-specific UPI QR code upon arrival at your doorstep. Scan &amp; pay via any UPI app.
+                  </p>
+                </div>
               </div>
+            </motion.div>
+
+            {/* ⚠️ Critical Security Note Banner */}
+            <div className="bg-amber-50/90 border border-amber-300/90 rounded-2xl p-3 flex items-start gap-2.5 shadow-2xs">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[10.5px] text-amber-950 font-bold leading-relaxed">
+                <span className="text-amber-900 font-black">⚠️ Important Security Note:</span> Do NOT pay to the rider's personal QR code! Orders will fail verification. Pay ONLY to the official Minnit QR code generated inside the Minnit Rider App.
+              </p>
             </div>
           </div>
         </section>
@@ -895,11 +851,13 @@ export const CheckoutView: React.FC = () => {
             <>
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4 text-emerald-200" />
-                <span>Pay {formatCurrency(total)}</span>
+                <span>{paymentMethod === 'online' ? `Pay ${formatCurrency(total)} Now` : `Pay on Delivery`}</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-emerald-100 lowercase">place order</span>
+                <span className="text-xs font-bold text-emerald-100 lowercase">
+                  {paymentMethod === 'online' ? 'instant online' : formatCurrency(total)}
+                </span>
                 <ArrowRight className="w-5 h-5 animate-pulse" />
               </div>
             </>
@@ -1150,7 +1108,7 @@ export const CheckoutView: React.FC = () => {
 
               {/* 2 Payment Options */}
               <div className="flex flex-col gap-3.5 mb-3">
-                {/* 1. Pay Now (Razorpay / Instant Online) */}
+                {/* 1. Pay Now (Instant Online) */}
                 <button
                   type="button"
                   onClick={handlePayNow}
@@ -1165,14 +1123,14 @@ export const CheckoutView: React.FC = () => {
                         Pay Now
                       </h4>
                       <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-xs">
-                        Razorpay
+                        Instant
                       </span>
                     </div>
                     <p className="text-xs text-gray-600 font-medium leading-snug">
                       Instant online payment via UPI (GPay, PhonePe, Paytm), Debit/Credit Cards, or NetBanking.
                     </p>
                     <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 mt-2">
-                      Proceed to Razorpay <ArrowRight className="w-3.5 h-3.5" />
+                      Proceed to Pay Now <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </button>
@@ -1191,18 +1149,23 @@ export const CheckoutView: React.FC = () => {
                       <h4 className="font-black text-sm text-gray-900 group-hover:text-emerald-800 transition-colors">
                         Pay on Delivery
                       </h4>
-                      <span className="text-[9px] font-black uppercase tracking-wider bg-teal-100 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-full">
-                        Rider QR
-                      </span>
                     </div>
                     <p className="text-xs text-gray-600 font-medium leading-snug">
-                      Rider will show an order-specific UPI QR code upon arrival at your doorstep. Scan & pay via any UPI app.
+                      Rider will show an order-specific UPI QR code upon arrival at your doorstep. Scan &amp; pay via any UPI app.
                     </p>
                     <span className="inline-flex items-center gap-1 text-[11px] font-black text-teal-700 mt-2">
-                      Confirm & Pay at Doorstep <ArrowRight className="w-3.5 h-3.5" />
+                      Confirm &amp; Pay at Doorstep <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </button>
+
+                {/* ⚠️ Critical Security Note Banner inside Modal */}
+                <div className="bg-amber-50/90 border border-amber-300/90 rounded-2xl p-3 flex items-start gap-2.5 shadow-2xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[10.5px] text-amber-950 font-bold leading-relaxed">
+                    <span className="text-amber-900 font-black">⚠️ Important Security Note:</span> Do NOT pay to the rider's personal QR code! Orders will fail verification. Pay ONLY to the official Minnit QR code generated inside the Minnit Rider App.
+                  </p>
+                </div>
               </div>
 
               {/* Trust Badge */}

@@ -6,7 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import { mockShoppingProducts, mockFoodProducts } from '../../api/mockData';
 import { useAllProducts } from '../../api/queries';
 import { formatCurrency } from '../../utils/currency';
-import { Plus, Minus, ArrowRight, ShoppingBag, Sparkles, Clock, Store, UtensilsCrossed, Lock, MapPin } from 'lucide-react';
+import { Plus, Minus, ArrowRight, ShoppingBag, Sparkles, Clock, Store, UtensilsCrossed, Lock, MapPin, Zap, Gift, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { calculateDeliveryFee } from '../../../../../common_logic/deliveryLogic';
 
@@ -88,7 +88,7 @@ export const CartView: React.FC = () => {
   const isReadyForCheckout = cartItemsWithDetails.length >= 3;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col relative pb-36">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col relative pb-44">
       <div className="flex-1 p-4 pt-3">
         {/* ── Ready-to-checkout banner — Catie or Momo based on context */}
         <AnimatePresence>
@@ -248,24 +248,86 @@ export const CartView: React.FC = () => {
           })}
         </div>
 
+        {/* ── Rich Bill Details Card ── */}
+        <section className="mb-4">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h3 className="font-black text-xs uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+              Bill Details
+            </h3>
+            <span className="text-[10px] font-bold text-emerald-700">Instant Delivery</span>
+          </div>
+
+          <div className="bg-white rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-100 space-y-3">
+            {/* Item total */}
+            <div className="flex justify-between text-xs text-gray-600 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Item Total ({cartItemsWithDetails.length} {cartItemsWithDetails.length === 1 ? 'item' : 'items'})
+              </span>
+              <span className="font-bold text-gray-900">{formatCurrency(itemTotal)}</span>
+            </div>
+
+            {/* Delivery */}
+            <div className="flex justify-between text-xs text-gray-600 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                Delivery Fee (KGF Fast Drop)
+              </span>
+              <span className="font-bold text-gray-900">{formatCurrency(deliveryFee)}</span>
+            </div>
+
+            {/* Platform & Taxes */}
+            <div className="flex justify-between text-xs text-gray-600 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Taxes &amp; Platform Fee
+              </span>
+              <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] border border-emerald-100">
+                ₹0 FREE
+              </span>
+            </div>
+
+            {/* Minnit Guarantee banner */}
+            <div className="bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 rounded-2xl p-3 border border-emerald-100 flex items-center gap-2.5">
+              <Gift className="w-4 h-4 text-emerald-600 shrink-0" />
+              <p className="text-[11px] font-bold text-emerald-900 leading-tight">
+                Minnit Promise: 100% Fresh &amp; Quality Guaranteed on delivery!
+              </p>
+            </div>
+
+            {/* One-Line Coupon Code Option */}
+            <div className="flex items-center justify-between bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-2.5 px-3.5 transition-all">
+              <div className="flex items-center gap-2 min-w-0">
+                <Tag className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="text-xs font-bold text-gray-700 truncate">Have a coupon code?</span>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => alert("Coupon codes are coming soon in KGF!")}
+                className="text-xs font-black text-brand uppercase tracking-wider hover:text-emerald-700 active:scale-95 transition-transform cursor-pointer shrink-0"
+              >
+                Apply
+              </button>
+            </div>
+
+            {/* Grand Total Row */}
+            <div className="border-t-2 border-dashed border-gray-100 pt-3 flex items-center justify-between">
+              <div>
+                <span className="font-black text-base text-gray-900 block leading-tight">To Pay</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Inclusive of all taxes</span>
+              </div>
+              <span className="font-black text-2xl text-brand font-mono tracking-tight bg-emerald-50 px-3.5 py-1 rounded-2xl border border-emerald-200">
+                {formatCurrency(total)}
+              </span>
+            </div>
+          </div>
+        </section>
+
       </div>
 
-      {/* ── Bill Summary (Fixed Footer) ── */}
+      {/* ── Sticky Bottom Checkout CTA ── */}
       <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-xl px-4 py-3 border-t border-emerald-100/90 shadow-[0_-10px_30px_rgba(5,150,105,0.08)] z-40 rounded-t-3xl pb-4">
-        <div className="bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/50 rounded-2xl px-4 py-2.5 border border-emerald-200/80 mb-3 space-y-1.5">
-          <div className="flex justify-between text-xs text-gray-600 font-medium">
-            <span>Item Subtotal</span>
-            <span className="font-bold text-gray-900">{formatCurrency(itemTotal)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-gray-600 font-medium">
-            <span>Delivery Fee</span>
-            <span className="font-bold text-gray-900">{formatCurrency(deliveryFee)}</span>
-          </div>
-          <div className="border-t border-dashed border-emerald-200/80 pt-1.5 flex justify-between items-center">
-            <span className="font-black text-sm text-gray-900">Total Due</span>
-            <span className="font-black text-lg text-brand font-mono">{formatCurrency(total)}</span>
-          </div>
-        </div>
 
         {/* Where should we deliver prompt with direct Sign Up option */}
         {!isRegistered && (
