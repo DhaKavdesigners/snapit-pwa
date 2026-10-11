@@ -194,10 +194,73 @@ export async function fetchLiveOrders(): Promise<DbOrder[]> {
   }
 }
 
-/** Assign rider to order without modifying merchant status */
-export async function assignRiderToOrder(orderId: string, riderId: string) {
+/** Authoritative check: verify if an order is eligible for rider dispatch and notifications */
+export async function checkOrderDispatchEligibility(orderId: string): Promise<{
+  eligible: boolean;
+  order?: DbOrder;
+  reason?: string;
+}> {
+  try {
+    // Authoritative check: read actual database status directly from Supabase
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return { eligible: false, reason: 'ORDER_NOT_FOUND_OR_DB_ERROR' };
+    }
+
+    const currentStatus = (data.status || '').toUpperCase();
+
+    // Mandatory condition: Rider notification or dispatch is ONLY allowed if status is exactly PREPARING
+    if (currentStatus !== 'PREPARING') {
+      return { eligible: false, reason: `STATUS_NOT_PREPARING:${currentStatus}` };
+    }
+
+    // Must not be already assigned to another rider
+    if (data.rider_assignment === 'ASSIGNED' && data.rider_id) {
+      return { eligible: false, reason: 'ALREADY_ASSIGNED' };
+    }
+
+    return { eligible: true, order: data as DbOrder };
+  } catch (err: any) {
+    return { eligible: false, reason: err?.message || 'EXCEPTION' };
+  }
+}
+
+/** Assign rider to order with strict PREPARING status verification */
+export async function assignRiderToOrder(orderId: string, riderId: string): Promise<{
+  success: boolean;
+  data?: any;
+  error?: any;
+}> {
   try {
     const cleanRiderId = riderId.replace(/[^0-9]/g, '').slice(-10) || riderId;
+
+    // 1. Try atomic RPC with row lock
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('assign_rider_if_preparing', {
+        p_order_id: orderId,
+        p_rider_id: cleanRiderId,
+      });
+
+      if (!rpcError && rpcData) {
+        if (rpcData.success) {
+          return { success: true, data: rpcData.order };
+        } else {
+          console.warn('RPC assign_rider_if_preparing rejected assignment:', rpcData.error);
+          return { success: false, error: new Error(rpcData.error || 'Assignment rejected by database rule') };
+        }
+      }
+    } catch {
+      // Fall through to atomic conditional update fallback
+    }
+
+    // 2. Atomic conditional update fallback:
+    // Guarantees row is only updated IF orders.status is exactly PREPARING
+    // and rider is not already assigned to another rider
     const updatePayload: any = {
       rider_assignment: 'ASSIGNED',
       rider_id: cleanRiderId,
@@ -207,13 +270,28 @@ export async function assignRiderToOrder(orderId: string, riderId: string) {
     const { data, error } = await supabase
       .from('orders')
       .update(updatePayload)
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .eq('status', 'PREPARING')
+      .or(`rider_id.is.null,rider_id.eq.,rider_id.eq.${cleanRiderId}`)
+      .select();
 
-    if (error) console.warn('Error assigning rider to order in Supabase:', error);
-    return { data, error };
+    if (error) {
+      console.warn('Error assigning rider to order in Supabase:', error);
+      return { success: false, error };
+    }
+
+    if (!data || data.length === 0) {
+      console.warn(`[Dispatch] Cannot assign order ${orderId}: status is no longer PREPARING or already assigned.`);
+      return {
+        success: false,
+        error: new Error('Order is no longer available in PREPARING status'),
+      };
+    }
+
+    return { success: true, data: data[0] };
   } catch (err) {
     console.warn('Supabase assignRiderToOrder exception:', err);
-    return { error: err };
+    return { success: false, error: err };
   }
 }
 
@@ -222,7 +300,7 @@ export async function updateDbOrderStatus(
   orderId: string,
   status: string,
   riderId?: string
-) {
+): Promise<{ success: boolean; data?: any; error?: any }> {
   try {
     const dbStatus = mapAppStatusToDbStatus(status);
     const updatePayload: any = {
@@ -234,13 +312,17 @@ export async function updateDbOrderStatus(
     const { data, error } = await supabase
       .from('orders')
       .update(updatePayload)
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .select();
 
-    if (error) console.warn('Error updating Supabase order status:', error);
-    return { data, error };
+    if (error) {
+      console.warn('Error updating Supabase order status:', error);
+      return { success: false, error };
+    }
+    return { success: true, data };
   } catch (err) {
     console.warn('Supabase updateDbOrderStatus exception:', err);
-    return { error: err };
+    return { success: false, error: err };
   }
 }
 
@@ -253,7 +335,7 @@ export async function updateDbOrderHandover(
     rider_pickup_confirmed?: boolean;
     shopkeeper_handover_confirmed?: boolean;
   }
-) {
+): Promise<{ success: boolean; data?: any; error?: any }> {
   try {
     const updatePayload: any = {
       ...updates,
@@ -262,13 +344,17 @@ export async function updateDbOrderHandover(
     const { data, error } = await supabase
       .from('orders')
       .update(updatePayload)
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .select();
 
-    if (error) console.warn('Error updating Supabase handover status:', error);
-    return { data, error };
+    if (error) {
+      console.warn('Error updating Supabase handover status:', error);
+      return { success: false, error };
+    }
+    return { success: true, data };
   } catch (err) {
     console.warn('Supabase updateDbOrderHandover exception:', err);
-    return { error: err };
+    return { success: false, error: err };
   }
 }
 

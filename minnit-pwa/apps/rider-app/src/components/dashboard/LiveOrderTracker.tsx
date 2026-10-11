@@ -14,14 +14,15 @@ export const LiveOrderTracker: React.FC = () => {
 
   if (!activeOrder) return null;
 
-  const handleSlideAction = () => {
+  const handleSlideAction = async () => {
     if (activeOrder.status === 'picking_up' || activeOrder.status === 'accepted' || activeOrder.status === 'arrived_at_pickup') {
-      advanceActiveOrderStatus(); // -> confirmRiderPickup()
+      return await advanceActiveOrderStatus(); // -> confirmRiderPickup()
     } else if (activeOrder.status === 'in_transit') {
-      advanceActiveOrderStatus(); // -> arrived_at_dropoff
+      return await advanceActiveOrderStatus(); // -> arrived_at_dropoff
     } else {
       // -> arrived_at_dropoff to delivery OTP
       router.push('/confirm-delivery');
+      return true;
     }
   };
 

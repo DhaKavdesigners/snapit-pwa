@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronsRight, Check } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { ChevronsRight, Check, Loader2 } from 'lucide-react';
 
 interface SlideButtonProps {
   label: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void | boolean>;
   variant?: 'emerald' | 'blue' | 'purple';
   disabled?: boolean;
   className?: string;
@@ -25,12 +25,45 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
   const [dragProgress, setDragProgress] = useState(0); // 0 to 1
   const [isDragging, setIsDragging] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
+  const knobRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef<number>(0);
   const currentDragRef = useRef<number>(0);
   const isDraggingRef = useRef<boolean>(false);
   const isCompletedRef = useRef<boolean>(false);
+  const isProcessingRef = useRef<boolean>(false);
+  const activePointerIdRef = useRef<number | null>(null);
+  const hasReachedThresholdRef = useRef<boolean>(false);
+  const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Reset state whenever label, variant, or disabled props change (ensures next status slider is clean & ready to slide)
+  useEffect(() => {
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+    isCompletedRef.current = false;
+    setIsCompleted(false);
+    isProcessingRef.current = false;
+    setIsProcessing(false);
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    currentDragRef.current = 0;
+    hasReachedThresholdRef.current = false;
+    setDragProgress(0);
+  }, [label, variant, disabled]);
+
+  // Clean up any pending reset timer on unmount
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+        resetTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const theme = {
     emerald: {
@@ -70,10 +103,10 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
 
   const handleWidth = 54;
 
-  const triggerCompletion = useCallback(() => {
-    if (isCompletedRef.current) return;
-    isCompletedRef.current = true;
-    setIsCompleted(true);
+  const triggerCompletion = useCallback(async () => {
+    if (isCompletedRef.current || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setIsProcessing(true);
     setDragProgress(1);
 
     // Haptic vibration feedback for mobile riders
@@ -85,20 +118,41 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
       }
     }
 
-    // Call confirmation after a brief visual confirmation animation
-    setTimeout(() => {
-      onConfirm();
-      // Reset state if component stays mounted
-      setTimeout(() => {
+    try {
+      const result = await onConfirm();
+      if (result === false) {
+        throw new Error('Action failed');
+      }
+      isCompletedRef.current = true;
+      setIsCompleted(true);
+      setIsProcessing(false);
+      isProcessingRef.current = false;
+
+      // Keep visual completion feedback briefly (500ms), then auto-reset so component never stays stuck
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = setTimeout(() => {
         isCompletedRef.current = false;
         setIsCompleted(false);
+        currentDragRef.current = 0;
+        hasReachedThresholdRef.current = false;
         setDragProgress(0);
+        resetTimerRef.current = null;
       }, 500);
-    }, 200);
+    } catch (err) {
+      console.warn('Slide action execution failed:', err);
+      // On failure: do NOT falsely mark as completed; allow rider to retry immediately
+      isCompletedRef.current = false;
+      setIsCompleted(false);
+      setIsProcessing(false);
+      isProcessingRef.current = false;
+      hasReachedThresholdRef.current = false;
+      currentDragRef.current = 0;
+      setDragProgress(0);
+    }
   }, [onConfirm]);
 
   const handleDrag = useCallback((clientX: number) => {
-    if (!isDraggingRef.current || !trackRef.current || isCompletedRef.current) return;
+    if (!isDraggingRef.current || !trackRef.current || isCompletedRef.current || isProcessingRef.current) return;
 
     const trackRect = trackRef.current.getBoundingClientRect();
     const maxDistance = trackRect.width - handleWidth - 8; // 8px total padding
@@ -112,77 +166,84 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
     currentDragRef.current = progress;
     setDragProgress(progress);
 
-    // If dragged past 85%, automatically confirm
-    if (progress >= 0.85) {
+    if (progress >= 0.80) {
+      hasReachedThresholdRef.current = true;
+    }
+
+    // Auto-confirm smoothly when dragged all the way past 88%
+    if (progress >= 0.88) {
       isDraggingRef.current = false;
       setIsDragging(false);
+      if (activePointerIdRef.current !== null && knobRef.current) {
+        try {
+          knobRef.current.releasePointerCapture(activePointerIdRef.current);
+        } catch {}
+        activePointerIdRef.current = null;
+      }
       triggerCompletion();
     }
   }, [handleWidth, triggerCompletion]);
 
-  const handleDragEnd = useCallback(() => {
-    if (!isDraggingRef.current || isCompletedRef.current) return;
-
-    isDraggingRef.current = false;
-    setIsDragging(false);
-
-    // Threshold check
-    if (currentDragRef.current >= 0.72) {
-      triggerCompletion();
-    } else {
-      // Spring back to 0
-      setDragProgress(0);
-      currentDragRef.current = 0;
-    }
-  }, [triggerCompletion]);
-
-  // Touch Handlers
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (disabled || isCompleted) return;
-    const touch = e.touches[0];
-    startXRef.current = touch.clientX;
-    isDraggingRef.current = true;
-    setIsDragging(true);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    handleDrag(e.touches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    handleDragEnd();
-  };
-
-  // Mouse Handlers
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (disabled || isCompleted) return;
+  // Unified Pointer Handlers (Works seamlessly across Android/iOS touch and Desktop mouse)
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled || isCompleted || isProcessing) return;
+    e.preventDefault();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    activePointerIdRef.current = e.pointerId;
     startXRef.current = e.clientX;
     isDraggingRef.current = true;
     setIsDragging(true);
+    currentDragRef.current = 0;
+    hasReachedThresholdRef.current = false;
   };
 
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (isDraggingRef.current) {
-        handleDrag(e.clientX);
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current || activePointerIdRef.current !== e.pointerId) return;
+    e.preventDefault();
+    handleDrag(e.clientX);
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current || activePointerIdRef.current !== e.pointerId) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    activePointerIdRef.current = null;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+
+    // Intentional completion check:
+    // When the slider reaches the valid completion threshold (>= 0.75) and user releases, trigger exactly once
+    if (currentDragRef.current >= 0.75 || hasReachedThresholdRef.current) {
+      triggerCompletion();
+    } else {
+      // Partial or accidental swipe: spring back smoothly without triggering action
+      setDragProgress(0);
+      currentDragRef.current = 0;
+      hasReachedThresholdRef.current = false;
+    }
+  };
+
+  const onPointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerIdRef.current === e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+      activePointerIdRef.current = null;
+      isDraggingRef.current = false;
+      setIsDragging(false);
+
+      if (currentDragRef.current >= 0.75 || hasReachedThresholdRef.current) {
+        triggerCompletion();
+      } else {
+        setDragProgress(0);
+        currentDragRef.current = 0;
+        hasReachedThresholdRef.current = false;
       }
-    };
-
-    const onMouseUp = () => {
-      if (isDraggingRef.current) {
-        handleDragEnd();
-      }
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [handleDrag, handleDragEnd]);
+    }
+  };
 
   const trackWidth = trackRef.current ? trackRef.current.clientWidth : 280;
   const maxTravel = Math.max(0, trackWidth - handleWidth - 8);
@@ -201,6 +262,7 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
   return (
     <div
       ref={trackRef}
+      style={{ touchAction: 'none', userSelect: 'none' }}
       className={`relative w-full h-[62px] rounded-full p-1 select-none border-[3px] ${theme.trackBorder} ${theme.trackShadow} ${theme.trackGradient} flex items-center ${className}`}
     >
       {/* Overflow-clipped Track Fill & Dynamic Chevron Trail */}
@@ -228,7 +290,7 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
           className={`text-[12.5px] font-black uppercase tracking-wider ${theme.textColor} transition-opacity duration-150 text-center select-none`}
           style={{ opacity: Math.max(0, 1 - dragProgress * 2.2) }}
         >
-          {label}
+          {isProcessing ? 'Processing...' : label}
         </span>
       </div>
 
@@ -239,13 +301,16 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
         </div>
       )}
 
-      {/* Draggable Circular Knob with Outer Glowing Halo */}
+      {/* Draggable Circular Knob with Outer Glowing Halo and Pointer Capture */}
       <div
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onMouseDown={onMouseDown}
+        ref={knobRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
         style={{
+          touchAction: 'none',
+          userSelect: 'none',
           transform: `translateX(${currentTranslateX}px)`,
           transition: isDragging
             ? 'none'
@@ -255,7 +320,9 @@ export const SlideButton: React.FC<SlideButtonProps> = ({
       >
         {/* Inner Solid Circle Button */}
         <div className={`w-full h-full rounded-full ${theme.buttonGradient} flex items-center justify-center shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.4),0_3px_6px_rgba(0,0,0,0.25)]`}>
-          {isCompleted ? (
+          {isProcessing ? (
+            <Loader2 className="w-5 h-5 text-white animate-spin stroke-[3]" />
+          ) : isCompleted ? (
             <Check className="w-5 h-5 text-white stroke-[3.5] animate-scale-in" />
           ) : icon ? (
             <span className="text-white flex items-center justify-center">{icon}</span>

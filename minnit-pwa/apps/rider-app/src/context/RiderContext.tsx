@@ -89,6 +89,7 @@ import {
   fetchAllRiders,
   fetchRiderDeliveredStats,
   assignRiderToOrder,
+  checkOrderDispatchEligibility,
   updateDbOrderStatus,
   updateDbOrderHandover,
   subscribeToOrders,
@@ -101,6 +102,7 @@ import {
   updateRiderLiveLocation,
   updateRiderOnlineStatus,
 } from '@/services/supabaseOrderService';
+import { isRiderEligibleForOrder, type CandidateRider } from '@/services/assignmentService';
 import { supabase } from '@/lib/supabase';
 import {
   getLocalSessionToken,
@@ -157,13 +159,13 @@ interface RiderContextType {
   toggleOnline: () => void;
   toggleDesktopFrame: () => void;
   setOnlineStatus: (status: boolean) => void;
-  acceptIncomingOrder: () => void;
+  acceptIncomingOrder: () => void | Promise<void>;
   declineIncomingOrder: () => void;
-  advanceActiveOrderStatus: () => void;
+  advanceActiveOrderStatus: () => void | Promise<boolean>;
   setActiveOrderStatus: (status: DeliveryStatus) => void;
   startNavigation: () => void;
-  markOrderPickedUp: () => void;
-  confirmRiderPickup: () => void;
+  markOrderPickedUp: () => void | Promise<boolean>;
+  confirmRiderPickup: () => void | Promise<boolean>;
   setNavStage: (stage: NavigationStage) => void;
   completeDeliveryWithOtp: (otp: string) => boolean;
   triggerMockOrder: () => void;
@@ -2058,10 +2060,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Supabase Live Orders Listener & Active Poller ──────────────────────────
 
-  // Order notification eligibility: customer places order (PLACED/PENDING) or merchant accepts/prepares (ACCEPTED/PREPARING/PACKING/READY)
+  // Strict requirement: A rider may receive an order notification or assignment
+  // ONLY when the authoritative Supabase orders table confirms that the order's status is exactly PREPARING.
   const isEligibleNotificationStatus = (statusStr?: string) => {
     const s = (statusStr || '').toUpperCase();
-    return s === 'PLACED' || s === 'PENDING' || s === 'ACCEPTED' || s === 'PREPARING' || s === 'PACKING' || s === 'READY' || s === 'READY_FOR_PICKUP';
+    return s === 'PREPARING';
   };
 
   const syncLiveOrders = useCallback(async () => {
@@ -2112,21 +2115,54 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
       // 2. Sync Incoming Orders (unassigned orders waiting for rider)
       if (dbOrders && dbOrders.length > 0 && !activeOrderRef.current) {
-        const eligible = dbOrders.find((o) =>
+        // Strict filter: Order must have status PREPARING, not assigned, and not handled
+        const preparingOrders = dbOrders.filter((o) =>
           isEligibleNotificationStatus(o.status) &&
           (!o.rider_id || o.rider_id === rider.phone || (cleanPhone && (o.rider_id || '').replace(/[^0-9]/g, '').slice(-10) === cleanPhone)) &&
+          o.rider_assignment !== 'ASSIGNED' &&
           o.rider_assignment !== 'assigned' &&
           !handledOrderIdsRef.current.has(String(o.id).trim()) &&
           !soundEngine.isOrderHandled(String(o.id).trim())
         );
 
-        if (eligible) {
-          const store = dbStores.find((s) => s.id === eligible.store_id);
-          const mapped = mapDbOrderToAppOrder(eligible, store);
-          if (isBreakActiveRef.current) {
-            showBreakOrderPreview(mapped);
-          } else if (isOnlineRef.current) {
-            setIncomingOrder((prev) => prev || mapped);
+        if (preparingOrders.length > 0) {
+          const candidateRiderInfo: CandidateRider = {
+            id: rider.id || cleanPhone,
+            name: rider.name || 'Rider',
+            phone: cleanPhone,
+            isOnline: isOnlineRef.current,
+            isVerified: Boolean(rider.isVerified),
+            selectedZoneId: rider.selectedZoneId,
+            availableForOrder: !activeOrderRef.current && !isBreakActiveRef.current,
+            currentLocation: gpsCoords || { lat: 12.9602, lng: 78.2711 },
+          };
+
+          const eligible = preparingOrders.find((o) => {
+            const store = dbStores.find((s) => s.id === o.store_id);
+            const targetZone = (store as any)?.zone_id || (store as any)?.selected_zone_id || rider.selectedZoneId || '';
+            return isRiderEligibleForOrder(candidateRiderInfo, targetZone);
+          }) || preparingOrders[0];
+
+          if (eligible) {
+            // Authoritative Pre-notification Status Validation:
+            // Query Supabase directly to ensure the order is STILL PREPARING before notifying rider
+            const verification = await checkOrderDispatchEligibility(eligible.id);
+
+            if (verification.eligible && verification.order) {
+              const freshDbOrder = verification.order;
+              const store = dbStores.find((s) => s.id === freshDbOrder.store_id);
+              const mapped = mapDbOrderToAppOrder(freshDbOrder, store);
+              if (isBreakActiveRef.current) {
+                showBreakOrderPreview(mapped);
+              } else if (isOnlineRef.current) {
+                setIncomingOrder((prev) => prev || mapped);
+              }
+            } else {
+              // Order is not confirmed as PREPARING (e.g. cancelled/rejected/assigned)
+              setIncomingOrder(null);
+            }
+          } else {
+            setIncomingOrder(null);
           }
         } else {
           setIncomingOrder(null);
@@ -2329,28 +2365,50 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Order Methods ─────────────────────────────────────────────────────────
 
-  const acceptIncomingOrder = () => {
+  const acceptIncomingOrder = async () => {
     if (!incomingOrder) return;
     const orderId = String(incomingOrder.id).trim();
+    const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
+
+    // Authoritative Pre-assignment validation & atomic commit in Supabase:
+    // A rider may be assigned ONLY if orders.status is exactly PREPARING
+    const assignResult = await assignRiderToOrder(orderId, cleanPhone);
+
+    if (!assignResult.success) {
+      console.warn(`[Dispatch] Cannot accept order ${orderId}: assignment rejected.`, assignResult.error);
+      markOrderHandledLocally(orderId);
+      soundEngine.stopIncomingOrderBuzzer();
+      setIncomingOrder(null);
+      addAlert({
+        id: `alert-missed-${Date.now()}`,
+        type: 'acceptance_warning',
+        title: '⚠️ Order Unavailable',
+        message: 'This order was already accepted by another rider or is no longer in PREPARING status.',
+        time: 'Just now',
+        priority: 'high',
+        read: false,
+      });
+      return;
+    }
+
     markOrderHandledLocally(orderId);
     soundEngine.stopIncomingOrderBuzzer();
     soundEngine.playSuccessChime();
     recordOrderAcceptance(orderId, 'accepted');
+
     const orderWithActiveStatus: Order = {
       ...incomingOrder,
       status: 'picking_up',
       navStage: 'to_shop',
       riderPickupConfirmed: false,
       shopkeeperHandoverConfirmed: Boolean(incomingOrder.shopkeeperHandoverConfirmed),
-      dbStatus: incomingOrder.dbStatus || 'PREPARING',
+      dbStatus: 'PREPARING',
       shopLocation: incomingOrder.shopLocation || { lat: 12.9365, lng: 78.2672, name: incomingOrder.restaurantName, address: incomingOrder.restaurantAddress },
       customerLocation: incomingOrder.customerLocation || { lat: 12.9550, lng: 78.2720, name: incomingOrder.customerName, address: incomingOrder.deliveryAddress },
       riderStartLocation: incomingOrder.riderStartLocation || { lat: 12.9602, lng: 78.2711 },
     };
     activeOrderRef.current = orderWithActiveStatus;
     setActiveOrder(orderWithActiveStatus);
-    const cleanPhone = (rider.phone || '').replace(/[^0-9]/g, '').slice(-10) || '9217649600';
-    assignRiderToOrder(orderId, cleanPhone);
     setIncomingOrder(null);
     if (isDemoMode) {
       setDemoStep('navigate_store');
@@ -2422,41 +2480,54 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /** Rider confirms physical pickup ("Confirm Parcel Picked Up") */
-  const confirmRiderPickup = () => {
-    if (!activeOrder) return;
+  const confirmRiderPickup = async (): Promise<boolean> => {
+    if (!activeOrder) return false;
 
-    setActiveOrder({
-      ...activeOrder,
-      status: 'in_transit',
-      navStage: 'to_customer',
-      riderPickupConfirmed: true,
-      shopkeeperHandoverConfirmed: true,
-      dbStatus: 'OUT_FOR_DELIVERY',
-    });
+    try {
+      const res = await updateDbOrderHandover(activeOrder.id, {
+        status: 'OUT_FOR_DELIVERY',
+        rider_pickup_confirmed: true,
+        shopkeeper_handover_confirmed: true,
+      });
 
-    updateDbOrderHandover(activeOrder.id, {
-      status: 'OUT_FOR_DELIVERY',
-      rider_pickup_confirmed: true,
-      shopkeeper_handover_confirmed: true,
-    });
-    updateDbOrderStatus(activeOrder.id, 'OUT_FOR_DELIVERY');
+      if (res && res.error) {
+        console.warn('Failed to update handover in database:', res.error);
+        return false;
+      }
 
-    addAlert({
-      id: `alert-handover-${Date.now()}`,
-      title: '🛍️ Handover Complete!',
-      message: `Order #${formatOrderNumber(activeOrder.orderNumber)} pickup verified. Now out for delivery!`,
-      time: 'Just now',
-      type: 'system',
-      read: false,
-    });
+      await updateDbOrderStatus(activeOrder.id, 'OUT_FOR_DELIVERY');
 
-    if (isDemoMode) {
-      setDemoStep('navigate_customer');
+      setActiveOrder({
+        ...activeOrder,
+        status: 'in_transit',
+        navStage: 'to_customer',
+        riderPickupConfirmed: true,
+        shopkeeperHandoverConfirmed: true,
+        dbStatus: 'OUT_FOR_DELIVERY',
+      });
+
+      addAlert({
+        id: `alert-handover-${Date.now()}`,
+        title: '🛍️ Handover Complete!',
+        message: `Order #${formatOrderNumber(activeOrder.orderNumber)} pickup verified. Now out for delivery!`,
+        time: 'Just now',
+        type: 'system',
+        read: false,
+      });
+
+      if (isDemoMode) {
+        setDemoStep('navigate_customer');
+      }
+
+      return true;
+    } catch (err) {
+      console.warn('confirmRiderPickup exception:', err);
+      return false;
     }
   };
 
-  const markOrderPickedUp = () => {
-    confirmRiderPickup();
+  const markOrderPickedUp = async (): Promise<boolean> => {
+    return await confirmRiderPickup();
   };
 
   const setNavStage = (stage: NavigationStage) => {
@@ -2464,25 +2535,39 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setActiveOrder({ ...activeOrder, navStage: stage });
   };
 
-  const advanceActiveOrderStatus = () => {
-    if (!activeOrder) return;
+  const advanceActiveOrderStatus = async (): Promise<boolean> => {
+    if (!activeOrder) return false;
 
     const rawDbStatus = (activeOrder.dbStatus || '').toUpperCase();
 
     if (rawDbStatus === 'OUT_OF_SHOP') {
-      confirmRiderPickup();
+      return await confirmRiderPickup();
     } else if (rawDbStatus === 'OUT_FOR_DELIVERY' || activeOrder.status === 'in_transit') {
-      setActiveOrder({
-        ...activeOrder,
-        status: 'arrived_at_dropoff',
-        dbStatus: 'RIDER_AT_LOC',
-        navStage: 'at_customer',
-      });
-      updateDbOrderStatus(activeOrder.id, 'RIDER_AT_LOC');
-      if (isDemoMode) {
-        setDemoStep('confirm_delivery');
+      try {
+        const res = await updateDbOrderStatus(activeOrder.id, 'RIDER_AT_LOC');
+        if (res && res.error) {
+          console.warn('Failed to update status to RIDER_AT_LOC:', res.error);
+          return false;
+        }
+
+        setActiveOrder({
+          ...activeOrder,
+          status: 'arrived_at_dropoff',
+          dbStatus: 'RIDER_AT_LOC',
+          navStage: 'at_customer',
+        });
+
+        if (isDemoMode) {
+          setDemoStep('confirm_delivery');
+        }
+
+        return true;
+      } catch (err) {
+        console.warn('advanceActiveOrderStatus exception:', err);
+        return false;
       }
     }
+    return true;
   };
 
   const completeDeliveryWithOtp = (enteredOtp: string): boolean => {
