@@ -470,70 +470,131 @@ export const CheckoutView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto relative min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col pb-36 shadow-2xl overflow-x-hidden text-gray-900">
+    <div className="max-w-md mx-auto relative min-h-screen bg-gradient-to-b from-[#e8f5ec] via-[#f0f9f3] to-[#e8f5ec] flex flex-col pb-36 shadow-2xl overflow-x-hidden text-gray-900">
 
       {/* ── Professional Clean Header ── */}
-      <div className="bg-white/95 backdrop-blur-xl px-4 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-xs border-b border-emerald-100/80">
+      <div className="bg-white/95 backdrop-blur-xl px-4 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-xs border-b border-emerald-200/90">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)} 
-            className="w-10 h-10 rounded-full bg-gray-100/90 flex items-center justify-center hover:bg-emerald-50 active:scale-95 transition-all text-gray-700 cursor-pointer"
+            className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center hover:bg-emerald-100/80 active:scale-95 transition-all text-emerald-900 cursor-pointer border border-emerald-200/60"
             aria-label="Back"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div>
-            <h1 className="font-black text-xl text-text-primary tracking-tight">Checkout</h1>
-            <p className="text-[10px] text-text-secondary font-bold flex items-center gap-1 text-emerald-700">
-              <Sparkles className="w-3 h-3 text-emerald-500" />
-              Direct Local Delivery
+            <h1 className="font-black text-xl text-gray-900 tracking-tight">Checkout</h1>
+            <p className="text-[10px] text-emerald-800 font-bold flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-emerald-600" />
+              Direct Local Delivery • KGF
             </p>
           </div>
         </div>
 
-        <div className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+        <div className="bg-emerald-100/80 text-emerald-900 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-300/80 flex items-center gap-1 shadow-2xs">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
           Secured
         </div>
       </div>
 
-      <div className="p-4 flex flex-col gap-5 overflow-y-auto">
+      {/* ── Bank-Grade Security Trust Strip ── */}
+      <div className="bg-gradient-to-r from-emerald-700 via-brand to-teal-700 text-white px-4 py-2 flex items-center justify-between text-[11px] font-bold shadow-xs">
+        <div className="flex items-center gap-1.5">
+          <Lock className="w-3.5 h-3.5 text-emerald-200" />
+          <span>256-Bit Bank Grade Secured Checkout</span>
+        </div>
+        <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+          Verified Safe
+        </span>
+      </div>
 
-        {/* ── 1. Signed In User Card ── */}
-        <section className="bg-white rounded-3xl p-4 border border-emerald-100 shadow-[0_4px_20px_rgba(5,150,105,0.04)] relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-black text-[11px] uppercase tracking-widest text-emerald-800 flex items-center gap-1.5">
-              <UserCheck className="w-4 h-4 text-brand" />
-              Signed In User
-            </h2>
-            <span className="text-[10px] font-black bg-emerald-100/70 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              Verified
-            </span>
-          </div>
+      <div className="p-4 flex flex-col gap-4 overflow-y-auto">
 
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20 font-black text-base">
-              {(userProfile?.name || 'V')[0]?.toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-black text-sm text-gray-900 truncate">
-                {userProfile?.name || 'Vishva D'}
-              </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono text-[11px] font-black tracking-wide">
-                  ID: {userProfile?.minnit_id || (() => {
-                    const phone = (userProfile?.phone || '').replace(/\D/g, '').slice(-10);
-                    if (phone === '8217649688') return generateUserId(1);
-                    if (phone === '7406187288') return generateUserId(2);
-                    const num = phone ? parseInt(phone.slice(-4), 10) || 1 : 1;
-                    return generateUserId(num);
-                  })()}
+        {/* ── 1. Receiver / Order for Someone Else Card ── */}
+        <section className="bg-white rounded-3xl p-4 border border-emerald-200/90 shadow-[0_4px_20px_rgba(5,150,105,0.06)] relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20 font-black text-sm">
+                {(finalRecipientName || 'V')[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5 text-brand" />
+                  Receiver
                 </span>
-                <span className="text-xs text-gray-500 font-mono">+91 {userProfile?.phone || ''}</span>
+                <h3 className="font-black text-sm text-gray-900 truncate">
+                  {finalRecipientName}
+                </h3>
               </div>
             </div>
+
+            {/* Toggle button */}
+            <button
+              type="button"
+              onClick={() => setIsSomeoneElse(!isSomeoneElse)}
+              className={`text-[11px] font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer shrink-0 ${
+                isSomeoneElse 
+                  ? 'bg-brand text-white border-brand shadow-xs' 
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>{isSomeoneElse ? 'Self Order' : 'Order for Someone Else'}</span>
+            </button>
           </div>
+
+          {/* If ordering for self: show primary phone */}
+          {!isSomeoneElse ? (
+            <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-gray-100 text-xs">
+              <div className="flex items-center gap-1 text-gray-600 font-mono text-xs">
+                <span className="text-gray-400 font-sans">Primary:</span>
+                <span className="font-bold text-gray-900">+91 {userProfile?.phone || '8217649688'}</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                Verified Customer
+              </span>
+            </div>
+          ) : (
+            /* If ordering for someone else: inputs expand right here */
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-2.5 pt-3 mt-1 border-t border-emerald-100 overflow-hidden"
+            >
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Recipient Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Rahul Sharma"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Recipient Phone Number *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-mono text-xs">
+                    +91
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder="98765 43210"
+                    maxLength={10}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                    value={recipientPhone}
+                    onChange={(e) => setRecipientPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
         </section>
 
         {/* ── 2. Alternate Phone Number (Simple & Compact) ── */}
@@ -638,65 +699,6 @@ export const CheckoutView: React.FC = () => {
               </button>
             </div>
           )}
-
-          {/* Ordering for someone else toggle */}
-          <div className="bg-white rounded-2xl p-3.5 border border-emerald-100/80 shadow-xs">
-            <label className="flex items-center justify-between cursor-pointer select-none">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-brand" />
-                <span className="font-bold text-xs text-gray-800">Ordering for someone else?</span>
-              </div>
-              <input 
-                type="checkbox" 
-                className="w-4 h-4 text-brand rounded border-gray-300 focus:ring-brand accent-emerald-600 cursor-pointer"
-                checked={isSomeoneElse}
-                onChange={(e) => setIsSomeoneElse(e.target.checked)}
-              />
-            </label>
-
-            <AnimatePresence>
-              {isSomeoneElse && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2.5 pt-3 mt-3 border-t border-emerald-50 overflow-hidden"
-                >
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                      Recipient Name *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rahul Sharma"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
-                      value={recipientName}
-                      onChange={(e) => setRecipientName(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                      Recipient Phone Number *
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-mono text-xs">
-                        +91
-                      </div>
-                      <input
-                        type="tel"
-                        placeholder="98765 43210"
-                        maxLength={10}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-3.5 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
-                        value={recipientPhone}
-                        onChange={(e) => setRecipientPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
           {/* Action Buttons: Pin on Map & Add Address */}
           <div className="grid grid-cols-2 gap-2.5">
