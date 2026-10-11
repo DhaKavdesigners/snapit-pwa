@@ -20,6 +20,11 @@ import {
 } from 'lucide-react';
 
 import { RiderInstructionViewer } from '@/components/common/RiderInstructionViewer';
+import {
+  validateIndianMobile,
+  extract10DigitPhone,
+  handlePhoneKeyDown,
+} from '@/utils/phoneValidation';
 
 export default function ProfilePage() {
   const { rider, updateRiderProfile, logout } = useRider();
@@ -37,16 +42,69 @@ export default function ProfilePage() {
   }, []);
   
   // Editable fields state
-  const [altPhone, setAltPhone] = useState(rider.altPhone || '');
+  const [altPhone, setAltPhone] = useState(extract10DigitPhone(rider.altPhone));
+  const [altPhoneError, setAltPhoneError] = useState('');
   const [address, setAddress] = useState(rider.address || '');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [surgeAlerts, setSurgeAlerts] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
 
+  const handleAltPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+
+    if (/[^\d]/.test(rawVal)) {
+      setAltPhoneError('Only numeric digits (0–9) are allowed.');
+      return;
+    }
+
+    if (rawVal.length > 10) {
+      return;
+    }
+
+    setAltPhone(rawVal);
+
+    if (rawVal.length === 10) {
+      const validation = validateIndianMobile(rawVal, true);
+      if (!validation.isValid) {
+        setAltPhoneError(validation.error || 'Invalid mobile number.');
+      } else {
+        setAltPhoneError('');
+      }
+    } else {
+      setAltPhoneError('');
+    }
+  };
+
+  const handleAltPhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setAltPhoneError('Copy-pasting is disabled. Please enter 10 digits manually.');
+  };
+
+  const handleAltPhoneBlur = () => {
+    if (altPhone) {
+      const validation = validateIndianMobile(altPhone, true);
+      if (!validation.isValid) {
+        setAltPhoneError(validation.error || 'Please enter a valid 10-digit mobile number.');
+      } else {
+        setAltPhoneError('');
+      }
+    }
+  };
+
   const handleSaveEditable = (e: React.FormEvent) => {
     e.preventDefault();
+    setAltPhoneError('');
+
+    if (altPhone.trim()) {
+      const validation = validateIndianMobile(altPhone.trim(), true);
+      if (!validation.isValid) {
+        setAltPhoneError(validation.error || 'Please enter a valid 10-digit Indian mobile number.');
+        return;
+      }
+    }
+
     updateRiderProfile({
-      altPhone,
+      altPhone: altPhone.trim(),
       address,
     });
     setIsSaved(true);
@@ -236,13 +294,36 @@ export default function ProfilePage() {
             {/* Alternative Phone */}
             <div className="space-y-1">
               <label className="font-semibold text-secondary">Alternative Phone Number</label>
-              <input
-                type="tel"
-                value={altPhone}
-                onChange={(e) => setAltPhone(e.target.value)}
-                placeholder="+91 98000 00000"
-                className="w-full bg-surface-container-low border border-slate-200 rounded-xl p-2.5 font-mono text-xs font-semibold text-on-surface outline-none focus:border-primary"
-              />
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 select-none shrink-0 shadow-2xs">
+                  +91
+                </div>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  value={altPhone}
+                  onChange={handleAltPhoneChange}
+                  onKeyDown={(e) =>
+                    handlePhoneKeyDown(e, () => {
+                      setAltPhoneError('Copy-pasting is disabled. Please enter 10 digits manually.');
+                    })
+                  }
+                  onPaste={handleAltPhonePaste}
+                  onBlur={handleAltPhoneBlur}
+                  placeholder="Optional 10-digit number"
+                  className={`flex-1 min-w-0 bg-surface-container-low border rounded-xl p-2.5 font-mono text-xs font-semibold text-on-surface outline-none ${
+                    altPhoneError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-primary'
+                  }`}
+                />
+              </div>
+              {altPhoneError && (
+                <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{altPhoneError}</span>
+                </p>
+              )}
             </div>
 
             {/* Current Address */}

@@ -714,6 +714,49 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
   prepTimers: {},
 
   acceptOrder: async (orderId: string, prepMinutes: number) => {
+    // 1. Authoritative Supabase persistence: atomically update orders.status = 'PREPARING'
+    let updateSuccess = false;
+    if (isSupabaseConfigured) {
+      try {
+        // Try authoritative database function if available
+        const { data: rpcData, error: rpcError } = await supabase.rpc('merchant_accept_order', {
+          p_order_id: orderId,
+          p_prep_minutes: prepMinutes,
+        });
+
+        if (!rpcError && rpcData && rpcData.success) {
+          updateSuccess = true;
+        } else {
+          // Fallback atomic conditional update: order MUST currently be PLACED or PENDING
+          const { data: updateData, error: updateError } = await supabase
+            .from('orders')
+            .update({
+              status: 'PREPARING',
+              prep_time_minutes: prepMinutes,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', orderId)
+            .in('status', ['PLACED', 'PENDING'])
+            .select();
+
+          if (!updateError && updateData && updateData.length > 0) {
+            updateSuccess = true;
+          } else {
+            console.warn('Could not update order to PREPARING in Supabase:', updateError);
+          }
+        }
+      } catch (err) {
+        console.warn('Exception updating order to PREPARING:', err);
+      }
+    } else {
+      updateSuccess = true;
+    }
+
+    if (!updateSuccess) {
+      console.warn(`[Merchant] Order ${orderId} status update to PREPARING was rejected or failed.`);
+      return;
+    }
+
     counterAudio.playActionChime();
 
     // Find the target order to inspect items
@@ -809,17 +852,6 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
         }
       }
     }
-
-    if (isSupabaseConfigured) {
-      await supabase
-        .from('orders')
-        .update({
-          status: 'PREPARING',
-          prep_time_minutes: prepMinutes,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', orderId);
-    }
   },
 
   markOrderPrepared: async (orderId: string) => {
@@ -863,14 +895,27 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     }
 
     if (isSupabaseConfigured) {
-      await supabase
-        .from('orders')
-        .update({
-          status: 'REJECTED',
-          rejection_reason: reason,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', orderId);
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('merchant_reject_order', {
+          p_order_id: orderId,
+          p_reason: reason,
+        });
+
+        if (rpcError || !rpcData?.success) {
+          await supabase
+            .from('orders')
+            .update({
+              status: 'REJECTED',
+              rejection_reason: reason,
+              rider_id: null,
+              rider_assignment: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', orderId);
+        }
+      } catch (err) {
+        console.warn('Exception updating order to REJECTED in Supabase:', err);
+      }
     }
   },
 

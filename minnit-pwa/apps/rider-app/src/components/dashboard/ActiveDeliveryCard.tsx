@@ -244,6 +244,7 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
               </div>
             ) : isOutOfShop ? (
               <SlideButton
+                key={`slide-pickup-${activeOrder.id}-${rawDbStatus}`}
                 label="SLIDE TO CONFIRM PICKUP"
                 variant="emerald"
                 onConfirm={onMarkPickedUp}
@@ -345,12 +346,14 @@ export const ActiveDeliveryCard: React.FC<ActiveDeliveryCardProps> = ({
           <div id="customer-slide-section" className="pt-1">
             {isOutForDelivery ? (
               <SlideButton
+                key={`slide-in-transit-${activeOrder.id}-${rawDbStatus}`}
                 label="SLIDE: ARRIVED AT LOCATION"
                 variant="blue"
                 onConfirm={onAdvanceStatus}
               />
             ) : (
               <SlideButton
+                key={`slide-at-doorstep-${activeOrder.id}-${rawDbStatus}`}
                 label="SLIDE TO ENTER DELIVERY PIN"
                 variant="purple"
                 icon={<ShieldCheck className="w-5 h-5 text-white stroke-[2.5]" />}

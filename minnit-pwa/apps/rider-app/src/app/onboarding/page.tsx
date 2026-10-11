@@ -37,6 +37,12 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import {
+  validateIndianMobile,
+  isValidIndianMobile,
+  extract10DigitPhone,
+  handlePhoneKeyDown,
+} from '@/utils/phoneValidation';
 
 export default function OnboardingPage() {
   const {
@@ -77,8 +83,10 @@ export default function OnboardingPage() {
   const [fullName, setFullName] = useState(rider.name || '');
   const [dob, setDob] = useState(rider.dob || '');
   const [dobError, setDobError] = useState('');
-  const [phone, setPhone] = useState(rider.phone || '');
-  const [confirmPhone, setConfirmPhone] = useState(rider.phone || '');
+  const [phone, setPhone] = useState(extract10DigitPhone(rider.phone));
+  const [confirmPhone, setConfirmPhone] = useState(extract10DigitPhone(rider.phone));
+  const [phoneError, setPhoneError] = useState('');
+  const [confirmPhoneError, setConfirmPhoneError] = useState('');
   const [personalError, setPersonalError] = useState('');
 
   // Residential Address breakdown
@@ -371,10 +379,109 @@ export default function OnboardingPage() {
     }
   };
 
+  // Controlled Indian phone input handlers
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+
+    // Digits only: reject non-numeric characters (block letters, spaces, symbols, +)
+    if (/[^\d]/.test(rawVal)) {
+      setPhoneError('Only numeric digits (0–9) are allowed.');
+      return;
+    }
+
+    // Maximum 10 digits: stop accepting input after 10 digits
+    if (rawVal.length > 10) {
+      return;
+    }
+
+    setPhone(rawVal);
+    setPersonalError('');
+
+    if (rawVal.length === 10) {
+      const validation = validateIndianMobile(rawVal, false);
+      if (!validation.isValid) {
+        setPhoneError(validation.error || 'Invalid mobile number.');
+      } else {
+        setPhoneError('');
+      }
+    } else {
+      setPhoneError('');
+    }
+  };
+
+  const handleConfirmPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+
+    // Digits only: reject non-numeric characters
+    if (/[^\d]/.test(rawVal)) {
+      setConfirmPhoneError('Only numeric digits (0–9) are allowed.');
+      return;
+    }
+
+    // Maximum 10 digits
+    if (rawVal.length > 10) {
+      return;
+    }
+
+    setConfirmPhone(rawVal);
+    setPersonalError('');
+
+    if (rawVal.length === 10) {
+      const validation = validateIndianMobile(rawVal, false);
+      if (!validation.isValid) {
+        setConfirmPhoneError(validation.error || 'Invalid mobile number.');
+      } else if (phone && rawVal !== phone) {
+        setConfirmPhoneError('Phone numbers do not match.');
+      } else {
+        setConfirmPhoneError('');
+      }
+    } else {
+      setConfirmPhoneError('');
+    }
+  };
+
+  const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setPhoneError('Copy-pasting is disabled. Please enter 10 digits manually.');
+    setPersonalError('Copy-pasting phone number is disabled. Please enter digits manually.');
+  };
+
+  const handleConfirmPhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setConfirmPhoneError('Copy-pasting is disabled. Please enter 10 digits manually.');
+    setPersonalError('Copy-pasting phone number is disabled. Please enter digits manually.');
+  };
+
+  const handlePhoneBlur = () => {
+    if (phone) {
+      const validation = validateIndianMobile(phone, false);
+      if (!validation.isValid) {
+        setPhoneError(validation.error || 'Please enter a valid 10-digit mobile number.');
+      } else {
+        setPhoneError('');
+      }
+    }
+  };
+
+  const handleConfirmPhoneBlur = () => {
+    if (confirmPhone) {
+      const validation = validateIndianMobile(confirmPhone, false);
+      if (!validation.isValid) {
+        setConfirmPhoneError(validation.error || 'Please enter a valid 10-digit mobile number.');
+      } else if (phone && confirmPhone !== phone) {
+        setConfirmPhoneError('Phone numbers do not match.');
+      } else {
+        setConfirmPhoneError('');
+      }
+    }
+  };
+
   // Validate Step 1: Personal Details
   const handlePersonalSubmit = () => {
     setPersonalError('');
     setDobError('');
+    setPhoneError('');
+    setConfirmPhoneError('');
 
     if (!fullName.trim()) {
       setPersonalError('Please enter your full name as per government ID.');
@@ -393,16 +500,23 @@ export default function OnboardingPage() {
       return;
     }
 
-    const cleanPhone1 = phone.replace(/[^0-9]/g, '');
-    const cleanPhone2 = confirmPhone.replace(/[^0-9]/g, '');
-
-    if (!cleanPhone1 || cleanPhone1.length < 10) {
-      setPersonalError('Please enter a valid 10-digit primary mobile number.');
+    const primaryValidation = validateIndianMobile(phone, false);
+    if (!primaryValidation.isValid) {
+      setPersonalError(primaryValidation.error || 'Please enter a valid 10-digit primary mobile number.');
+      setPhoneError(primaryValidation.error || 'Please enter a valid 10-digit primary mobile number.');
       return;
     }
 
-    if (cleanPhone1 !== cleanPhone2) {
+    const confirmValidation = validateIndianMobile(confirmPhone, false);
+    if (!confirmValidation.isValid) {
+      setPersonalError(confirmValidation.error || 'Please enter a valid 10-digit confirmation number.');
+      setConfirmPhoneError(confirmValidation.error || 'Please enter a valid 10-digit confirmation number.');
+      return;
+    }
+
+    if (phone !== confirmPhone) {
       setPersonalError('Phone numbers do not match! Please verify the confirmation number.');
+      setConfirmPhoneError('Phone numbers do not match.');
       return;
     }
 
@@ -448,7 +562,7 @@ export default function OnboardingPage() {
     updateRiderProfile({
       name: fullName,
       dob,
-      phone: cleanPhone1,
+      phone: phone,
       address: fullAddress,
       addressStreet: addressStreet.trim(),
       addressArea: addressArea.trim(),
@@ -543,6 +657,13 @@ export default function OnboardingPage() {
 
     if (!selectedZoneId) {
       setRegError('Please select a preferred operating delivery zone.');
+      return;
+    }
+
+    // Registration protection: Re-validate required primary phone number
+    const primaryValidation = validateIndianMobile(phone, false);
+    if (!primaryValidation.isValid) {
+      setRegError(primaryValidation.error || 'Invalid primary mobile number. Must be a valid 10-digit Indian mobile number.');
       return;
     }
 
@@ -872,14 +993,40 @@ export default function OnboardingPage() {
 
               {/* Primary Phone Number */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface">Primary Phone Number</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
-                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary"
-                />
+                <label className="text-xs font-bold text-on-surface">
+                  Primary Phone Number <span className="text-primary">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center px-3 py-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 select-none shrink-0 shadow-2xs">
+                    +91
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    onKeyDown={(e) =>
+                      handlePhoneKeyDown(e, () => {
+                        setPhoneError('Copy-pasting is disabled. Please enter 10 digits manually.');
+                        setPersonalError('Copy-pasting phone number is disabled. Please enter digits manually.');
+                      })
+                    }
+                    onPaste={handlePhonePaste}
+                    onBlur={handlePhoneBlur}
+                    placeholder="Enter 10-digit mobile number"
+                    className={`flex-1 min-w-0 bg-white border rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none ${
+                      phoneError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-primary'
+                    }`}
+                  />
+                </div>
+                {phoneError && (
+                  <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{phoneError}</span>
+                  </p>
+                )}
               </div>
 
               {/* Confirm Phone Number */}
@@ -887,13 +1034,37 @@ export default function OnboardingPage() {
                 <label className="text-xs font-bold text-on-surface">
                   Confirm Phone Number <span className="text-primary">*</span>
                 </label>
-                <input
-                  type="tel"
-                  value={confirmPhone}
-                  onChange={(e) => setConfirmPhone(e.target.value)}
-                  placeholder="Re-enter phone number"
-                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none focus:border-primary"
-                />
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center px-3 py-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 select-none shrink-0 shadow-2xs">
+                    +91
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    value={confirmPhone}
+                    onChange={handleConfirmPhoneChange}
+                    onKeyDown={(e) =>
+                      handlePhoneKeyDown(e, () => {
+                        setConfirmPhoneError('Copy-pasting is disabled. Please enter 10 digits manually.');
+                        setPersonalError('Copy-pasting phone number is disabled. Please enter digits manually.');
+                      })
+                    }
+                    onPaste={handleConfirmPhonePaste}
+                    onBlur={handleConfirmPhoneBlur}
+                    placeholder="Re-enter 10-digit number"
+                    className={`flex-1 min-w-0 bg-white border rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none ${
+                      confirmPhoneError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-primary'
+                    }`}
+                  />
+                </div>
+                {confirmPhoneError && (
+                  <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{confirmPhoneError}</span>
+                  </p>
+                )}
               </div>
 
               {/* Residential Address Fields */}
