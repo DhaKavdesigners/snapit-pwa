@@ -653,32 +653,15 @@ export default function OnboardingPage() {
     <AppShell showHeader={false} showNav={false} noPadding={true}>
       <div className="min-h-screen bg-background flex flex-col justify-between relative overflow-hidden p-5">
         
-        {/* SCREEN 1: SPLASH SCREEN (CLEAN LOGO, AUTO-NAVIGATES IN 2 SECONDS) */}
+        {/* SCREEN 1: SPLASH SCREEN (CLEAN LOGO ONLY, EXACTLY AT THE CENTRE) */}
         {step === 'splash' && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-4 animate-scale-up">
-            {/* Clean Minnit Logo */}
-            <div className="relative mb-6">
-              <img
-                src="/images/minnit_logo_main.png"
-                alt="Minnit Logo"
-                className="w-56 h-auto object-contain select-none filter drop-shadow-sm animate-pulse-soft"
-                style={{ imageRendering: 'auto' }}
-              />
-            </div>
-
-            <h1 className="text-3xl font-black text-on-surface tracking-tight mb-2">
-              Welcome to <span className="text-primary">Minnit</span>
-            </h1>
-            <p className="text-sm font-medium text-secondary mb-6">
-              Deliver smarter. Earn better.
-            </p>
-
-            {/* Subtle loading pulse */}
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="w-2 h-2 rounded-full bg-primary/40 animate-ping" />
-              <span className="w-2 h-2 rounded-full bg-primary/70 animate-pulse" />
-              <span className="w-2 h-2 rounded-full bg-primary" />
-            </div>
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background p-6 animate-scale-up">
+            <img
+              src="/images/minnit_logo_main.png"
+              alt="Minnit"
+              className="w-64 max-w-[80%] h-auto object-contain select-none filter drop-shadow-sm animate-pulse-soft"
+              style={{ imageRendering: 'auto' }}
+            />
           </div>
         )}
 
