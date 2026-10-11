@@ -9,6 +9,11 @@ import { ProfileView } from './features/profile/ProfileView';
 import { CartView } from './features/cart/CartView';
 import { CheckoutView } from './features/checkout/CheckoutView';
 import { OrderSuccessView } from './features/checkout/OrderSuccessView';
+import { TermsView } from './features/legal/TermsView';
+import { PrivacyView } from './features/legal/PrivacyView';
+import { RefundPolicyView } from './features/legal/RefundPolicyView';
+import { ShippingPolicyView } from './features/legal/ShippingPolicyView';
+import { ContactView } from './features/legal/ContactView';
 import { supabase } from './lib/supabase';
 import { SessionGuard } from './components/auth/SessionGuard';
 
@@ -90,6 +95,19 @@ function App() {
           {/* Full Screen Flows without Bottom Navigation */}
           <Route path="/checkout" element={<CheckoutView />} />
           <Route path="/success" element={<OrderSuccessView />} />
+
+          {/* Public Legal & Policy Pages (Direct URLs for Razorpay Compliance Scanner & Visitors) */}
+          <Route path="/terms" element={<TermsView />} />
+          <Route path="/terms-and-conditions" element={<TermsView />} />
+          <Route path="/privacy" element={<PrivacyView />} />
+          <Route path="/privacy-policy" element={<PrivacyView />} />
+          <Route path="/refund-policy" element={<RefundPolicyView />} />
+          <Route path="/refunds" element={<RefundPolicyView />} />
+          <Route path="/shipping-policy" element={<ShippingPolicyView />} />
+          <Route path="/shipping" element={<ShippingPolicyView />} />
+          <Route path="/delivery-policy" element={<ShippingPolicyView />} />
+          <Route path="/contact" element={<ContactView />} />
+          <Route path="/contact-us" element={<ContactView />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

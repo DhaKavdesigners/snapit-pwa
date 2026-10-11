@@ -13,6 +13,7 @@ import { ProductCard } from '../../components/ProductCard';
 import { useProducts, useTrending, useTodaysPicks, useStores } from '../../api/queries';
 import { useContextStore } from '../../store/contextStore';
 import { useOrderStore, getActiveOrders } from '../../store/orderStore';
+import { PublicFooter } from '../../components/layout/PublicFooter';
 
 export const HomeView: React.FC = () => {
   const { activeContext } = useContextStore();
@@ -406,6 +407,9 @@ export const HomeView: React.FC = () => {
             )}
           </>
         )}
+
+        {/* ── Razorpay Compliance & Public Information Footer ── */}
+        <PublicFooter />
       </div>
     </PullToRefresh>
   );

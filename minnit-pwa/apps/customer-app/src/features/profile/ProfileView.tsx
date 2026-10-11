@@ -8,7 +8,7 @@ import {
   Receipt, Printer, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useOrderStore } from '../../store/orderStore';
 import { useCartStore } from '../../store/cartStore';
@@ -866,7 +866,7 @@ export const ProfileView: React.FC = () => {
         },
         {
           heading: '5. Account & Data Rights',
-          content: 'You can update your address anytime or contact support@minnitkgf.in to request full account data deletion.',
+          content: 'You can update your address anytime or contact contact.minnit@gmail.com to request full account data deletion.',
         },
       ],
     },
@@ -1302,16 +1302,16 @@ export const ProfileView: React.FC = () => {
         )}
 
         {/* ── Legal footer ── */}
-        <div className="flex justify-center gap-5 mb-5">
-          {(['privacy', 'terms', 'refund'] as const).map((key) => (
-            <button
-              key={key}
-              onClick={() => setPolicyModal(key)}
-              className="text-xs text-gray-400 hover:text-brand transition-colors font-medium"
-            >
-              {key === 'privacy' ? 'Privacy Policy' : key === 'terms' ? 'Terms of Service' : 'Refund Policy'}
-            </button>
-          ))}
+        <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1.5 mb-5 text-[11px] text-gray-400 font-medium">
+          <Link to="/terms" className="hover:text-brand transition-colors">Terms of Service</Link>
+          <span>•</span>
+          <Link to="/privacy" className="hover:text-brand transition-colors">Privacy Policy</Link>
+          <span>•</span>
+          <Link to="/refund-policy" className="hover:text-brand transition-colors">Refund Policy</Link>
+          <span>•</span>
+          <Link to="/shipping-policy" className="hover:text-brand transition-colors">Shipping Policy</Link>
+          <span>•</span>
+          <Link to="/contact" className="hover:text-brand transition-colors">Contact Us</Link>
         </div>
 
         {/* ── Sign Out ── */}
@@ -2056,10 +2056,11 @@ export const ProfileView: React.FC = () => {
                 <p className="text-text-secondary text-xs mb-1">Instant Hyperlocal Delivery · Version 1.0.0</p>
                 <p className="text-emerald-700 text-xs font-bold mb-5">Built by Dhakav Designers</p>
                 <div className="bg-gray-50 rounded-2xl p-4 w-full text-left text-xs text-gray-600 space-y-2 border border-gray-100">
-                  <p>🏠 <strong className="text-gray-900">Region:</strong> Kolar Gold Fields (KGF), Karnataka</p>
+                  <p>🏠 <strong className="text-gray-900">Entity:</strong> Dhakav Designers (Minnit)</p>
+                  <p>📍 <strong className="text-gray-900">Address:</strong> #48, Tailor Shop Line, Oorgaum, KGF, Karnataka 563120</p>
                   <p>📦 <strong className="text-gray-900">Services:</strong> Groceries, Essentials &amp; Restaurant Food</p>
                   <p>📞 <strong className="text-gray-900">Support:</strong> +91 82176 49688</p>
-                  <p>✉️ <strong className="text-gray-900">Email:</strong> support@minnitkgf.in</p>
+                  <p>✉️ <strong className="text-gray-900">Email:</strong> contact.minnit@gmail.com</p>
                 </div>
               </motion.div>
             </div>
