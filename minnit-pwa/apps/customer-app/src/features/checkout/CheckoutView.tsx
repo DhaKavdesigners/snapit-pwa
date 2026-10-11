@@ -511,207 +511,181 @@ export const CheckoutView: React.FC = () => {
         </span>
       </div>
 
-      <div className="p-3.5 flex flex-col gap-3.5 overflow-y-auto">
+      <div className="p-4 flex flex-col gap-3.5 overflow-y-auto">
 
-        {/* ── 3. DELIVERY ADDRESS & RECIPIENT CARD (OLD REFINED STYLE) ── */}
-        <section className="bg-white rounded-3xl p-4.5 border-2 border-emerald-200/90 shadow-[0_4px_24px_rgba(5,150,105,0.08)] relative overflow-hidden space-y-3.5">
-          {/* Vertical Green Accent Stripe */}
-          <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-emerald-400 via-brand to-teal-600" />
+        {/* ── CARD 1: DELIVERY ADDRESS ── */}
+        <section className="bg-white rounded-3xl p-4 border border-emerald-200/80 shadow-[0_4px_20px_rgba(5,150,105,0.06)] relative overflow-hidden space-y-3">
+          {/* Subtle accent bar on top */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-brand to-teal-500" />
 
-          {/* Address Content Block */}
-          <div className="flex gap-3 pl-1">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25">
-              <MapPin className="w-5 h-5 text-white" />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <span className="bg-brand text-white text-[9.5px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-xs">
+          {/* Header Row: Title on Left, Change Button on Right */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <MapPin className="w-4.5 h-4.5 text-brand" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block leading-tight">
+                  Delivery Address
+                </span>
+                <span className="font-black text-xs text-gray-900">
                   {displayTitle}
                 </span>
-
-                {pinnedCoords ? (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                    Exact Pin Set
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-black bg-brand/10 text-brand px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    Doorstep Drop
-                  </span>
-                )}
               </div>
+            </div>
 
-              {/* Clean Address Text (The Old Way User Preferred) */}
-              <p className="text-xs text-gray-800 leading-relaxed font-semibold mt-1">
-                {displayAddressLine}
-                {displayLandmark && (
-                  <span className="block text-gray-500 font-medium mt-0.5">
-                    Near: {displayLandmark}
-                  </span>
-                )}
-                {displayPin && (
-                  <span className="inline-block mt-1 font-mono font-bold text-gray-800 bg-emerald-100/70 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px]">
-                    PIN: {displayPin}
-                  </span>
-                )}
-              </p>
+            {/* Change Address Action */}
+            <button
+              type="button"
+              onClick={() => setIsAddressModalOpen(true)}
+              className="text-xs font-black text-brand bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-3 py-1.5 rounded-xl active:scale-95 transition-all cursor-pointer shadow-2xs"
+            >
+              Change
+            </button>
+          </div>
 
-              {/* Pinned Coordinates Hint (if set) */}
-              {pinnedCoords && (
-                <div className="mt-2.5 p-2.5 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-emerald-950 font-bold min-w-0">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-700 shrink-0">
-                      <LocateFixed className="w-3.5 h-3.5 text-brand shrink-0" />
-                    </div>
-                    <div className="truncate">
-                      <span className="block font-black text-xs text-emerald-950">
-                        Exact Doorstep Location Pinned ✓
-                      </span>
-                      <span className="block text-[10px] text-emerald-700 font-medium truncate">
-                        {pinnedCoords.addressHint ? `Near: ${pinnedCoords.addressHint}` : 'Rider will deliver directly to this pinned spot'}
-                      </span>
-                    </div>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setIsMapModalOpen(true)}
-                    className="text-brand font-black text-xs bg-white border border-emerald-300 px-3 py-1.5 rounded-xl hover:bg-emerald-50 active:scale-95 transition-all shadow-2xs shrink-0 ml-2 cursor-pointer"
-                  >
-                    Relocate Pin
-                  </button>
-                </div>
+          {/* Formatted Address Details */}
+          <div className="bg-emerald-50/40 rounded-2xl p-3 border border-emerald-100/80 space-y-1">
+            <p className="text-xs text-gray-800 leading-relaxed font-semibold">
+              {displayAddressLine}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-600 font-medium pt-0.5">
+              {displayLandmark && (
+                <span>Near: {displayLandmark}</span>
+              )}
+              {displayPin && (
+                <span className="font-mono font-bold text-gray-800 bg-white border border-emerald-200 px-1.5 py-0.2 rounded text-[10.5px]">
+                  PIN: {displayPin}
+                </span>
               )}
             </div>
           </div>
 
-          {/* Action Buttons: Pin on Map & Change Address */}
-          <div className="grid grid-cols-2 gap-2 pl-1">
+          {/* GPS Pin Strip */}
+          <div className="flex items-center justify-between pt-0.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${pinnedCoords ? 'bg-emerald-600 animate-ping' : 'bg-brand'}`} />
+              <span className="text-[11px] font-bold text-gray-700 truncate">
+                {pinnedCoords ? 'Exact Doorstep Location Pinned ✓' : 'Standard Doorstep Delivery'}
+              </span>
+            </div>
+
             <button 
-              type="button"
+              type="button" 
               onClick={() => setIsMapModalOpen(true)}
-              className="bg-gradient-to-r from-emerald-600 to-brand text-white font-black py-2.5 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all hover:brightness-105 cursor-pointer"
+              className="text-[11px] font-black text-emerald-800 bg-white border border-emerald-300 hover:bg-emerald-50 px-2.5 py-1 rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0 shadow-2xs active:scale-95"
             >
-              <Compass className="w-3.5 h-3.5 animate-spin [animation-duration:8s]" />
+              <Compass className="w-3.5 h-3.5 text-brand" />
               <span>{pinnedCoords ? 'Relocate Pin' : '🗺️ Pin on Map'}</span>
             </button>
-            
-            <button 
-              type="button"
-              onClick={() => setIsAddressModalOpen(true)}
-              className="bg-white border-2 border-emerald-200 text-emerald-800 font-black py-2.5 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs hover:bg-emerald-50 active:scale-95 transition-all shadow-xs cursor-pointer"
-            >
-              <MapPin className="w-3.5 h-3.5 text-brand" />
-              <span>Change Address</span>
-            </button>
-          </div>
-
-          {/* Receiver / Order for Someone Else (Neatly Integrated) */}
-          <div className="pt-3 border-t border-emerald-100/90 pl-1 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
-                  {(finalRecipientName || 'V')[0]?.toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-xs text-gray-900 truncate">
-                      Receiver: {finalRecipientName}
-                    </span>
-                    <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80 shrink-0">
-                      Verified Customer ✓
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-mono text-gray-500 font-semibold truncate">
-                    +91 {finalRecipientPhone.replace(/\D/g, '').slice(-10)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Toggle button */}
-              <button
-                type="button"
-                onClick={() => setIsSomeoneElse(!isSomeoneElse)}
-                className={`text-[10.5px] font-black px-2.5 py-1 rounded-xl transition-all border active:scale-95 cursor-pointer shrink-0 ${
-                  isSomeoneElse 
-                    ? 'bg-brand text-white border-brand shadow-xs' 
-                    : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                }`}
-              >
-                {isSomeoneElse ? 'Self Order' : 'Order for Someone Else'}
-              </button>
-            </div>
-
-            {/* Recipient inputs if ordering for someone else */}
-            {isSomeoneElse && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-2 pt-2 border-t border-dashed border-emerald-200"
-              >
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                    Recipient Name *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Rahul Sharma"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
-                    Recipient Phone Number *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-mono text-xs">
-                      +91
-                    </span>
-                    <input
-                      type="tel"
-                      placeholder="98765 43210"
-                      maxLength={10}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-3 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
-                      value={recipientPhone}
-                      onChange={(e) => setRecipientPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                    />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Alternate Phone Row */}
-            <div className="flex items-center gap-2 bg-emerald-50/50 rounded-xl px-3 py-2 border border-emerald-100">
-              <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span className="text-[11px] font-mono font-bold text-gray-400 shrink-0">+91</span>
-              <input
-                type="tel"
-                value={alternatePhone}
-                onChange={(e) => setAlternatePhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
-                placeholder="Alternate phone number (optional backup)"
-                maxLength={10}
-                className="flex-1 bg-transparent text-xs font-medium text-gray-900 placeholder-gray-400 outline-none"
-              />
-            </div>
           </div>
         </section>
 
-        {/* ── 4. PAYMENT METHOD SECTION ── */}
-        <section className="bg-white rounded-3xl p-4.5 border-2 border-emerald-200/90 shadow-[0_4px_24px_rgba(5,150,105,0.08)] space-y-3">
+        {/* ── CARD 2: RECIPIENT & CONTACT ── */}
+        <section className="bg-white rounded-3xl p-4 border border-emerald-200/80 shadow-[0_4px_20px_rgba(5,150,105,0.06)] space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                {(finalRecipientName || 'V')[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-xs text-gray-900 truncate">
+                    Receiver: {finalRecipientName}
+                  </span>
+                  <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 shrink-0">
+                    Verified ✓
+                  </span>
+                </div>
+                <p className="text-[11px] font-mono text-gray-500 font-semibold truncate mt-0.5">
+                  +91 {finalRecipientPhone.replace(/\D/g, '').slice(-10)}
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle button */}
+            <button
+              type="button"
+              onClick={() => setIsSomeoneElse(!isSomeoneElse)}
+              className={`text-[10.5px] font-black px-2.5 py-1 rounded-xl transition-all border active:scale-95 cursor-pointer shrink-0 ${
+                isSomeoneElse 
+                  ? 'bg-brand text-white border-brand shadow-xs' 
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              {isSomeoneElse ? 'Self Order' : 'Order for Someone Else'}
+            </button>
+          </div>
+
+          {/* Someone else expandable inputs */}
+          {isSomeoneElse && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-2 pt-2 border-t border-dashed border-emerald-200"
+            >
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Recipient Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Rahul Sharma"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  Recipient Phone Number *
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-mono text-xs">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    placeholder="98765 43210"
+                    maxLength={10}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-3 py-2 text-xs font-semibold text-gray-900 focus:outline-none focus:border-brand focus:bg-white"
+                    value={recipientPhone}
+                    onChange={(e) => setRecipientPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Alternate Phone Row */}
+          <div className="flex items-center gap-2 bg-gray-50/80 rounded-xl px-3 py-2 border border-gray-200/80">
+            <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span className="text-[11px] font-mono font-bold text-gray-400 shrink-0">+91</span>
+            <input
+              type="tel"
+              value={alternatePhone}
+              onChange={(e) => setAlternatePhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+              placeholder="Alternate phone number (optional backup)"
+              maxLength={10}
+              className="flex-1 bg-transparent text-xs font-medium text-gray-900 placeholder-gray-400 outline-none"
+            />
+          </div>
+        </section>
+
+        {/* ── CARD 3: PAYMENT METHOD (CLEAN & ALIGNED) ── */}
+        <section className="bg-white rounded-3xl p-4 border border-emerald-200/80 shadow-[0_4px_20px_rgba(5,150,105,0.06)] space-y-3">
           
-          <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
                 <CreditCard className="w-4.5 h-4.5 text-teal-600" />
               </div>
               <div>
-                <h2 className="font-black text-xs uppercase tracking-wider text-emerald-900 leading-tight">
+                <h2 className="font-black text-xs uppercase tracking-wider text-emerald-950 leading-tight">
                   Payment Method
                 </h2>
-                <span className="text-[10.5px] font-medium text-gray-500">
+                <span className="text-[10px] font-medium text-gray-400">
                   Select payment mode
                 </span>
               </div>
@@ -722,32 +696,31 @@ export const CheckoutView: React.FC = () => {
             </span>
           </div>
 
-          <div className="space-y-2.5">
-            {/* 1. Pay Now (Instant Online) */}
-            <motion.div 
-              whileTap={{ scale: 0.99 }}
+          <div className="space-y-2">
+            {/* 1. Pay Now */}
+            <div 
               onClick={() => setPaymentMethod('online')}
-              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative flex items-start gap-3.5 ${
+              className={`p-3 rounded-2xl border-2 transition-all cursor-pointer relative flex items-center gap-3 ${
                 paymentMethod === 'online'
-                  ? 'border-emerald-500 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/50 ring-4 ring-emerald-500/10 shadow-sm'
+                  ? 'border-emerald-500 bg-gradient-to-r from-emerald-50/90 via-white to-teal-50/40 ring-4 ring-emerald-500/10 shadow-2xs'
                   : 'border-gray-200 bg-white hover:border-emerald-200'
               }`}
             >
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                 paymentMethod === 'online' ? 'border-brand bg-brand text-white' : 'border-gray-300 bg-white'
               }`}>
                 {paymentMethod === 'online' && <Check className="w-3 h-3 stroke-[3]" />}
               </div>
 
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25">
-                <CreditCard className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-brand text-white flex items-center justify-center shrink-0 shadow-xs">
+                <CreditCard className="w-4.5 h-4.5" />
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-black text-sm text-gray-900">Pay Now</h3>
-                    <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                    <h3 className="font-black text-xs text-gray-900">Pay Now</h3>
+                    <span className="text-[8.5px] font-black uppercase tracking-wider bg-emerald-600 text-white px-1.5 py-0.2 rounded-full">
                       Instant
                     </span>
                   </div>
@@ -755,40 +728,36 @@ export const CheckoutView: React.FC = () => {
                     {formatCurrency(total)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                  UPI (GPay, PhonePe, Paytm), Debit/Credit Cards, or NetBanking.
+                <p className="text-[10.5px] text-gray-500 font-medium truncate mt-0.5">
+                  UPI (GPay, PhonePe, Paytm), Cards &amp; NetBanking
                 </p>
-                <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-700 mt-1.5">
-                  <Lock className="w-3 h-3" /> Secured by Razorpay Gateway
-                </span>
               </div>
-            </motion.div>
+            </div>
 
             {/* 2. Pay UPI on Delivery */}
-            <motion.div 
-              whileTap={{ scale: 0.99 }}
+            <div 
               onClick={() => setPaymentMethod('upiDelivery')}
-              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative flex items-start gap-3.5 ${
+              className={`p-3 rounded-2xl border-2 transition-all cursor-pointer relative flex items-center gap-3 ${
                 paymentMethod === 'upiDelivery'
-                  ? 'border-teal-500 bg-gradient-to-r from-teal-50/90 via-white to-emerald-50/50 ring-4 ring-teal-500/10 shadow-sm'
+                  ? 'border-teal-500 bg-gradient-to-r from-teal-50/90 via-white to-emerald-50/40 ring-4 ring-teal-500/10 shadow-2xs'
                   : 'border-gray-200 bg-white hover:border-teal-200'
               }`}
             >
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                 paymentMethod === 'upiDelivery' ? 'border-teal-600 bg-teal-600 text-white' : 'border-gray-300 bg-white'
               }`}>
                 {paymentMethod === 'upiDelivery' && <Check className="w-3 h-3 stroke-[3]" />}
               </div>
 
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-teal-500/20">
-                <QrCode className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <QrCode className="w-4.5 h-4.5" />
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-black text-sm text-gray-900">Pay UPI on Delivery</h3>
-                    <span className="text-[9px] font-black uppercase tracking-wider bg-teal-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                    <h3 className="font-black text-xs text-gray-900">Pay UPI on Delivery</h3>
+                    <span className="text-[8.5px] font-black uppercase tracking-wider bg-teal-600 text-white px-1.5 py-0.2 rounded-full">
                       At Doorstep
                     </span>
                   </div>
@@ -796,37 +765,43 @@ export const CheckoutView: React.FC = () => {
                     {formatCurrency(total)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                  Rider will show an order-specific UPI QR code upon arrival at your doorstep. Scan &amp; pay via any UPI app.
+                <p className="text-[10.5px] text-gray-500 font-medium truncate mt-0.5">
+                  Scan rider's dynamic UPI QR at doorstep
                 </p>
               </div>
-            </motion.div>
+            </div>
 
             {/* 3. Cash on Delivery (Reddish / Strictly Unavailable) */}
             <div 
               onClick={() => alert('Cash on Delivery is strictly unavailable. Delivery riders do not carry cash or change. Please pay online or select Pay UPI on Delivery!')}
-              className="p-3.5 rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-50/95 via-red-50/40 to-white relative flex items-start gap-3.5 cursor-not-allowed opacity-90 shadow-2xs"
+              className="p-3 rounded-2xl border-2 border-rose-300 bg-rose-50/90 relative flex items-center gap-3 cursor-not-allowed opacity-90 shadow-2xs"
             >
-              <div className="w-5 h-5 rounded-full border-2 border-rose-400 bg-rose-100 flex items-center justify-center shrink-0 mt-0.5 text-rose-600">
+              <div className="w-5 h-5 rounded-full border-2 border-rose-400 bg-rose-100 flex items-center justify-center shrink-0 text-rose-600">
                 <Ban className="w-3 h-3 stroke-[2.5]" />
               </div>
 
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-red-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-500/20">
-                <Banknote className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-red-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Banknote className="w-4.5 h-4.5" />
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <h3 className="font-black text-sm text-gray-900">Cash on Delivery</h3>
-                  <span className="text-[8.5px] font-black uppercase tracking-wider bg-rose-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-xs text-gray-900">Cash on Delivery</h3>
+                  <span className="text-[8px] font-black uppercase tracking-wider bg-rose-600 text-white px-1.5 py-0.2 rounded-full">
                     Unavailable
                   </span>
                 </div>
-                <p className="text-[11px] text-rose-800 font-bold leading-snug">
-                  STRICTLY NO CASH ACCEPTED · Riders do not carry cash or change. Please pay online or choose Pay UPI on Delivery.
+                <p className="text-[10.5px] text-rose-800 font-bold truncate mt-0.5">
+                  STRICTLY NO CASH · Minnit is 100% digital
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Razorpay Trust note */}
+          <div className="pt-2 border-t border-gray-100 flex items-center justify-center gap-1.5 text-[10px] text-emerald-800 font-bold">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>256-Bit SSL Encrypted • Razorpay Supported Secure Gateway</span>
           </div>
         </section>
 
