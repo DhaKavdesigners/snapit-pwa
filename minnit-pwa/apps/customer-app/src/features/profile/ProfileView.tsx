@@ -1094,17 +1094,19 @@ export const ProfileView: React.FC = () => {
         case 'CANCELLED':
           return {
             stepIndex: -1,
-            title: 'Order Cancelled by Store ❌',
-            subtitle: rejectionReason ? `Reason: ${rejectionReason}` : 'Store was unable to fulfill this order.',
-            badgeText: 'Cancelled',
-            badgeClass: 'bg-red-100 text-red-900 border-red-300',
-            dotClass: 'bg-red-500',
+            title: "We're So Sorry — Store Facing High Demand 🙏",
+            subtitle: rejectionReason 
+              ? `Note from Store: "${rejectionReason}"` 
+              : 'The merchant is currently facing high order demand. Kindly try again in a few minutes!',
+            badgeText: 'High Demand',
+            badgeClass: 'bg-rose-100 text-rose-900 border-rose-300',
+            dotClass: 'bg-rose-500',
             step1Label: 'Placed',
-            step2Label: 'Cancelled',
+            step2Label: 'High Demand',
             step3Label: 'Refunded',
             progress: 0,
             icon: AlertCircle,
-            iconColor: 'text-red-600',
+            iconColor: 'text-rose-600',
             isHandedOver: false
           };
         default:
@@ -1597,16 +1599,38 @@ export const ProfileView: React.FC = () => {
                                 isDelivered 
                                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
                                   : isCancelled
-                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
                                   : 'bg-gray-50 text-gray-700 border-gray-200'
                               }`}>
-                                {isDelivered ? 'Delivered ✓' : isCancelled ? 'Cancelled' : order.status}
+                                {isDelivered ? 'Delivered ✓' : isCancelled ? 'High Demand' : order.status}
                               </span>
                             </div>
 
                             <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl font-medium">
                               {order.items?.map((it: any) => `${it.quantity}x ${it.name}`).join(', ') || 'Groceries & Essentials'}
                             </div>
+
+                            {/* Apology card for cancelled/rejected orders */}
+                            {isCancelled && (
+                              <div className="bg-rose-50/80 border border-rose-100 rounded-2xl p-2.5 px-3 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-base shrink-0">🥺</span>
+                                  <p className="text-[11px] text-rose-950 font-bold truncate">
+                                    Merchant faced high demand. We're so sorry!
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    useOrderStore.getState().setTrackerOpen(true, order.id);
+                                    setOrdersModal(false);
+                                  }}
+                                  className="text-[10px] font-black text-rose-800 bg-white px-2 py-0.5 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors shrink-0 shadow-2xs cursor-pointer"
+                                >
+                                  View Note
+                                </button>
+                              </div>
+                            )}
 
                             <div className="flex justify-between items-center pt-1 border-t border-gray-100/80">
                               <div>

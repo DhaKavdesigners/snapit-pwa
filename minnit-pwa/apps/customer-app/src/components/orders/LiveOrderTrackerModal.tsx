@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -9,6 +9,7 @@ import {
 import { useOrderStore, LiveOrder, getActiveOrders } from '../../store/orderStore';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
+import { playSadApologyTone } from '../../utils/audio';
 import { supabase } from '../../lib/supabase';
 
 // Imported milestone images
@@ -114,6 +115,21 @@ export const LiveOrderTrackerModal: React.FC = () => {
       }
     }
   }, [status, isTrackerOpen]);
+
+  // Trigger sad apology tone when order is CANCELLED or REJECTED by merchant
+  const playedSadForOrderRef = useRef<string | null>(null);
+  useEffect(() => {
+    const isCancelled = status === 'CANCELLED' || status === 'REJECTED';
+    if (isCancelled && isTrackerOpen && currentOrder?.id) {
+      if (playedSadForOrderRef.current !== currentOrder.id) {
+        playedSadForOrderRef.current = currentOrder.id;
+        const timer = setTimeout(() => {
+          playSadApologyTone();
+        }, 120);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [status, isTrackerOpen, currentOrder?.id]);
 
   if (!isLoggedIn || !userProfile?.phone || !isTrackerOpen || !currentOrder) return null;
 
@@ -313,11 +329,11 @@ export const LiveOrderTrackerModal: React.FC = () => {
         return {
           step: 0,
           pathRatio: 0,
-          title: 'Order Cancelled ❌',
-          subtitle: currentOrder.rejection_reason || 'Store was unable to fulfill this order.',
-          badge: 'CANCELLED',
-          badgeColor: 'bg-red-100 text-red-900 border-red-300',
-          eta: 'Cancelled',
+          title: "We're So Sorry! Merchant High Demand 🙏",
+          subtitle: currentOrder.rejection_reason || 'The merchant is currently facing high order demand. Kindly try again in a few minutes!',
+          badge: 'HIGH DEMAND',
+          badgeColor: 'bg-rose-100 text-rose-900 border-rose-300',
+          eta: 'High Demand',
           isOutForDelivery: false,
         };
       default:
@@ -352,6 +368,8 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
   // SVG S-Curve Path definition (viewBox 380 x 200 with plenty of right margin)
   const sPathD = "M 45 45 L 295 45 A 50 50 0 0 1 295 145 L 45 145";
+
+  const isCancelled = status === 'CANCELLED' || status === 'REJECTED';
 
   return (
     <AnimatePresence>
@@ -405,8 +423,93 @@ export const LiveOrderTrackerModal: React.FC = () => {
 
           {/* Modal Scrollable Content */}
           <div className="p-5 overflow-y-auto space-y-4">
-            {/* ── 1. MATHEMATICALLY PERFECT S-CURVE DELIVERY ROADMAP & ILLUSTRATED MILESTONES ── */}
-            <div className="bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-white rounded-3xl p-4.5 border border-emerald-200/80 shadow-xs relative overflow-hidden">
+            {isCancelled ? (
+              /* ── DEDICATED MERCHANT CANCELLATION APOLOGY CARD ── */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.94, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 26 }}
+                className="bg-gradient-to-br from-rose-50 via-amber-50/50 to-white rounded-3xl p-5 border-2 border-rose-200/90 shadow-xl shadow-rose-950/5 text-center space-y-4 relative overflow-hidden"
+              >
+                {/* Empathetic Sad Mascot Icon */}
+                <div className="relative mx-auto w-20 h-20 rounded-3xl bg-gradient-to-br from-rose-100 via-amber-100 to-rose-200 border-2 border-rose-300 flex items-center justify-center text-4xl shadow-md shadow-rose-200/50">
+                  <span className="animate-pulse">🥺</span>
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                    ⏳
+                  </div>
+                </div>
+
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100/90 text-rose-900 text-[10.5px] font-black uppercase tracking-wider mb-2 border border-rose-200">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                    Merchant Facing High Demand
+                  </div>
+                  <h3 className="text-xl font-black text-gray-950 tracking-tight">
+                    We're So Sorry! 🙏
+                  </h3>
+                  <p className="text-xs text-gray-800 font-semibold mt-2 leading-relaxed px-1">
+                    The merchant at <strong className="text-rose-950 font-black">{storeName}</strong> is currently facing a heavy rush and high customer demand.
+                  </p>
+                  <p className="text-[11.5px] text-gray-600 font-medium mt-1 leading-snug">
+                    They couldn't accept this order right now. Kindly try placing your order again in a few minutes!
+                  </p>
+                </div>
+
+                {/* Reason Note from Merchant (if present) */}
+                {currentOrder.rejection_reason && (
+                  <div className="bg-white/90 rounded-2xl p-3 border border-rose-200/70 text-left text-xs shadow-2xs">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-800 block mb-0.5">
+                      Store Counter Note:
+                    </span>
+                    <p className="text-gray-900 font-bold italic">
+                      "{currentOrder.rejection_reason}"
+                    </p>
+                  </div>
+                )}
+
+                {/* 100% Payment & Refund Guarantee */}
+                <div className="bg-emerald-50/95 border border-emerald-200 rounded-2xl p-3 text-left flex items-start gap-2.5 shadow-2xs">
+                  <ShieldCheck className="w-4.5 h-4.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="text-[11px] text-emerald-950 leading-snug font-medium">
+                    <strong className="font-black text-emerald-900 block mb-0.5">100% Payment Safety Guarantee</strong>
+                    {((currentOrder.payment_method === 'PAY_ON_DELIVERY_QR') || (currentOrder.payment_method || '').includes('DELIVERY'))
+                      ? 'This was Pay on Delivery. No payment has been deducted from your account.'
+                      : 'Any amount debited online will be refunded back to your original payment method automatically within 24–48 hours.'}
+                  </div>
+                </div>
+
+                {/* Direct Action CTAs */}
+                <div className="pt-1 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTrackerOpen(false);
+                      navigate('/');
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-600 via-brand to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-700/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Browse Other Stores / Try Again</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const custIdText = userProfile?.minnit_id ? ` (Customer ID: ${userProfile.minnit_id})` : '';
+                      const helpUrl = `https://wa.me/918217649688?text=${encodeURIComponent(`Hi Minnit, my order ${currentOrder.id} at ${storeName} could not be accepted due to high demand. Please help${custIdText}`)}`;
+                      window.open(helpUrl, '_blank');
+                    }}
+                    className="w-full py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs rounded-xl border border-gray-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Need Help? Chat on WhatsApp</span>
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <>
+                {/* ── 1. MATHEMATICALLY PERFECT S-CURVE DELIVERY ROADMAP & ILLUSTRATED MILESTONES ── */}
+                <div className="bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-white rounded-3xl p-4.5 border border-emerald-200/80 shadow-xs relative overflow-hidden">
               {/* ETA Headline */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
@@ -755,6 +858,8 @@ export const LiveOrderTrackerModal: React.FC = () => {
                   </div>
                 )}
               </motion.div>
+            )}
+              </>
             )}
 
             {/* ── 4. ITEMS IN PACKAGE ── */}

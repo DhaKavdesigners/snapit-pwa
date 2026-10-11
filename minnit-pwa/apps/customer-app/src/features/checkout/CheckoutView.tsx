@@ -493,18 +493,18 @@ export const CheckoutView: React.FC = () => {
 
         <div className="bg-emerald-100/80 text-emerald-900 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-300/80 flex items-center gap-1 shadow-2xs">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-          Secured
+          Razorpay Verified
         </div>
       </div>
 
-      {/* ── Bank-Grade Security Trust Strip ── */}
+      {/* ── Razorpay Supported Trust Strip ── */}
       <div className="bg-gradient-to-r from-emerald-700 via-brand to-teal-700 text-white px-4 py-2 flex items-center justify-between text-[11px] font-bold shadow-xs">
         <div className="flex items-center gap-1.5">
           <Lock className="w-3.5 h-3.5 text-emerald-200" />
-          <span>256-Bit Bank Grade Secured Checkout</span>
+          <span>Razorpay Supported Secure Payment Gateway</span>
         </div>
         <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
-          Verified Safe
+          100% Secured
         </span>
       </div>
 
@@ -1125,7 +1125,7 @@ export const CheckoutView: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-gray-600 font-medium leading-snug">
-                      Instant online payment via UPI (GPay, PhonePe, Paytm), Debit/Credit Cards, or NetBanking.
+                      Instant online payment via UPI (GPay, PhonePe, Paytm), Debit/Credit Cards, or NetBanking secured by Razorpay.
                     </p>
                     <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 mt-2">
                       Proceed to Pay Now <ArrowRight className="w-3.5 h-3.5" />
@@ -1161,7 +1161,7 @@ export const CheckoutView: React.FC = () => {
               {/* Trust Badge */}
               <div className="pt-2 text-center text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-t border-gray-100">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>100% Safe & Secure Delivery in KGF</span>
+                <span>Razorpay Supported • 100% Safe & Secure Delivery in KGF</span>
               </div>
             </motion.div>
           </div>

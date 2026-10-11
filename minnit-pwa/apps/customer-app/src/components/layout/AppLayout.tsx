@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
@@ -8,15 +8,20 @@ import { BabyToast } from '../ui/BabyToast';
 import { FlyToCartOverlay } from '../ui/FlyToCartOverlay';
 import { useOrderStore } from '../../store/orderStore';
 import { useAuthStore } from '../../store/authStore';
+import { playSadApologyTone } from '../../utils/audio';
 
 export const AppLayout: React.FC = () => {
   const { userProfile, isLoggedIn } = useAuthStore();
-  const { initLiveSubscription, clearOrders } = useOrderStore();
+  const { initLiveSubscription, clearOrders, orders, setTrackerOpen } = useOrderStore();
   const location = useLocation();
+
+  // Track active order cancellations in real-time
+  const prevStatusesRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (!isLoggedIn || !userProfile?.phone) {
       clearOrders();
+      prevStatusesRef.current = {};
       return;
     }
     const cleanup = initLiveSubscription(userProfile.phone);
@@ -24,6 +29,30 @@ export const AppLayout: React.FC = () => {
       cleanup();
     };
   }, [isLoggedIn, userProfile?.phone, initLiveSubscription, clearOrders]);
+
+  // Real-time merchant cancellation listener: triggers sad tone and opens apology sheet
+  useEffect(() => {
+    if (!orders || orders.length === 0) return;
+
+    orders.forEach((o) => {
+      const prevStatus = prevStatusesRef.current[o.id];
+      const newStatus = (o.status || '').toUpperCase();
+
+      if (prevStatus && prevStatus !== newStatus) {
+        const wasActive = [
+          'PLACED', 'PENDING', 'ACCEPTED', 'PREPARING', 'PACKING', 'RIDER_ASSIGNED', 'READY'
+        ].includes(prevStatus);
+        const isNowCancelled = ['REJECTED', 'CANCELLED'].includes(newStatus);
+
+        if (wasActive && isNowCancelled) {
+          playSadApologyTone();
+          setTrackerOpen(true, o.id);
+        }
+      }
+
+      prevStatusesRef.current[o.id] = newStatus;
+    });
+  }, [orders, setTrackerOpen]);
 
   // Always scroll window and containers to top on route change
   useEffect(() => {
