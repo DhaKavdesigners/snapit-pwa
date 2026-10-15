@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRider } from '@/context/RiderContext';
+import { canExtendSession } from '@/services/sessionService';
 import { Clock, Plus, X, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface ExtendSessionModalProps {
@@ -14,7 +15,7 @@ export const ExtendSessionModal: React.FC<ExtendSessionModalProps> = ({ isOpen, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  if (!isOpen || !activeSession) return null;
+  if (!isOpen || !activeSession || !canExtendSession(activeSession)) return null;
 
   const currentEndMs = new Date(activeSession.committed_until).getTime();
   const newEndMs = currentEndMs + 60 * 60000;

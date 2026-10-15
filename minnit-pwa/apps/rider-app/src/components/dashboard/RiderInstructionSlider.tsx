@@ -41,7 +41,7 @@ const INSTRUCTION_SLIDES: RiderInstructionSlide[] = [
     momoImg: '/images/momo/characters/momo_online.png',
     points: [
       'Select 1, 2, 3, or 4 hours of duty whenever you want.',
-      'Extend by +1 hour anytime with a single tap.',
+      'Extend by +1 hour in the final 30 minutes with a single tap.',
       'Zero rigid lockouts — ride whenever you are free.',
     ],
   },

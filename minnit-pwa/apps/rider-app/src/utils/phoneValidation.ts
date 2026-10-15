@@ -88,6 +88,40 @@ export function extract10DigitPhone(phone?: string | null): string {
 }
 
 /**
+ * Validates an optional alternative phone number:
+ * - Empty string is valid (optional field).
+ * - If provided, must be exactly 10 digits starting with 6, 7, 8, or 9.
+ * - Must be different from the primary phone number.
+ */
+export function validateAlternativePhone(
+  altPhone: string,
+  primaryPhone?: string
+): ValidationResult {
+  const trimmed = (altPhone || '').trim();
+
+  if (!trimmed) {
+    return { isValid: true };
+  }
+
+  const baseValidation = validateIndianMobile(trimmed, true);
+  if (!baseValidation.isValid) {
+    return baseValidation;
+  }
+
+  // Ensure alt phone is different from primary phone
+  const cleanPrimary = extract10DigitPhone(primaryPhone);
+  const cleanAlt = extract10DigitPhone(trimmed);
+  if (cleanPrimary && cleanAlt && cleanPrimary === cleanAlt) {
+    return {
+      isValid: false,
+      error: 'Alternative phone number cannot be the same as primary phone number.',
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
  * Keydown handler to restrict typing to 0-9 digits and control keys.
  * Blocks non-digit characters, paste shortcuts (Ctrl+V / Cmd+V), and 11th digit.
  */

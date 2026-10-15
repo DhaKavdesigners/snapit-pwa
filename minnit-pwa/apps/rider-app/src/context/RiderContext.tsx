@@ -135,6 +135,7 @@ import {
   getSessionRemainingMs,
   getSessionBreakAllowanceMinutes,
   formatRemainingBreakTime,
+  canExtendSession,
 } from '@/services/sessionService';
 
 // ─── Context Type ─────────────────────────────────────────────────────────────
@@ -177,6 +178,8 @@ interface RiderContextType {
   resetOnboarding: () => void;
   transferWalletToBank: (amount: number) => boolean;
   markAlertAsRead: (id: string) => void;
+  markAllAlertsAsRead: () => void;
+  clearAllAlerts: () => void;
   loginWithMpin: (phone: string, mpin: string) => Promise<{ success: boolean; error?: string; verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'; riderId?: string }>;
   loginWithMpinOnly: (mpin: string) => Promise<{ success: boolean; error?: string }>;
   loginWithRiderId: (riderId: string, mpin: string) => Promise<{ success: boolean; error?: string; verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'; riderId?: string }>;
@@ -375,7 +378,41 @@ const initialEarnings: EarningsSummary = {
 
 const availableZones: DeliveryZone[] = [];
 
-const initialAlerts: AlertNotification[] = [];
+const initialAlerts: AlertNotification[] = [
+  {
+    id: 'alert-welcome',
+    type: 'system',
+    title: '🎉 Welcome to Minnit Rider',
+    message: 'Your rider cockpit is active. Start a flexible riding session anytime to begin receiving delivery orders.',
+    time: 'Today',
+    read: false,
+    priority: 'normal',
+    actionRoute: '/',
+    actionLabel: 'Go Online',
+  },
+  {
+    id: 'alert-zone-info',
+    type: 'zone_entered',
+    title: '📍 Delivery Zone Active',
+    message: 'Your default operating zone is Robertsonpet. Orders from nearby restaurants will dispatch directly to your phone with sound alerts.',
+    time: 'Today',
+    read: false,
+    priority: 'normal',
+    actionRoute: '/availability',
+    actionLabel: 'View Zones',
+  },
+  {
+    id: 'alert-wallet-info',
+    type: 'payout',
+    title: '💳 Instant UPI / Bank Payouts',
+    message: 'Complete orders to build daily earnings with instant bank withdrawals anytime from your wallet.',
+    time: 'Today',
+    read: false,
+    priority: 'normal',
+    actionRoute: '/earnings',
+    actionLabel: 'Check Wallet',
+  },
+];
 
 const completedOrdersSeed: Order[] = [];
 
@@ -708,6 +745,14 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
         const savedCancelled = localStorage.getItem('snapit_cancelled_orders_v2');
         if (savedCancelled) setCancelledOrders(JSON.parse(savedCancelled));
+
+        const savedAlerts = localStorage.getItem('snapit_rider_alerts_v1');
+        if (savedAlerts) {
+          try {
+            const parsed = JSON.parse(savedAlerts);
+            if (Array.isArray(parsed) && parsed.length > 0) setAlerts(parsed);
+          } catch {}
+        }
 
         // Restore handled order IDs to prevent repeat buzzing across reloads
         const savedHandled = localStorage.getItem('snapit_handled_orders_v2');
@@ -1140,10 +1185,11 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('snapit_rider_break_v1', JSON.stringify(riderBreak));
       localStorage.setItem('snapit_acceptance_events_v1', JSON.stringify(orderAcceptanceEvents));
       localStorage.setItem('snapit_non_acceptance_count_v1', JSON.stringify(nonAcceptanceCount));
+      localStorage.setItem('snapit_rider_alerts_v1', JSON.stringify(alerts));
     } catch (e) {
       console.warn('Could not write local storage', e);
     }
-  }, [isHydrated, rider, isOnline, activeOrder, earnings, bookedSlotIds, riderBreak, orderAcceptanceEvents, nonAcceptanceCount]);
+  }, [isHydrated, rider, isOnline, activeOrder, earnings, bookedSlotIds, riderBreak, orderAcceptanceEvents, nonAcceptanceCount, alerts]);
 
   // ─── Flexible Session Expiry Monitoring (Timestamp-driven) ─────────────────
   useEffect(() => {
@@ -1166,6 +1212,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
           setActiveSession(null);
           setIsOnline(false);
           setRiderBreak(null);
+          setSessionBreakUsedMs(0);
           setSessionCompletedData({
             ordersCompleted: completedCount,
             earnings: 0,
@@ -1243,6 +1290,10 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
 
   const extendSession = async (addHours: number = 1): Promise<boolean> => {
     if (!activeSession) return false;
+    if (!canExtendSession(activeSession)) {
+      console.warn('Session extension is only permitted in the last 30 minutes of the session.');
+      return false;
+    }
     const updated = await extendShiftSession(activeSession.id, addHours);
     if (updated) {
       setActiveSession(updated);
@@ -1278,6 +1329,7 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setActiveSession(null);
     setIsOnline(false);
     setRiderBreak(null);
+    setSessionBreakUsedMs(0);
     sessionExpiredPendingDeliveryRef.current = false;
 
     setRider((prev) => ({
@@ -2851,6 +2903,17 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
   };
 
+  const markAllAlertsAsRead = () => {
+    setAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
+  };
+
+  const clearAllAlerts = () => {
+    setAlerts([]);
+    try {
+      localStorage.removeItem('snapit_rider_alerts_v1');
+    } catch {}
+  };
+
   const loginWithRiderId = async (
     riderIdOrPhone: string,
     mpin: string
@@ -3166,6 +3229,8 @@ export const RiderProvider = ({ children }: { children: ReactNode }) => {
         resetOnboarding,
         transferWalletToBank,
         markAlertAsRead,
+        markAllAlertsAsRead,
+        clearAllAlerts,
         loginWithMpin,
         loginWithMpinOnly,
         loginWithRiderId,

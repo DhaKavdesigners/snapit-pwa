@@ -237,6 +237,15 @@ export default function ProfilePage() {
               </span>
             </div>
 
+            {/* Email Address (Locked) */}
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-secondary font-medium">Email Address</span>
+              <span className="font-mono font-bold text-on-surface flex items-center gap-1.5 truncate max-w-[200px]">
+                <span>{rider.email || 'Not Provided'}</span>
+                <Lock className="w-3 h-3 text-slate-400 shrink-0" />
+              </span>
+            </div>
+
             {/* Aadhaar (Locked) */}
             <div className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-secondary font-medium">Aadhaar Number</span>

@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useRider } from '@/context/RiderContext';
-import { Power, MapPin, ChevronDown, Lock } from 'lucide-react';
+import { Power, MapPin, ChevronDown, Lock, Bell } from 'lucide-react';
 import { getSessionRemainingMs, formatRemainingSessionTime } from '@/services/sessionService';
 
 interface TopHeaderProps {
@@ -22,6 +23,7 @@ function getGreeting() {
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, subtitle }) => {
+  const pathname = usePathname();
   const {
     rider,
     isOnline,
@@ -30,7 +32,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
     riderBreak,
     activeSession,
     openStartRiding,
+    alerts,
   } = useRider();
+
+  const unreadAlertsCount = alerts?.filter((a) => !a.read).length || 0;
 
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -168,68 +173,90 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ showBack, onBack, title, s
           </div>
         )}
 
-        {/* Right: Compact Professional Online/Offline Switch with Text Outside */}
-        <div id="tour-online-toggle" className="flex items-center justify-end shrink-0">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isOnline}
-            aria-label={isOnline ? 'Go Offline' : 'Go Online'}
-            onClick={handleToggleClick}
-            className="flex items-center gap-2 select-none cursor-pointer py-1 px-1 rounded-full hover:opacity-95 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
-            title={isOnline ? 'Switch to Offline' : 'Switch to Online'}
-          >
-            {/* Outside Text Label + Status Indicator */}
-            <div className="flex items-center gap-1.5">
-              {isPendingVerification ? (
-                <Lock className="w-3 h-3 text-amber-500 shrink-0" />
-              ) : isBreakActive ? (
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+        {/* Right: Compact Professional Online/Offline Switch + Bell Notification Icon */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div id="tour-online-toggle" className="flex items-center justify-end shrink-0">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isOnline}
+              aria-label={isOnline ? 'Go Offline' : 'Go Online'}
+              onClick={handleToggleClick}
+              className="flex items-center gap-2 select-none cursor-pointer py-1 px-1 rounded-full hover:opacity-95 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+              title={isOnline ? 'Switch to Offline' : 'Switch to Online'}
+            >
+              {/* Outside Text Label + Status Indicator */}
+              <div className="flex items-center gap-1.5">
+                {isPendingVerification ? (
+                  <Lock className="w-3 h-3 text-amber-500 shrink-0" />
+                ) : isBreakActive ? (
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                  </span>
+                ) : isOnline ? (
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                )}
+                <span
+                  className={`text-xs font-black uppercase tracking-wider ${
+                    isPendingVerification
+                      ? 'text-amber-600'
+                      : isBreakActive
+                      ? 'text-amber-600'
+                      : isOnline
+                      ? 'text-emerald-600'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  {onlineLabel}
                 </span>
-              ) : isOnline ? (
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-              )}
-              <span
-                className={`text-xs font-black uppercase tracking-wider ${
+              </div>
+
+              {/* Small Compact iOS-Style Switch Slider */}
+              <div
+                className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 relative flex items-center shrink-0 ${
                   isPendingVerification
-                    ? 'text-amber-600'
+                    ? 'bg-slate-200 border border-slate-300 cursor-not-allowed'
                     : isBreakActive
-                    ? 'text-amber-600'
+                    ? 'bg-amber-400'
                     : isOnline
-                    ? 'text-emerald-600'
-                    : 'text-slate-500'
+                    ? 'bg-emerald-500 shadow-2xs'
+                    : 'bg-slate-300'
                 }`}
               >
-                {onlineLabel}
-              </span>
-            </div>
+                <div
+                  className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-out ${
+                    !isPendingVerification && (isOnline || isBreakActive) ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+            </button>
+          </div>
 
-            {/* Small Compact iOS-Style Switch Slider */}
-            <div
-              className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 relative flex items-center shrink-0 ${
-                isPendingVerification
-                  ? 'bg-slate-200 border border-slate-300 cursor-not-allowed'
-                  : isBreakActive
-                  ? 'bg-amber-400'
-                  : isOnline
-                  ? 'bg-emerald-500 shadow-2xs'
-                  : 'bg-slate-300'
-              }`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-out ${
-                  !isPendingVerification && (isOnline || isBreakActive) ? 'translate-x-4' : 'translate-x-0'
-                }`}
-              />
-            </div>
-          </button>
+          {/* Bell Notification Icon (Clean borderless) */}
+          <Link
+            id="tour-nav-alerts"
+            href="/alerts"
+            className={`relative p-1.5 flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 ${
+              pathname === '/alerts'
+                ? 'text-emerald-600'
+                : 'text-slate-700 hover:text-slate-950'
+            }`}
+            title="Important Notifications & Alerts"
+            aria-label="View notifications"
+          >
+            <Bell className="w-5 h-5 stroke-[2.2]" />
+            {unreadAlertsCount > 0 && (
+              <span className="absolute top-0 right-0 min-w-[15px] h-[15px] px-1 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-xs animate-pulse leading-none">
+                {unreadAlertsCount > 9 ? '9+' : unreadAlertsCount}
+              </span>
+            )}
+          </Link>
         </div>
       </div>
 

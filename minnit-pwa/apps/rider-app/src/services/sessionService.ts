@@ -87,6 +87,19 @@ export function formatRemainingSessionTime(remainingMs: number): string {
   return `${mins}m remaining`;
 }
 
+/** Threshold in milliseconds when rider is eligible to extend session: 30 minutes before session ends */
+export const SESSION_EXTEND_WINDOW_MS = 30 * 60 * 1000;
+
+/** Check if active riding session is eligible for extension (+1 hr appears only in the final 30 minutes) */
+export function canExtendSession(
+  session: RiderShiftSession | null,
+  now: number = Date.now()
+): boolean {
+  if (!session || session.status !== 'ACTIVE') return false;
+  const remainingMs = getSessionRemainingMs(session, now);
+  return remainingMs <= SESSION_EXTEND_WINDOW_MS;
+}
+
 /**
  * Break duration allowance in minutes based on planned riding session duration:
  * - 2 Hours -> 15 min break (single break)
@@ -109,6 +122,39 @@ export function formatRemainingBreakTime(remainingMs: number): string {
   const mins = Math.floor(totalSecs / 60);
   const secs = totalSecs % 60;
   return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+}
+
+/**
+ * Format remaining break allowance label for the "Take Break" button:
+ * - If no break used yet: "Take Break (25m)" (or 30m, 15m)
+ * - If break partially used: "Take Break (18m 30s left)" or "Take Break (20m left)"
+ * - If break allowance completed: "Break Used (25m limit)"
+ */
+export function formatRemainingBreakAllowance(
+  remainingMs: number,
+  totalAllowanceMins: number
+): string {
+  if (remainingMs <= 0) {
+    return `Break Used (${totalAllowanceMins}m limit)`;
+  }
+
+  const totalAllowanceMs = totalAllowanceMins * 60000;
+  // If virtually untouched (within 1 second of total allowance)
+  if (remainingMs >= totalAllowanceMs - 1000) {
+    return `Take Break (${totalAllowanceMins}m)`;
+  }
+
+  const totalSecs = Math.round(remainingMs / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+
+  if (mins > 0 && secs > 0) {
+    return `Take Break (${mins}m ${secs}s left)`;
+  }
+  if (mins > 0) {
+    return `Take Break (${mins}m left)`;
+  }
+  return `Take Break (${secs}s left)`;
 }
 
 /** Create a new riding session (2, 3, or 4 hours) */

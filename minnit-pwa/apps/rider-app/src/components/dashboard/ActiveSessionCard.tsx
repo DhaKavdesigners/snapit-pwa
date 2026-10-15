@@ -7,6 +7,8 @@ import {
   formatRemainingSessionTime,
   getSessionBreakAllowanceMinutes,
   formatRemainingBreakTime,
+  formatRemainingBreakAllowance,
+  canExtendSession,
 } from '@/services/sessionService';
 import {
   Clock,
@@ -32,6 +34,7 @@ export const ActiveSessionCard: React.FC<ActiveSessionCardProps> = ({
     endBreak,
     activeOrder,
     remainingBreakAllowanceMs,
+    sessionBreakUsedMs,
   } = useRider();
 
   // Local 1-second countdown ticker so only this card re-renders every second,
@@ -51,6 +54,9 @@ export const ActiveSessionCard: React.FC<ActiveSessionCardProps> = ({
   const remainingMs = getSessionRemainingMs(activeSession, now);
   const remainingTimeStr = formatRemainingSessionTime(remainingMs);
 
+  // Extend +1hr option is only eligible 30 minutes before the session ends
+  const isExtendEligible = canExtendSession(activeSession, now);
+
   // Session progress percentage
   const totalDurationMs = (activeSession?.planned_duration_mins || 180) * 60000;
   const elapsedMs = totalDurationMs - remainingMs;
@@ -59,7 +65,12 @@ export const ActiveSessionCard: React.FC<ActiveSessionCardProps> = ({
   // Break allowance based on planned session hours:
   // 2h -> 15m single break, 3h -> 25m, 4h -> 30m
   const sessionBreakAllowanceMins = getSessionBreakAllowanceMinutes(activeSession?.planned_duration_mins);
-  const breakAllowedMs = riderBreak?.allowedDurationMs || (sessionBreakAllowanceMins * 60000);
+  const totalBreakAllowanceMs = sessionBreakAllowanceMins * 60000;
+  const effectiveRemainingBreakMs =
+    remainingBreakAllowanceMs !== undefined
+      ? remainingBreakAllowanceMs
+      : Math.max(0, totalBreakAllowanceMs - (sessionBreakUsedMs || 0));
+  const breakAllowedMs = riderBreak?.allowedDurationMs || effectiveRemainingBreakMs;
 
   // Reducing countdown calculation
   const breakElapsedMs = riderBreak ? Math.max(0, now - riderBreak.startedAt) : 0;
@@ -162,15 +173,17 @@ export const ActiveSessionCard: React.FC<ActiveSessionCardProps> = ({
               </div>
             </div>
 
-            {/* Extend +1h Quick Pill */}
-            <button
-              type="button"
-              onClick={onOpenExtend}
-              className="px-3 py-1.5 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-black text-emerald-700 shadow-2xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              <span>+1 Hr</span>
-            </button>
+            {/* Extend +1h Quick Pill (Only shown 30 minutes before session ends) */}
+            {isExtendEligible && (
+              <button
+                type="button"
+                onClick={onOpenExtend}
+                className="px-3 py-1.5 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-black text-emerald-700 shadow-2xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer animate-fade-in"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>+1 Hr</span>
+              </button>
+            )}
           </div>
 
           {/* Clean Progress Line */}
@@ -196,21 +209,22 @@ export const ActiveSessionCard: React.FC<ActiveSessionCardProps> = ({
           <button
             type="button"
             onClick={startBreak}
-            disabled={Boolean(activeOrder) || (remainingBreakAllowanceMs !== undefined && remainingBreakAllowanceMs <= 0)}
+            disabled={Boolean(activeOrder) || effectiveRemainingBreakMs <= 0}
             className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-extrabold text-xs rounded-2xl border border-slate-200/90 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
             title={
               activeOrder
                 ? 'Finish active delivery first'
-                : remainingBreakAllowanceMs !== undefined && remainingBreakAllowanceMs <= 0
+                : effectiveRemainingBreakMs <= 0
                 ? 'Break allowance already used for this session'
                 : 'Take your riding break'
             }
           >
             <Coffee className="w-4 h-4 text-slate-600" />
             <span>
-              {remainingBreakAllowanceMs !== undefined && remainingBreakAllowanceMs <= 0
-                ? `Break Used (${sessionBreakAllowanceMins}m limit)`
-                : `Take Break (${sessionBreakAllowanceMins}m)`}
+              {formatRemainingBreakAllowance(
+                effectiveRemainingBreakMs,
+                sessionBreakAllowanceMins
+              )}
             </span>
           </button>
         </div>

@@ -88,7 +88,7 @@ const PROMO_SLIDES: FeaturePromoSlide[] = [
     tagBg: 'bg-purple-100 text-purple-900 border-purple-300/80',
     tagText: 'text-purple-900',
     headline: 'Need More Time?',
-    description: 'Earning good momentum? Add +1 hour to your active session anytime with a single tap.',
+    description: 'Earning good momentum? Add +1 hour in the final 30 minutes of your session with a single tap.',
     pillHighlight: '+1 Hr Extend',
     ctaText: 'Explore Slots',
     ctaAction: 'start_riding',

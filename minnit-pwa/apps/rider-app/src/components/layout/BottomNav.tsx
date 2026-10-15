@@ -22,13 +22,6 @@ export const BottomNav: React.FC = () => {
       active: pathname === '/',
     },
     {
-      label: 'Orders',
-      id: 'tour-nav-orders',
-      href: '/orders',
-      icon: 'local_mall',
-      active: pathname.startsWith('/orders'),
-    },
-    {
       label: 'Availability',
       id: 'tour-nav-availability',
       href: '/availability',
@@ -44,20 +37,27 @@ export const BottomNav: React.FC = () => {
         : 'bg-primary',
     },
     {
-      label: 'Earnings',
-      id: 'tour-nav-earnings',
-      href: '/earnings',
-      icon: 'payments',
-      active: pathname === '/earnings',
+      label: 'Orders',
+      id: 'tour-nav-orders',
+      href: '/orders',
+      icon: 'local_mall',
+      active: pathname.startsWith('/orders'),
     },
     {
       label: 'Rewards',
       id: 'tour-nav-rewards',
       href: '/rewards',
       icon: 'redeem',
-      active: pathname.startsWith('/rewards') || pathname.startsWith('/alerts'),
+      active: pathname.startsWith('/rewards'),
       badge: '🎁',
       badgeColor: 'bg-emerald-600',
+    },
+    {
+      label: 'Earnings',
+      id: 'tour-nav-earnings',
+      href: '/earnings',
+      icon: 'payments',
+      active: pathname === '/earnings',
     },
   ];
 

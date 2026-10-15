@@ -42,7 +42,9 @@ import {
   isValidIndianMobile,
   extract10DigitPhone,
   handlePhoneKeyDown,
+  validateAlternativePhone,
 } from '@/utils/phoneValidation';
+import { validateEmail } from '@/utils/emailValidation';
 
 export default function OnboardingPage() {
   const {
@@ -87,6 +89,10 @@ export default function OnboardingPage() {
   const [confirmPhone, setConfirmPhone] = useState(extract10DigitPhone(rider.phone));
   const [phoneError, setPhoneError] = useState('');
   const [confirmPhoneError, setConfirmPhoneError] = useState('');
+  const [email, setEmail] = useState(rider.email || '');
+  const [emailError, setEmailError] = useState('');
+  const [altPhone, setAltPhone] = useState(extract10DigitPhone(rider.altPhone));
+  const [altPhoneError, setAltPhoneError] = useState('');
   const [personalError, setPersonalError] = useState('');
 
   // Residential Address breakdown
@@ -109,7 +115,10 @@ export default function OnboardingPage() {
 
   // Step 3: Vehicle Details
   const [hasDrivingLicense, setHasDrivingLicense] = useState<boolean>(rider.hasDrivingLicense ?? true);
-  const [vehicleType, setVehicleType] = useState(rider.vehicleType || 'Motorcycle');
+  const [vehicleType, setVehicleType] = useState<string>(() => {
+    if (rider.vehicleType?.toLowerCase().includes('electric')) return 'Electric Scooter';
+    return 'Motorcycle';
+  });
   const [vehicleModel, setVehicleModel] = useState(rider.vehicleModel || '');
   const [vehicleNumber, setVehicleNumber] = useState(rider.vehicleNumber || '');
   const [dlNumber, setDlNumber] = useState(rider.dlNumber || '');
@@ -407,6 +416,14 @@ export default function OnboardingPage() {
     } else {
       setPhoneError('');
     }
+
+    if (altPhone) {
+      if (rawVal === altPhone) {
+        setAltPhoneError('Alternative phone number cannot be the same as primary phone number.');
+      } else if (altPhoneError === 'Alternative phone number cannot be the same as primary phone number.') {
+        setAltPhoneError('');
+      }
+    }
   };
 
   const handleConfirmPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -460,6 +477,9 @@ export default function OnboardingPage() {
       } else {
         setPhoneError('');
       }
+      if (altPhone && altPhone === phone) {
+        setAltPhoneError('Alternative phone number cannot be the same as primary phone number.');
+      }
     }
   };
 
@@ -476,12 +496,167 @@ export default function OnboardingPage() {
     }
   };
 
+  // Controlled Email input handlers
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setEmail(val);
+    setPersonalError('');
+
+    if (emailError) {
+      const validation = validateEmail(val.trim());
+      if (validation.isValid) {
+        setEmailError('');
+      }
+    }
+  };
+
+  const handleEmailBlur = () => {
+    const trimmed = email.trim();
+    if (trimmed) {
+      const validation = validateEmail(trimmed);
+      if (!validation.isValid) {
+        setEmailError(validation.error || 'Please enter a valid email address.');
+      } else {
+        setEmailError('');
+      }
+    } else {
+      setEmailError('Email address is required.');
+    }
+  };
+
+  // Controlled Alternative Phone input handlers
+  const handleAltPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+
+    // Digits only: reject non-numeric characters (block letters, spaces, symbols, +)
+    if (/[^\d]/.test(rawVal)) {
+      setAltPhoneError('Only numeric digits (0–9) are allowed.');
+      return;
+    }
+
+    // Maximum 10 digits
+    if (rawVal.length > 10) {
+      return;
+    }
+
+    setAltPhone(rawVal);
+    setPersonalError('');
+
+    if (!rawVal) {
+      setAltPhoneError('');
+      return;
+    }
+
+    if (rawVal.length === 10) {
+      const validation = validateAlternativePhone(rawVal, phone);
+      if (!validation.isValid) {
+        setAltPhoneError(validation.error || 'Invalid alternative mobile number.');
+      } else {
+        setAltPhoneError('');
+      }
+    } else {
+      if (altPhoneError && !altPhoneError.includes('Only numeric')) {
+        setAltPhoneError('');
+      }
+    }
+  };
+
+  const handleAltPhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow navigation / editing keys
+    if (
+      [
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Escape',
+        'Enter',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+      ].includes(e.key)
+    ) {
+      return;
+    }
+
+    // Allow Ctrl/Cmd combinations (Ctrl+A, Ctrl+C, Ctrl+V, Cmd+V)
+    if (e.ctrlKey || e.metaKey) {
+      return;
+    }
+
+    // Block any non-numeric key
+    if (!/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      setAltPhoneError('Only numeric digits (0–9) are allowed.');
+      return;
+    }
+
+    // Stop accepting input after 10 digits (if no text selected to overwrite)
+    const target = e.currentTarget;
+    const hasSelection =
+      target.selectionStart !== null &&
+      target.selectionEnd !== null &&
+      target.selectionStart !== target.selectionEnd;
+
+    if (target.value.length >= 10 && !hasSelection) {
+      e.preventDefault();
+    }
+  };
+
+  const handleAltPhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text') || '';
+    // Extract 10 digits only, stripping country codes, spaces, letters, special characters
+    let digits = extract10DigitPhone(pasted);
+    if (!digits) {
+      digits = pasted.replace(/\D/g, '').slice(0, 10);
+    } else {
+      digits = digits.slice(0, 10);
+    }
+
+    setAltPhone(digits);
+    setPersonalError('');
+
+    if (!digits) {
+      setAltPhoneError('');
+      return;
+    }
+
+    if (digits.length === 10) {
+      const validation = validateAlternativePhone(digits, phone);
+      if (!validation.isValid) {
+        setAltPhoneError(validation.error || 'Invalid alternative mobile number.');
+      } else {
+        setAltPhoneError('');
+      }
+    } else {
+      setAltPhoneError('Please enter a complete 10-digit mobile number.');
+    }
+  };
+
+  const handleAltPhoneBlur = () => {
+    if (altPhone) {
+      const validation = validateAlternativePhone(altPhone, phone);
+      if (!validation.isValid) {
+        setAltPhoneError(validation.error || 'Please enter a valid 10-digit mobile number.');
+      } else {
+        setAltPhoneError('');
+      }
+    } else {
+      setAltPhoneError('');
+    }
+  };
+
   // Validate Step 1: Personal Details
   const handlePersonalSubmit = () => {
     setPersonalError('');
     setDobError('');
     setPhoneError('');
     setConfirmPhoneError('');
+    setEmailError('');
+    setAltPhoneError('');
 
     if (!fullName.trim()) {
       setPersonalError('Please enter your full name as per government ID.');
@@ -518,6 +693,30 @@ export default function OnboardingPage() {
       setPersonalError('Phone numbers do not match! Please verify the confirmation number.');
       setConfirmPhoneError('Phone numbers do not match.');
       return;
+    }
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setPersonalError('Email address is required.');
+      setEmailError('Email address is required.');
+      return;
+    }
+
+    const emailValidation = validateEmail(trimmedEmail);
+    if (!emailValidation.isValid) {
+      setPersonalError(emailValidation.error || 'Please enter a valid email address.');
+      setEmailError(emailValidation.error || 'Please enter a valid email address.');
+      return;
+    }
+
+    const trimmedAltPhone = altPhone.trim();
+    if (trimmedAltPhone) {
+      const altValidation = validateAlternativePhone(trimmedAltPhone, phone);
+      if (!altValidation.isValid) {
+        setPersonalError(altValidation.error || 'Please enter a valid alternative mobile number.');
+        setAltPhoneError(altValidation.error || 'Please enter a valid alternative mobile number.');
+        return;
+      }
     }
 
     if (!addressStreet.trim()) {
@@ -563,6 +762,8 @@ export default function OnboardingPage() {
       name: fullName,
       dob,
       phone: phone,
+      email: trimmedEmail,
+      altPhone: trimmedAltPhone || undefined,
       address: fullAddress,
       addressStreet: addressStreet.trim(),
       addressArea: addressArea.trim(),
@@ -580,18 +781,30 @@ export default function OnboardingPage() {
   const handleVehicleSubmit = () => {
     setVehicleError('');
 
-    if (!vehicleNumber.trim()) {
-      setVehicleError('Please enter your vehicle registration number (e.g. KA 08 EJ 1234).');
-      return;
-    }
+    if (vehicleType !== 'Bicycle') {
+      if (!vehicleModel.trim()) {
+        setVehicleError('Please enter your vehicle model (e.g. TVS Victor).');
+        return;
+      }
 
-    if (!dlNumber.trim()) {
-      setVehicleError('Please enter your Driving Licence (DL) number.');
-      return;
+      if (!vehicleNumber.trim()) {
+        setVehicleError('Please enter your vehicle registration number (e.g. KA 08 EJ 1234).');
+        return;
+      }
+
+      if (!dlNumber.trim()) {
+        setVehicleError('Please enter your Driving Licence (DL) number.');
+        return;
+      }
+
+      if (!dlDocUrl) {
+        setVehicleError('Please upload your Driving Licence (DL) document.');
+        return;
+      }
     }
 
     updateRiderProfile({
-      hasDrivingLicense: true,
+      hasDrivingLicense: vehicleType === 'Bicycle' ? Boolean(dlNumber.trim() || dlDocUrl) : true,
       vehicleType,
       vehicleModel: vehicleModel.trim(),
       vehicleNumber: vehicleNumber.toUpperCase().trim(),
@@ -683,9 +896,11 @@ export default function OnboardingPage() {
     const result = await registerRider({
       name: fullName,
       phone: cleanPhone1,
+      email: email.trim(),
+      altPhone: altPhone.trim() || undefined,
       mpin: createMpin,
       dob,
-      hasDrivingLicense: true,
+      hasDrivingLicense: vehicleType === 'Bicycle' ? Boolean(dlNumber.trim() || dlDocUrl) : true,
       vehicleType: resolvedVehicleType,
       vehicleModel: vehicleModel.trim(),
       vehicleNumber: resolvedVehicleNumber,
@@ -726,6 +941,10 @@ export default function OnboardingPage() {
     setDob('');
     setPhone('');
     setConfirmPhone('');
+    setEmail('');
+    setEmailError('');
+    setAltPhone('');
+    setAltPhoneError('');
     setAddressStreet('');
     setAddressArea('');
     setAddressCity('KGF');
@@ -1067,6 +1286,66 @@ export default function OnboardingPage() {
                 )}
               </div>
 
+              {/* Email Address */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface">
+                  Email Address <span className="text-primary">*</span>
+                </label>
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={email}
+                  onChange={handleEmailChange}
+                  onBlur={handleEmailBlur}
+                  placeholder="Enter your email address"
+                  className={`w-full bg-white border rounded-xl p-3 text-xs font-semibold text-on-surface outline-none ${
+                    emailError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-primary'
+                  }`}
+                />
+                {emailError && (
+                  <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{emailError}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Alternative Phone Number (Optional) */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface">
+                  Alternative Phone Number <span className="text-[10px] text-slate-400 font-normal ml-1.5">(Optional)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center px-3 py-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 select-none shrink-0 shadow-2xs">
+                    +91
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    value={altPhone}
+                    onChange={handleAltPhoneChange}
+                    onKeyDown={handleAltPhoneKeyDown}
+                    onPaste={handleAltPhonePaste}
+                    onBlur={handleAltPhoneBlur}
+                    placeholder="Enter 10-digit mobile number"
+                    className={`flex-1 min-w-0 bg-white border rounded-xl p-3 text-xs font-mono font-semibold text-on-surface outline-none ${
+                      altPhoneError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-primary'
+                    }`}
+                  />
+                </div>
+                {altPhoneError && (
+                  <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{altPhoneError}</span>
+                  </p>
+                )}
+              </div>
+
               {/* Residential Address Fields */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
                 <label className="text-xs font-bold text-slate-800 block">
@@ -1310,52 +1589,46 @@ export default function OnboardingPage() {
                   <label className="text-xs font-bold text-on-surface">Vehicle Type</label>
                   <select
                     value={vehicleType}
-                    onChange={(e) => setVehicleType(e.target.value)}
+                    onChange={(e) => {
+                      setVehicleType(e.target.value);
+                      setVehicleError('');
+                    }}
                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
                   >
-                    <option value="Motorcycle">Motorcycle (Petrol / Geared)</option>
-                    <option value="Scooter">Scooter (Petrol / Non-Geared)</option>
-                    <option value="Electric Scooter (High-Speed)">Electric Scooter (High-Speed RTO)</option>
+                    <option value="Motorcycle">Motorcycle</option>
+                    <option value="Electric Scooter">Electric Scooter</option>
                   </select>
                 </div>
 
-                {/* Vehicle Model Name with suggestions */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface">Vehicle Model</label>
+                {/* Vehicle Model Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface">
+                    Vehicle Model {vehicleType !== 'Bicycle' && <span className="text-primary">*</span>}
+                  </label>
                   <input
                     type="text"
                     value={vehicleModel}
-                    onChange={(e) => setVehicleModel(e.target.value)}
-                    placeholder="e.g. Honda Activa 6G, Hero Splendor, Ola S1"
-                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface outline-none focus:border-primary"
+                    onChange={(e) => {
+                      setVehicleModel(e.target.value);
+                      setVehicleError('');
+                    }}
+                    placeholder="TVS Victor"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold text-on-surface placeholder:text-slate-400 outline-none focus:border-primary"
                   />
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {['Honda Activa', 'Hero Splendor', 'Bajaj Pulsar', 'TVS Jupiter', 'Ola S1', 'Ather 450X'].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setVehicleModel(m)}
-                        className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
-                          vehicleModel === m
-                            ? 'bg-primary text-white border-primary'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Vehicle Number Plate */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-on-surface">
-                    Vehicle Registration Number <span className="text-primary">*</span>
+                    Vehicle Registration Number {vehicleType !== 'Bicycle' && <span className="text-primary">*</span>}
                   </label>
                   <input
                     type="text"
                     value={vehicleNumber}
-                    onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      setVehicleNumber(e.target.value.toUpperCase());
+                      setVehicleError('');
+                    }}
                     placeholder="KA 08 EJ 1234"
                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
                   />
@@ -1364,12 +1637,15 @@ export default function OnboardingPage() {
                 {/* DL Number Input */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-on-surface">
-                    Driving Licence (DL) Number <span className="text-primary">*</span>
+                    Driving Licence (DL) Number {vehicleType !== 'Bicycle' && <span className="text-primary">*</span>}
                   </label>
                   <input
                     type="text"
                     value={dlNumber}
-                    onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      setDlNumber(e.target.value.toUpperCase());
+                      setVehicleError('');
+                    }}
                     placeholder="e.g. KA08 20210001234"
                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono font-bold text-on-surface outline-none focus:border-primary uppercase tracking-wider"
                   />
@@ -1379,11 +1655,14 @@ export default function OnboardingPage() {
                 <div className="space-y-1.5">
                   <DocumentUploadCard
                     title="Driving Licence (DL) Document"
-                    subtitle="Front & Back scan/photo (JPG/PNG/PDF)"
+                    subtitle={vehicleType === 'Bicycle' ? 'Front & Back scan/photo (Optional)' : 'Front & Back scan/photo (JPG/PNG/PDF)'}
                     documentType="dl"
                     riderPhone={phone}
-                    onFileUploaded={(url) => setDlDocUrl(url)}
-                    required={true}
+                    onFileUploaded={(url) => {
+                      setDlDocUrl(url);
+                      setVehicleError('');
+                    }}
+                    required={vehicleType !== 'Bicycle'}
                   />
                 </div>
               </div>
